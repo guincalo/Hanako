@@ -1,0 +1,1217 @@
+diff --git a/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgFileLocation.java b/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgFileLocation.java
+new file mode 100644
+index 0000000..506b55e
+--- /dev/null
++++ b/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgFileLocation.java
+@@ -0,0 +1,29 @@
++package it.belloworld.mercurygram;
++
++import org.telegram.tgnet.TLRPC;
++
++/**
++ * Mercurygram saved-history media: a photo / thumbnail location that points at
++ * a copy kept in app-private storage by {@link MgHistoryMedia}. Keeps every
++ * field of the original location (so file names, keys and serialization stay
++ * the same) and adds the local {@link #path}, which
++ * {@code FileLoader.getPathToAttach} and {@code ImageLocation} resolve first.
++ * Only ever set on messages rebuilt from the history DB, never on live ones.
++ */
++public class MgFileLocation extends TLRPC.TL_fileLocationToBeDeprecated {
++
++    public final String path;
++
++    public MgFileLocation(TLRPC.FileLocation src, String path) {
++        this.path = path;
++        if (src != null) {
++            dc_id = src.dc_id;
++            volume_id = src.volume_id;
++            local_id = src.local_id;
++            secret = src.secret;
++            file_reference = src.file_reference;
++            key = src.key;
++            iv = src.iv;
++        }
++    }
++}
+diff --git a/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgHistoryMedia.java b/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgHistoryMedia.java
+new file mode 100644
+index 0000000..219d4ab
+--- /dev/null
++++ b/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgHistoryMedia.java
+@@ -0,0 +1,446 @@
++package it.belloworld.mercurygram;
++
++import android.text.TextUtils;
++
++import org.telegram.messenger.ApplicationLoader;
++import org.telegram.messenger.DispatchQueue;
++import org.telegram.messenger.FileLoader;
++import org.telegram.messenger.FileLog;
++import org.telegram.messenger.MessageObject;
++import org.telegram.messenger.secretmedia.EncryptedFileInputStream;
++import org.telegram.tgnet.TLObject;
++import org.telegram.tgnet.TLRPC;
++
++import java.io.File;
++import java.io.FileInputStream;
++import java.io.FileOutputStream;
++import java.io.InputStream;
++import java.util.ArrayList;
++import java.util.Collection;
++
++/**
++ * Mercurygram saved-history media: copies the cached file of a message that is
++ * being archived (deleted, or replaced by an edit, or a self-destructing media
++ * that expires) into app-private storage ({@code files/mg_history_media}), so it
++ * survives a Telegram cache clear and keep-media cleanup.
++ *
++ * <p>Destination paths are decided up front ({@link #plan}) on the storage
++ * queue from the message alone (no disk access) and stored in the history DB;
++ * the copy itself runs later on a dedicated serial queue ({@link #copyAsync}).
++ * File deletions for trimmed / cleared entries go through the same queue, so a
++ * delete never overtakes the copy of the same file.</p>
++ *
++ * <p>When an entry is read back, {@link #apply} points the message's media at
++ * the saved copy: photo sizes / document thumbs get a {@link MgFileLocation},
++ * documents get {@code localPath} and {@code attachPath}. {@link #redirect} is
++ * the {@code FileLoader.getPathToAttach} hook that resolves those.</p>
++ */
++public final class MgHistoryMedia {
++
++    public static final String DIR_NAME = "mg_history_media";
++
++    private static volatile File dir;
++    private static volatile String dirPrefix;
++    private static volatile DispatchQueue queue;
++
++    private MgHistoryMedia() {
++    }
++
++    /** One planned copy: the message as archived plus its destination path(s). */
++    public static final class Plan {
++        public final int account;
++        public final TLRPC.Message message;
++        public final String mediaPath;
++        public final String thumbPath;
++
++        Plan(int account, TLRPC.Message message, String mediaPath, String thumbPath) {
++            this.account = account;
++            this.message = message;
++            this.mediaPath = mediaPath;
++            this.thumbPath = thumbPath;
++        }
++    }
++
++    public static File getDir() {
++        File d = dir;
++        if (d == null) {
++            d = new File(ApplicationLoader.getFilesDirFixed(), DIR_NAME);
++            dirPrefix = d.getAbsolutePath() + File.separator;
++            dir = d;
++        }
++        return d;
++    }
++
++    private static String getDirPrefix() {
++        getDir();
++        return dirPrefix;
++    }
++
++    private static DispatchQueue getQueue() {
++        DispatchQueue q = queue;
++        if (q == null) {
++            synchronized (MgHistoryMedia.class) {
++                q = queue;
++                if (q == null) {
++                    q = queue = new DispatchQueue("mgHistoryMedia");
++                }
++            }
++        }
++        return q;
++    }
++
++    private static TLRPC.MessageMedia mediaOf(TLRPC.Message m) {
++        if (m == null || m.media == null) {
++            return null;
++        }
++        return MessageObject.getMedia(m);
++    }
++
++    private static TLRPC.Photo photoOf(TLRPC.MessageMedia media) {
++        if (media instanceof TLRPC.TL_messageMediaPhoto && media.photo != null
++                && !(media.photo instanceof TLRPC.TL_photoEmpty) && !media.photo.sizes.isEmpty()) {
++            return media.photo;
++        }
++        return null;
++    }
++
++    private static TLRPC.Document documentOf(TLRPC.MessageMedia media) {
++        if (media instanceof TLRPC.TL_messageMediaDocument && media.document != null
++                && !(media.document instanceof TLRPC.TL_documentEmpty)) {
++            return media.document;
++        }
++        return null;
++    }
++
++    /** Photo, video, voice, round video, GIF, sticker or file media that can be copied. */
++    public static boolean hasSavableMedia(TLRPC.Message m) {
++        TLRPC.MessageMedia media = mediaOf(m);
++        return photoOf(media) != null || documentOf(media) != null;
++    }
++
++    /** True when both messages carry the same photo / document (or neither has one). */
++    public static boolean sameMedia(TLRPC.Message a, TLRPC.Message b) {
++        TLRPC.MessageMedia ma = mediaOf(a);
++        TLRPC.MessageMedia mb = mediaOf(b);
++        TLRPC.Photo pa = photoOf(ma);
++        TLRPC.Photo pb = photoOf(mb);
++        if (pa != null || pb != null) {
++            return pa != null && pb != null && pa.id == pb.id;
++        }
++        TLRPC.Document da = documentOf(ma);
++        TLRPC.Document db = documentOf(mb);
++        if (da != null || db != null) {
++            return da != null && db != null && da.id == db.id;
++        }
++        return true;
++    }
++
++    private static boolean isFileSize(TLRPC.PhotoSize s) {
++        return s != null && s.location != null
++                && !(s instanceof TLRPC.TL_photoStrippedSize)
++                && !(s instanceof TLRPC.TL_photoPathSize);
++    }
++
++    /** Largest real (downloadable) thumbnail of a document, or null. */
++    private static TLRPC.PhotoSize pickThumb(TLRPC.Document document) {
++        if (document == null || document.thumbs == null) {
++            return null;
++        }
++        TLRPC.PhotoSize best = null;
++        for (int i = 0; i < document.thumbs.size(); i++) {
++            TLRPC.PhotoSize s = document.thumbs.get(i);
++            if (!isFileSize(s) || s instanceof TLRPC.TL_photoCachedSize) {
++                continue;
++            }
++            if (best == null || s.w * s.h > best.w * best.h) {
++                best = s;
++            }
++        }
++        return best;
++    }
++
++    private static String extOf(TLRPC.Document document) {
++        String name = FileLoader.getAttachFileName(document);
++        if (name == null) {
++            return "";
++        }
++        int dot = name.lastIndexOf('.');
++        if (dot < 0 || name.length() - dot > 8) {
++            return "";
++        }
++        return name.substring(dot).replace(File.separatorChar, '_');
++    }
++
++    /**
++     * Decide where the media of {@code m} will be saved. No disk access, safe on
++     * the storage queue. Returns null when the message has nothing to copy.
++     */
++    public static Plan plan(int account, long dialogId, TLRPC.Message m, String tag) {
++        TLRPC.MessageMedia media = mediaOf(m);
++        TLRPC.Photo photo = photoOf(media);
++        TLRPC.Document document = documentOf(media);
++        if (photo == null && document == null) {
++            return null;
++        }
++        String base = "a" + account + "_" + dialogId + "_" + m.id + "_" + tag;
++        File d = getDir();
++        String mediaPath;
++        String thumbPath = null;
++        if (document != null) {
++            mediaPath = new File(d, base + extOf(document)).getAbsolutePath();
++            if (pickThumb(document) != null) {
++                thumbPath = new File(d, base + "_thumb.jpg").getAbsolutePath();
++            }
++        } else {
++            mediaPath = new File(d, base + ".jpg").getAbsolutePath();
++        }
++        return new Plan(account, m, mediaPath, thumbPath);
++    }
++
++    public static void copyAsync(Collection<Plan> plans) {
++        if (plans == null || plans.isEmpty()) {
++            return;
++        }
++        final ArrayList<Plan> copy = new ArrayList<>(plans);
++        getQueue().postRunnable(() -> {
++            for (int i = 0; i < copy.size(); i++) {
++                runCopy(copy.get(i));
++            }
++        });
++    }
++
++    /** Copies the planned file(s) on the calling thread. */
++    public static void runCopy(Plan p) {
++        if (p == null) {
++            return;
++        }
++        try {
++            TLRPC.MessageMedia media = mediaOf(p.message);
++            TLRPC.Photo photo = photoOf(media);
++            TLRPC.Document document = documentOf(media);
++            FileLoader fl = FileLoader.getInstance(p.account);
++            ArrayList<File> candidates = new ArrayList<>();
++            candidates.add(fl.getPathToMessage(p.message));
++            candidates.add(fl.getPathToMessage(p.message, true, true));
++            if (photo != null) {
++                for (int i = photo.sizes.size() - 1; i >= 0; i--) {
++                    TLRPC.PhotoSize s = photo.sizes.get(i);
++                    if (isFileSize(s)) {
++                        candidates.add(fl.getPathToAttach(s, null, false, true));
++                        candidates.add(fl.getPathToAttach(s, null, true, true));
++                    }
++                }
++            } else if (document != null) {
++                candidates.add(fl.getPathToAttach(document, null, false, true));
++                candidates.add(fl.getPathToAttach(document, null, true, true));
++            }
++            if (p.mediaPath != null) {
++                copyFirst(candidates, new File(p.mediaPath));
++            }
++            TLRPC.PhotoSize thumb = pickThumb(document);
++            if (p.thumbPath != null && thumb != null) {
++                ArrayList<File> thumbCandidates = new ArrayList<>();
++                thumbCandidates.add(fl.getPathToAttach(thumb, null, true, true));
++                thumbCandidates.add(fl.getPathToAttach(thumb, null, false, true));
++                copyFirst(thumbCandidates, new File(p.thumbPath));
++            }
++        } catch (Throwable e) {
++            FileLog.e(e);
++        }
++    }
++
++    private static boolean copyFirst(ArrayList<File> candidates, File dest) {
++        if (dest.exists()) {
++            return true;
++        }
++        for (int i = 0; i < candidates.size(); i++) {
++            File src = candidates.get(i);
++            if (src == null || src.getPath().length() == 0) {
++                continue;
++            }
++            if (src.isFile() && src.length() > 0) {
++                if (copyStream(src, null, dest)) {
++                    return true;
++                }
++                continue;
++            }
++            // Self-destructing media is cached encrypted: <name>.enc + <name>.enc.key.
++            File enc = new File(src.getAbsolutePath() + ".enc");
++            File key = new File(FileLoader.getInternalCacheDir(), enc.getName() + ".key");
++            if (enc.isFile() && key.isFile()) {
++                if (copyStream(enc, key, dest)) {
++                    return true;
++                }
++            }
++        }
++        return false;
++    }
++
++    private static boolean copyStream(File src, File keyFile, File dest) {
++        File parent = dest.getParentFile();
++        if (parent != null && !parent.exists()) {
++            parent.mkdirs();
++        }
++        File tmp = new File(dest.getAbsolutePath() + ".tmp");
++        InputStream in = null;
++        FileOutputStream out = null;
++        boolean ok = false;
++        try {
++            in = keyFile != null ? new EncryptedFileInputStream(src, keyFile) : new FileInputStream(src);
++            out = new FileOutputStream(tmp);
++            byte[] buf = new byte[64 * 1024];
++            int read;
++            while ((read = in.read(buf, 0, buf.length)) > 0) {
++                out.write(buf, 0, read);
++            }
++            out.getFD().sync();
++            ok = true;
++        } catch (Throwable e) {
++            FileLog.e(e);
++        } finally {
++            try {
++                if (in != null) {
++                    in.close();
++                }
++            } catch (Throwable ignore) {
++            }
++            try {
++                if (out != null) {
++                    out.close();
++                }
++            } catch (Throwable ignore) {
++            }
++        }
++        if (ok) {
++            ok = tmp.renameTo(dest);
++        }
++        if (!ok) {
++            tmp.delete();
++        }
++        return ok;
++    }
++
++    /** Deletes saved files (paths from trimmed / forgotten entries) after any pending copy. */
++    public static void deleteAsync(Collection<String> paths) {
++        if (paths == null || paths.isEmpty()) {
++            return;
++        }
++        final ArrayList<String> copy = new ArrayList<>(paths);
++        getQueue().postRunnable(() -> {
++            String prefix = getDirPrefix();
++            for (int i = 0; i < copy.size(); i++) {
++                String path = copy.get(i);
++                // Never touch anything outside our own directory.
++                if (path == null || !path.startsWith(prefix)) {
++                    continue;
++                }
++                try {
++                    new File(path).delete();
++                } catch (Throwable e) {
++                    FileLog.e(e);
++                }
++            }
++        });
++    }
++
++    /** Deletes every saved file (Clear saved history). */
++    public static void deleteAllAsync() {
++        getQueue().postRunnable(() -> {
++            try {
++                File[] files = getDir().listFiles();
++                if (files != null) {
++                    for (File f : files) {
++                        f.delete();
++                    }
++                }
++            } catch (Throwable e) {
++                FileLog.e(e);
++            }
++        });
++    }
++
++    private static boolean exists(String path) {
++        return !TextUtils.isEmpty(path) && new File(path).isFile();
++    }
++
++    /**
++     * Points a message rebuilt from the history DB at its saved media copies,
++     * and strips self-destruct state so the kept copy shows like a normal
++     * message. Call off the UI thread (checks the files exist).
++     */
++    public static void apply(TLRPC.Message m, String mediaPath, String thumbPath) {
++        if (m == null) {
++            return;
++        }
++        m.ttl = 0;
++        m.destroyTime = 0;
++        m.destroyTimeMillis = 0;
++        TLRPC.MessageMedia media = mediaOf(m);
++        if (media == null) {
++            return;
++        }
++        TLRPC.Photo photo = photoOf(media);
++        TLRPC.Document document = documentOf(media);
++        if (exists(mediaPath)) {
++            if (photo != null) {
++                for (int i = 0; i < photo.sizes.size(); i++) {
++                    TLRPC.PhotoSize s = photo.sizes.get(i);
++                    if (isFileSize(s) && !(s.location instanceof MgFileLocation)) {
++                        s.location = new MgFileLocation(s.location, mediaPath);
++                    }
++                }
++            } else if (document != null) {
++                document.localPath = mediaPath;
++                m.attachPath = mediaPath;
++            }
++            // A saved view-once / timed media is shown as a normal one.
++            media.ttl_seconds = 0;
++        }
++        if (document != null && exists(thumbPath)) {
++            for (int i = 0; i < document.thumbs.size(); i++) {
++                TLRPC.PhotoSize s = document.thumbs.get(i);
++                if (isFileSize(s) && !(s instanceof TLRPC.TL_photoCachedSize) && !(s.location instanceof MgFileLocation)) {
++                    s.location = new MgFileLocation(s.location, thumbPath);
++                }
++            }
++        }
++    }
++
++    /**
++     * FileLoader.getPathToAttach hook: resolves objects that {@link #apply}
++     * pointed at a saved copy. Returns null (fall through to the normal path)
++     * for everything else, or when the saved copy is gone.
++     */
++    public static File redirect(TLObject attach) {
++        String path = null;
++        if (attach instanceof TLRPC.PhotoSize) {
++            TLRPC.FileLocation loc = ((TLRPC.PhotoSize) attach).location;
++            if (loc instanceof MgFileLocation) {
++                path = ((MgFileLocation) loc).path;
++            }
++        } else if (attach instanceof MgFileLocation) {
++            path = ((MgFileLocation) attach).path;
++        } else if (attach instanceof TLRPC.Document) {
++            String lp = ((TLRPC.Document) attach).localPath;
++            if (lp != null && lp.startsWith(getDirPrefix())) {
++                path = lp;
++            }
++        } else if (attach instanceof TLRPC.Photo) {
++            ArrayList<TLRPC.PhotoSize> sizes = ((TLRPC.Photo) attach).sizes;
++            if (sizes != null) {
++                for (int i = 0; i < sizes.size(); i++) {
++                    TLRPC.PhotoSize s = sizes.get(i);
++                    if (s != null && s.location instanceof MgFileLocation) {
++                        path = ((MgFileLocation) s.location).path;
++                        break;
++                    }
++                }
++            }
++        }
++        if (path == null) {
++            return null;
++        }
++        File f = new File(path);
++        return f.exists() ? f : null;
++    }
++}
+diff --git a/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgMessageHistory.java b/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgMessageHistory.java
+index 6ed3336..1e6dfbd 100644
+--- a/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgMessageHistory.java
++++ b/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgMessageHistory.java
+@@ -4,6 +4,7 @@ import android.content.ContentValues;
+ import android.database.Cursor;
+ import android.database.sqlite.SQLiteOpenHelper;
+ import android.util.LongSparseArray;
++import android.util.SparseArray;
+ 
+ import org.telegram.SQLite.SQLiteCursor;
+ import org.telegram.messenger.ApplicationLoader;
+@@ -13,6 +14,7 @@ import org.telegram.messenger.MessagesStorage;
+ import org.telegram.messenger.UserConfig;
+ import org.telegram.messenger.Utilities;
+ import org.telegram.tgnet.NativeByteBuffer;
++import org.telegram.tgnet.SerializedData;
+ import org.telegram.tgnet.TLRPC;
+ 
+ import java.util.ArrayList;
+@@ -32,9 +34,14 @@ import java.util.Set;
+  * separate from Telegram's {@code cache4.db}, so clearing the Telegram cache
+  * does not wipe saved entries.</p>
+  *
+- * <p>ToS guard (https://core.telegram.org/api/terms §1.4): self-destructing
+- * content, secret chats and TTL messages are <b>never</b> archived. The
+- * feature is opt-in (per-account {@code UserConfig.mg.savedMessagesHistory}, default off).</p>
++ * <p>Media of archived messages (photo, video + thumb, voice, round video,
++ * GIF, sticker, file) is copied into app-private storage by
++ * {@link MgHistoryMedia}; the copy's path is stored with the entry
++ * ({@code media_path}, {@code thumb_path}) and applied when the entry is read.</p>
++ *
++ * <p>Personal build: self-destructing / view-once media is archived too (when
++ * deleted, or when it expires after viewing). Secret chats are still never
++ * archived. The feature is per-account ({@code UserConfig.mg.savedMessagesHistory}).</p>
+  */
+ public class MgMessageHistory {
+ 
+@@ -42,7 +49,7 @@ public class MgMessageHistory {
+     public static final int KIND_EDITED = 1;
+ 
+     private static final String DB_NAME = "mg_message_history.db";
+-    private static final int DB_VERSION = 1;
++    private static final int DB_VERSION = 2;
+     private static final String TBL_DELETED = "deleted_messages";
+     private static final String TBL_EDITED = "edited_messages";
+     // Cap rows kept per (account, dialog) so an active deleter cannot grow the DB unbounded.
+@@ -59,13 +66,18 @@ public class MgMessageHistory {
+         public final int mid;
+         public final long whenMs;
+         public final TLRPC.Message message;
++        /** Saved copy of the media / video thumbnail, or null (may no longer exist). */
++        public final String mediaPath;
++        public final String thumbPath;
+ 
+-        Entry(int kind, long dialogId, int mid, long whenMs, TLRPC.Message message) {
++        Entry(int kind, long dialogId, int mid, long whenMs, TLRPC.Message message, String mediaPath, String thumbPath) {
+             this.kind = kind;
+             this.dialogId = dialogId;
+             this.mid = mid;
+             this.whenMs = whenMs;
+             this.message = message;
++            this.mediaPath = mediaPath;
++            this.thumbPath = thumbPath;
+         }
+     }
+ 
+@@ -97,29 +109,49 @@ public class MgMessageHistory {
+             // (every retraction must survive), so the edited table has no PK.
+             db.execSQL("CREATE TABLE " + TBL_DELETED + " (" +
+                     "account INTEGER, dialog_id INTEGER, mid INTEGER, data BLOB, when_ms INTEGER, " +
++                    "media_path TEXT, thumb_path TEXT, " +
+                     "PRIMARY KEY(account, dialog_id, mid))");
+             db.execSQL("CREATE TABLE " + TBL_EDITED + " (" +
+-                    "account INTEGER, dialog_id INTEGER, mid INTEGER, data BLOB, when_ms INTEGER)");
++                    "account INTEGER, dialog_id INTEGER, mid INTEGER, data BLOB, when_ms INTEGER, " +
++                    "media_path TEXT, thumb_path TEXT)");
+             db.execSQL("CREATE INDEX idx_deleted_dialog ON " + TBL_DELETED + "(account, dialog_id, when_ms)");
+             db.execSQL("CREATE INDEX idx_edited_dialog ON " + TBL_EDITED + "(account, dialog_id, when_ms)");
+         }
+ 
+         @Override
+         public void onUpgrade(android.database.sqlite.SQLiteDatabase db, int oldVersion, int newVersion) {
++            if (oldVersion < 2) {
++                // v2: saved media copies (MgHistoryMedia).
++                db.execSQL("ALTER TABLE " + TBL_DELETED + " ADD COLUMN media_path TEXT");
++                db.execSQL("ALTER TABLE " + TBL_DELETED + " ADD COLUMN thumb_path TEXT");
++                db.execSQL("ALTER TABLE " + TBL_EDITED + " ADD COLUMN media_path TEXT");
++                db.execSQL("ALTER TABLE " + TBL_EDITED + " ADD COLUMN thumb_path TEXT");
++            }
+         }
+     }
+ 
+     /**
+-     * ToS guard — a message that self-destructs, or lives in a secret chat,
+-     * must never be persisted nor kept as an inline ghost (api/terms §1.4
+-     * "preventing self-destructing content from disappearing"). Shared by the
+-     * archive path and the ChatActivity ghost path so the rule cannot drift.
++     * Messages that are never persisted nor kept as an inline ghost: secret
++     * chats. Self-destructing / view-once messages used to be excluded here
++     * (api/terms §1.4); this personal build saves them on purpose. Shared by
++     * the archive path and the ChatActivity ghost path so the rule cannot drift.
+      */
+     public static boolean isExcluded(long dialogId, TLRPC.Message message) {
+         return DialogObject.isEncryptedDialog(dialogId)
+-                || message == null
+-                || message.ttl != 0
+-                || message.destroyTime != 0;
++                || message == null;
++    }
++
++    private static byte[] serialize(TLRPC.Message message) {
++        try {
++            SerializedData data = new SerializedData(message.getObjectSize());
++            message.serializeToStream(data);
++            byte[] bytes = data.toByteArray();
++            data.cleanup();
++            return bytes;
++        } catch (Exception e) {
++            FileLog.e(e);
++            return null;
++        }
+     }
+ 
+     private static TLRPC.Message deserialize(byte[] bytes) {
+@@ -153,7 +185,7 @@ public class MgMessageHistory {
+             return;
+         }
+         markRemote(dialogId, mids);
+-        archive(account, dialogId, mids, true);
++        archive(account, dialogId, mids, true, null);
+     }
+ 
+     // Mids the server reported deleted that the storage read has not been consumed for
+@@ -199,16 +231,54 @@ public class MgMessageHistory {
+             return;
+         }
+         ArrayList<Integer> mids = new ArrayList<>(newMessages.size());
++        SparseArray<TLRPC.Message> replacements = new SparseArray<>(newMessages.size());
+         for (int a = 0; a < newMessages.size(); a++) {
+             TLRPC.Message m = newMessages.get(a);
+             if (m != null) {
+                 mids.add(m.id);
++                replacements.put(m.id, m);
++            }
++        }
++        archive(account, dialogId, mids, false, replacements);
++    }
++
++    /** One row to insert, with the media copy to run once the insert sticks. */
++    private static final class Pending {
++        final long dialogId;
++        final ContentValues cv;
++        final MgHistoryMedia.Plan plan;
++
++        Pending(long dialogId, ContentValues cv, MgHistoryMedia.Plan plan) {
++            this.dialogId = dialogId;
++            this.cv = cv;
++            this.plan = plan;
++        }
++    }
++
++    private static Pending makePending(int account, long uid, TLRPC.Message message, byte[] bytes,
++                                       long now, MgHistoryMedia.Plan plan, boolean runPlan) {
++        ContentValues cv = new ContentValues();
++        cv.put("account", account);
++        cv.put("dialog_id", uid);
++        cv.put("mid", message.id);
++        cv.put("data", bytes);
++        cv.put("when_ms", now);
++        if (plan != null) {
++            cv.put("media_path", plan.mediaPath);
++            if (plan.thumbPath != null) {
++                cv.put("thumb_path", plan.thumbPath);
+             }
+         }
+-        archive(account, dialogId, mids, false);
++        return new Pending(uid, cv, runPlan ? plan : null);
+     }
+ 
+-    private void archive(int account, long dialogId, ArrayList<Integer> mids, boolean deleted) {
++    /**
++     * @param replacements for edits, the new versions by mid: the old media is
++     *                     only copied when the edit replaces it (otherwise the
++     *                     current message still references the same file).
++     */
++    private void archive(int account, long dialogId, ArrayList<Integer> mids, boolean deleted,
++                         SparseArray<TLRPC.Message> replacements) {
+         if (!UserConfig.getInstance(account).mg.savedMessagesHistory || mids == null || mids.isEmpty()
+                 || DialogObject.isEncryptedDialog(dialogId)) {
+             return;
+@@ -217,6 +287,7 @@ public class MgMessageHistory {
+         final MessagesStorage storage = MessagesStorage.getInstance(account);
+         storage.getStorageQueue().postRunnable(() -> {
+             SQLiteCursor cursor = null;
++            ArrayList<Pending> rows = new ArrayList<>();
+             try {
+                 String ids = android.text.TextUtils.join(",", midsCopy);
+                 String where = dialogId != 0
+@@ -232,13 +303,16 @@ public class MgMessageHistory {
+                     if (message == null || isExcluded(uid, message)) {
+                         continue;
+                     }
+-                    ContentValues cv = new ContentValues();
+-                    cv.put("account", account);
+-                    cv.put("dialog_id", uid);
+-                    cv.put("mid", message.id);
+-                    cv.put("data", bytes);
+-                    cv.put("when_ms", now);
+-                    store(deleted ? TBL_DELETED : TBL_EDITED, cv, uid);
++                    MgHistoryMedia.Plan plan = null;
++                    if (deleted) {
++                        plan = MgHistoryMedia.plan(account, uid, message, "d" + now);
++                    } else {
++                        TLRPC.Message replacement = replacements != null ? replacements.get(message.id) : null;
++                        if (replacement == null || !MgHistoryMedia.sameMedia(message, replacement)) {
++                            plan = MgHistoryMedia.plan(account, uid, message, "e" + now);
++                        }
++                    }
++                    rows.add(makePending(account, uid, message, bytes, now, plan, true));
+                 }
+             } catch (Exception e) {
+                 FileLog.e(e);
+@@ -247,24 +321,106 @@ public class MgMessageHistory {
+                     cursor.dispose();
+                 }
+             }
++            storeBatch(account, deleted ? TBL_DELETED : TBL_EDITED, rows);
+         });
+     }
+ 
+-    private void store(String table, ContentValues cv, long dialogId) {
++    /**
++     * Self-destructing (view-once / timed) media is about to be emptied after it
++     * was viewed ({@code MessagesStorage.emptyMessagesMedia}). Runs <b>on the
++     * storage queue</b>, before the cached file is queued for deletion: copies
++     * the media synchronously (one message) and keeps the pre-expiry version as
++     * an edit-history entry of the message (the message itself stays, empty).
++     */
++    public void archiveExpiringSync(int account, long dialogId, TLRPC.Message message) {
++        if (!UserConfig.getInstance(account).mg.savedMessagesHistory || message == null
++                || DialogObject.isEncryptedDialog(dialogId) || !MgHistoryMedia.hasSavableMedia(message)) {
++            return;
++        }
++        try {
++            byte[] bytes = serialize(message);
++            if (bytes == null) {
++                return;
++            }
++            long now = System.currentTimeMillis();
++            MgHistoryMedia.Plan plan = MgHistoryMedia.plan(account, dialogId, message, "x" + now);
++            MgHistoryMedia.runCopy(plan);
++            ArrayList<Pending> rows = new ArrayList<>(1);
++            rows.add(makePending(account, dialogId, message, bytes, now, plan, false));
++            storeBatch(account, TBL_EDITED, rows);
++        } catch (Exception e) {
++            FileLog.e(e);
++        }
++    }
++
++    /**
++     * Inserts all rows of one archive call in a single transaction and prunes
++     * each touched dialog once, then hands the media copies (for rows that were
++     * actually inserted) and the files of pruned rows to MgHistoryMedia's queue.
++     */
++    private void storeBatch(int account, String table, ArrayList<Pending> rows) {
++        if (rows == null || rows.isEmpty()) {
++            return;
++        }
++        ArrayList<MgHistoryMedia.Plan> toCopy = new ArrayList<>();
++        ArrayList<String> toDelete = new ArrayList<>();
+         synchronized (writeLock) {
+             try {
+                 android.database.sqlite.SQLiteDatabase db = dbHelper.getWritableDatabase();
+-                db.insertWithOnConflict(table, null, cv,
+-                        android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE);
+-                db.execSQL("DELETE FROM " + table + " WHERE account=? AND dialog_id=? AND rowid NOT IN "
+-                                + "(SELECT rowid FROM " + table + " WHERE account=? AND dialog_id=? "
+-                                + "ORDER BY when_ms DESC LIMIT " + MAX_PER_DIALOG + ")",
+-                        new Object[]{cv.getAsInteger("account"), dialogId,
+-                                cv.getAsInteger("account"), dialogId});
++                db.beginTransaction();
++                try {
++                    HashSet<Long> dialogs = new HashSet<>();
++                    for (int i = 0; i < rows.size(); i++) {
++                        Pending p = rows.get(i);
++                        long rowId = db.insertWithOnConflict(table, null, p.cv,
++                                android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE);
++                        if (rowId != -1 && p.plan != null) {
++                            toCopy.add(p.plan);
++                        }
++                        dialogs.add(p.dialogId);
++                    }
++                    for (Long did : dialogs) {
++                        prune(db, table, account, did, toDelete);
++                    }
++                    db.setTransactionSuccessful();
++                } finally {
++                    db.endTransaction();
++                }
+             } catch (Exception e) {
+                 FileLog.e(e);
++                toCopy.clear();
++                toDelete.clear();
++            }
++        }
++        MgHistoryMedia.copyAsync(toCopy);
++        MgHistoryMedia.deleteAsync(toDelete);
++    }
++
++    private static final String PRUNE_WHERE = " WHERE account=? AND dialog_id=? AND rowid NOT IN "
++            + "(SELECT rowid FROM %1$s WHERE account=? AND dialog_id=? ORDER BY when_ms DESC LIMIT " + MAX_PER_DIALOG + ")";
++
++    private static void prune(android.database.sqlite.SQLiteDatabase db, String table, int account, long dialogId,
++                              ArrayList<String> filesOut) {
++        String where = String.format(Locale.US, PRUNE_WHERE, table);
++        String[] args = new String[]{Integer.toString(account), Long.toString(dialogId),
++                Integer.toString(account), Long.toString(dialogId)};
++        Cursor c = null;
++        try {
++            c = db.rawQuery("SELECT media_path, thumb_path FROM " + table + where, args);
++            while (c.moveToNext()) {
++                if (!c.isNull(0)) {
++                    filesOut.add(c.getString(0));
++                }
++                if (!c.isNull(1)) {
++                    filesOut.add(c.getString(1));
++                }
++            }
++        } finally {
++            if (c != null) {
++                c.close();
+             }
+         }
++        db.execSQL("DELETE FROM " + table + where, args);
+     }
+ 
+     /** All saved entries (deleted + pre-edit) for a dialog, newest first. */
+@@ -305,13 +461,16 @@ public class MgMessageHistory {
+                           String table, int kind, List<Entry> out) {
+         Cursor c = null;
+         try {
+-            c = db.rawQuery("SELECT mid, when_ms, data FROM " + table
++            c = db.rawQuery("SELECT mid, when_ms, data, media_path, thumb_path FROM " + table
+                             + " WHERE account=? AND dialog_id=? ORDER BY when_ms DESC LIMIT " + MAX_PER_DIALOG,
+                     new String[]{Integer.toString(account), Long.toString(dialogId)});
+             while (c.moveToNext()) {
+                 TLRPC.Message m = deserialize(c.getBlob(2));
+                 if (m != null) {
+-                    out.add(new Entry(kind, dialogId, c.getInt(0), c.getLong(1), m));
++                    String mediaPath = c.isNull(3) ? null : c.getString(3);
++                    String thumbPath = c.isNull(4) ? null : c.getString(4);
++                    MgHistoryMedia.apply(m, mediaPath, thumbPath);
++                    out.add(new Entry(kind, dialogId, c.getInt(0), c.getLong(1), m, mediaPath, thumbPath));
+                 }
+             }
+         } catch (Exception e) {
+@@ -346,7 +505,7 @@ public class MgMessageHistory {
+     /** Pre-edit versions of a single message, oldest first. */
+     public List<Entry> getEditHistoryFor(int account, long dialogId, int mid) {
+         ArrayList<Entry> out = new ArrayList<>();
+-        final String sql = "SELECT when_ms, data FROM " + TBL_EDITED
++        final String sql = "SELECT when_ms, data, media_path, thumb_path FROM " + TBL_EDITED
+                 + " WHERE account=? AND dialog_id=? AND mid=? ORDER BY when_ms ASC";
+         readCursor(sql,
+                 new String[]{Integer.toString(account), Long.toString(dialogId), Integer.toString(mid)},
+@@ -354,7 +513,10 @@ public class MgMessageHistory {
+                     while (c.moveToNext()) {
+                         TLRPC.Message m = deserialize(c.getBlob(1));
+                         if (m != null) {
+-                            out.add(new Entry(KIND_EDITED, dialogId, mid, c.getLong(0), m));
++                            String mediaPath = c.isNull(2) ? null : c.getString(2);
++                            String thumbPath = c.isNull(3) ? null : c.getString(3);
++                            MgHistoryMedia.apply(m, mediaPath, thumbPath);
++                            out.add(new Entry(KIND_EDITED, dialogId, mid, c.getLong(0), m, mediaPath, thumbPath));
+                         }
+                     }
+                 });
+@@ -391,15 +553,40 @@ public class MgMessageHistory {
+         }
+         final String ids = android.text.TextUtils.join(",", mids);
+         Utilities.globalQueue.postRunnable(() -> {
++            ArrayList<String> files = new ArrayList<>();
+             synchronized (writeLock) {
++                Cursor c = null;
+                 try {
+-                    dbHelper.getWritableDatabase().execSQL("DELETE FROM " + TBL_DELETED
++                    android.database.sqlite.SQLiteDatabase db = dbHelper.getWritableDatabase();
++                    c = db.rawQuery("SELECT media_path, thumb_path FROM " + TBL_DELETED
++                                    + " WHERE account=? AND dialog_id=? AND mid IN (" + ids + ")",
++                            new String[]{Integer.toString(account), Long.toString(dialogId)});
++                    while (c.moveToNext()) {
++                        if (!c.isNull(0)) {
++                            files.add(c.getString(0));
++                        }
++                        if (!c.isNull(1)) {
++                            files.add(c.getString(1));
++                        }
++                    }
++                    c.close();
++                    c = null;
++                    db.execSQL("DELETE FROM " + TBL_DELETED
+                                     + " WHERE account=? AND dialog_id=? AND mid IN (" + ids + ")",
+                             new Object[]{account, dialogId});
+                 } catch (Exception e) {
+                     FileLog.e(e);
++                    files.clear();
++                } finally {
++                    if (c != null) {
++                        try {
++                            c.close();
++                        } catch (Exception ignore) {
++                        }
++                    }
+                 }
+             }
++            MgHistoryMedia.deleteAsync(files);
+         });
+     }
+ 
+@@ -413,5 +600,6 @@ public class MgMessageHistory {
+                 FileLog.e(e);
+             }
+         }
++        MgHistoryMedia.deleteAllAsync();
+     }
+ }
+diff --git a/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MgChatGhostController.java b/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MgChatGhostController.java
+index 843f4ec..9e60695 100644
+--- a/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MgChatGhostController.java
++++ b/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MgChatGhostController.java
+@@ -352,12 +352,12 @@ public final class MgChatGhostController {
+         }
+     }
+ 
+-    /** Long-press menu gate for the "Edit history" item. */
++    /** Long-press menu gate for the "Edit history" item. No edit_date check: an
++     * expired view-once media keeps its pre-expiry version as an edit entry. */
+     public boolean isEditHistoryCandidate(MessageObject selectedObject) {
+         return host.getUserConfig().mg.savedMessagesHistory
+                 && selectedObject != null
+                 && selectedObject.messageOwner != null
+-                && selectedObject.messageOwner.edit_date != 0
+                 && editedMids != null
+                 && editedMids.contains(selectedObject.getId());
+     }
+diff --git a/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MgMessageEditHistoryActivity.java b/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MgMessageEditHistoryActivity.java
+index f4073f9..675c519 100644
+--- a/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MgMessageEditHistoryActivity.java
++++ b/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MgMessageEditHistoryActivity.java
+@@ -1,14 +1,20 @@
+ package it.belloworld.mercurygram.ui;
+ 
++import android.content.Context;
+ import android.view.View;
++import android.widget.FrameLayout;
+ 
+ import org.telegram.messenger.AndroidUtilities;
++import org.telegram.messenger.FileLog;
+ import org.telegram.messenger.LocaleController;
++import org.telegram.messenger.MediaController;
+ import org.telegram.messenger.MessageObject;
+ import org.telegram.messenger.R;
+ import org.telegram.messenger.Utilities;
+ import org.telegram.tgnet.TLRPC;
+ import org.telegram.ui.ActionBar.AlertDialog;
++import org.telegram.ui.Cells.ChatMessageCell;
++import org.telegram.ui.Components.LayoutHelper;
+ import org.telegram.ui.Components.UItem;
+ import org.telegram.ui.Components.UniversalAdapter;
+ import org.telegram.ui.Components.UniversalFragment;
+@@ -21,6 +27,9 @@ import it.belloworld.mercurygram.MgMessageHistory;
+ /**
+  * Mercurygram — per-message edit-history viewer. Lists the current server
+  * version on top followed by each archived pre-edit version, newest first.
++ * Each version is drawn as a chat bubble (text and media, the media resolved
++ * to the copy saved by MgHistoryMedia when the edit replaced it), with a
++ * copy-text row under it.
+  */
+ public class MgMessageEditHistoryActivity extends UniversalFragment {
+ 
+@@ -36,12 +45,17 @@ public class MgMessageEditHistoryActivity extends UniversalFragment {
+         final String meta;
+         final CharSequence detail;
+         final String title;
++        final boolean hasText;
++        final MessageObject bubbleObject;
++        View bubbleView;
+ 
+-        Row(CharSequence body, String meta, CharSequence detail, String title) {
++        Row(CharSequence body, String meta, CharSequence detail, String title, boolean hasText, MessageObject bubbleObject) {
+             this.body = body;
+             this.meta = meta;
+             this.detail = detail;
+             this.title = title;
++            this.hasText = hasText;
++            this.bubbleObject = bubbleObject;
+         }
+     }
+ 
+@@ -70,7 +84,59 @@ public class MgMessageEditHistoryActivity extends UniversalFragment {
+         }
+         for (int i = 0; i < rows.size(); i++) {
+             Row r = rows.get(i);
+-            items.add(UItem.asButton(i, r.body, r.meta));
++            View bubble = getBubbleView(r);
++            if (bubble != null) {
++                items.add(UItem.asHeader(r.meta));
++                items.add(UItem.asCustom(bubble, LayoutHelper.WRAP_CONTENT));
++                if (r.hasText) {
++                    items.add(UItem.asButton(i, R.drawable.msg_copy, LocaleController.getString(R.string.Copy)));
++                }
++                items.add(UItem.asShadow(null));
++            } else {
++                items.add(UItem.asButton(i, r.body, r.meta));
++            }
++        }
++    }
++
++    private View getBubbleView(Row r) {
++        if (r.bubbleObject == null) {
++            return null;
++        }
++        if (r.bubbleView == null) {
++            Context context = getContext();
++            if (context == null) {
++                return null;
++            }
++            try {
++                r.bubbleView = new BubbleView(context, r.bubbleObject);
++            } catch (Exception e) {
++                FileLog.e(e);
++                return null;
++            }
++        }
++        return r.bubbleView;
++    }
++
++    /** One non-scrolling chat bubble; media plays from the saved copy when there is one. */
++    private class BubbleView extends FrameLayout {
++
++        BubbleView(Context context, MessageObject messageObject) {
++            super(context);
++            setPadding(0, AndroidUtilities.dp(4), 0, AndroidUtilities.dp(4));
++            ChatMessageCell cell = new ChatMessageCell(context, currentAccount);
++            cell.setDelegate(new ChatMessageCell.ChatMessageCellDelegate() {
++                @Override
++                public boolean needPlayMessage(ChatMessageCell c, MessageObject mo, boolean muted) {
++                    if (mo != null && (mo.isVoice() || mo.isMusic())) {
++                        return MediaController.getInstance().playMessage(mo);
++                    }
++                    return false;
++                }
++            });
++            cell.isChat = false;
++            cell.setFullyDraw(true);
++            cell.setMessageObject(messageObject, null, false, false, false);
++            addView(cell, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+         }
+     }
+ 
+@@ -80,6 +146,12 @@ public class MgMessageEditHistoryActivity extends UniversalFragment {
+             return;
+         }
+         Row r = rows.get(item.id);
++        if (r.bubbleObject != null && r.bubbleView != null) {
++            if (r.hasText) {
++                AndroidUtilities.addToClipboard(r.detail);
++            }
++            return;
++        }
+         new AlertDialog.Builder(getParentActivity())
+                 .setTitle(r.title)
+                 .setMessage(r.detail)
+@@ -94,25 +166,44 @@ public class MgMessageEditHistoryActivity extends UniversalFragment {
+         return false;
+     }
+ 
++    private static MessageObject buildBubble(int account, TLRPC.Message m) {
++        if (m == null) {
++            return null;
++        }
++        try {
++            MessageObject mo = new MessageObject(account, m, true, true);
++            if (mo.type < 0) {
++                return null;
++            }
++            return mo;
++        } catch (Exception e) {
++            FileLog.e(e);
++            return null;
++        }
++    }
++
+     private void loadEntries() {
+         final int account = currentAccount;
+         final long did = dialogId;
+         final int mid = messageId;
++        final TLRPC.Message current = currentMessage;
+         Utilities.globalQueue.postRunnable(() -> {
+             List<MgMessageHistory.Entry> entries =
+                     MgMessageHistory.getInstance().getEditHistoryFor(account, did, mid);
+             ArrayList<Row> built = new ArrayList<>(entries.size() + 1);
+ 
+             String currentLabel = LocaleController.getString(R.string.MercurygramEditHistoryCurrent);
+-            int editDate = currentMessage != null ? currentMessage.edit_date : 0;
++            int editDate = current != null ? current.edit_date : 0;
+             String currentTs = editDate != 0
+                     ? LocaleController.getInstance().getFormatterStats().format(editDate * 1000L)
+                     : "";
+-            String currentBody = textOf(currentMessage);
++            String currentBody = textOf(current);
+             built.add(new Row(currentBody,
+                     currentLabel + (currentTs.isEmpty() ? "" : " · " + currentTs),
+                     currentBody,
+-                    currentLabel));
++                    currentLabel,
++                    hasText(current),
++                    buildBubble(account, current)));
+ 
+             // entries are oldest-first; show newest revision right under "current".
+             for (int i = entries.size() - 1; i >= 0; i--) {
+@@ -121,7 +212,8 @@ public class MgMessageEditHistoryActivity extends UniversalFragment {
+                         i + 1, entries.size());
+                 String when = LocaleController.getInstance().getFormatterStats().format(e.whenMs);
+                 String body = textOf(e.message);
+-                built.add(new Row(body, label + " · " + when, body, label));
++                built.add(new Row(body, label + " · " + when, body, label,
++                        hasText(e.message), buildBubble(account, e.message)));
+             }
+ 
+             AndroidUtilities.runOnUIThread(() -> {
+@@ -135,6 +227,10 @@ public class MgMessageEditHistoryActivity extends UniversalFragment {
+         });
+     }
+ 
++    private static boolean hasText(TLRPC.Message m) {
++        return m != null && m.message != null && !m.message.isEmpty();
++    }
++
+     private static String textOf(TLRPC.Message m) {
+         if (m == null) {
+             return "";
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/FileLoader.java b/TMessagesProj/src/main/java/org/telegram/messenger/FileLoader.java
+index 87465e9..6305538 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/FileLoader.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/FileLoader.java
+@@ -1337,6 +1337,11 @@ public class FileLoader extends BaseController {
+      * Return real file name. Used before file.exist()
+      */
+     public File getPathToAttach(TLObject attach, String size, String ext, boolean forceCache, boolean useFileDatabaseQueue) {
++        // Mercurygram: saved-history media copy (deleted / pre-edit / expired message), see MgHistoryMedia.apply.
++        File mgSaved = it.belloworld.mercurygram.MgHistoryMedia.redirect(attach);
++        if (mgSaved != null) {
++            return mgSaved;
++        }
+         File dir = null;
+         long documentId = 0;
+         int dcId = 0;
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/ImageLoader.java b/TMessagesProj/src/main/java/org/telegram/messenger/ImageLoader.java
+index 40c48ab..e48eac6 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/ImageLoader.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ImageLoader.java
+@@ -3218,6 +3218,13 @@ public class ImageLoader {
+                                 cacheFile = new File(FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE), imageLocation.location.volume_id + "_" + imageLocation.location.local_id + ".temp");
+                             }
+                         }
++                        if (imageLocation.document != null) {
++                            // Mercurygram: saved-history copy of a deleted / replaced document (video, GIF, round, sticker).
++                            File mgSaved = it.belloworld.mercurygram.MgHistoryMedia.redirect(imageLocation.document);
++                            if (mgSaved != null) {
++                                cacheFile = mgSaved;
++                            }
++                        }
+                         if (hasAutoplayFilter(filter) || isAnimatedAvatar(filter)) {
+                             img.imageType = FileLoader.IMAGE_TYPE_ANIMATION;
+                             img.size = fileSize;
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/ImageLocation.java b/TMessagesProj/src/main/java/org/telegram/messenger/ImageLocation.java
+index d32a2dc..a1fff97 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/ImageLocation.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ImageLocation.java
+@@ -375,6 +375,10 @@ public class ImageLocation {
+     }
+ 
+     private static ImageLocation getForPhoto(TLRPC.FileLocation location, int size, TLRPC.Photo photo, TLRPC.Document document, TLRPC.InputPeer photoPeer, int photoPeerType, int dc_id, TLRPC.InputStickerSet stickerSet, String thumbSize) {
++        if (location instanceof it.belloworld.mercurygram.MgFileLocation) {
++            // Mercurygram: saved-history media copy, load straight from the local file.
++            return getForPath(((it.belloworld.mercurygram.MgFileLocation) location).path);
++        }
+         if (location == null || photo == null && photoPeer == null && stickerSet == null && document == null) {
+             return null;
+         }
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesStorage.java b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesStorage.java
+index e769f73..581102f 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesStorage.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesStorage.java
+@@ -4748,6 +4748,8 @@ public class MessagesStorage extends BaseController {
+                         message.readAttachPath(data, getUserConfig().clientUserId);
+                         data.reuse();
+                         if (message.media != null) {
++                            // Mercurygram: keep a copy of self-destructing media before it is emptied.
++                            it.belloworld.mercurygram.MgMessageHistory.getInstance().archiveExpiringSync(currentAccount, dialogId, message);
+                             if (!addFilesToDelete(message, filesToDelete, idsToDelete, namesToDelete, true)) {
+                                 continue;
+                             } else {
+@@ -16355,7 +16357,10 @@ public class MessagesStorage extends BaseController {
+                                     if (oldMessage.out && !message.out) {
+                                         message.out = oldMessage.out;
+                                     }
+-                                    if (!sameMedia) {
++                                    // Mercurygram: with saved history on, the replaced media file is kept;
++                                    // MgMessageHistory.archiveEditsBefore (queued before this put) copies it
++                                    // into the edit-history entry. It is left to the normal cache cleanup.
++                                    if (!sameMedia && !getUserConfig().mg.savedMessagesHistory) {
+                                         addFilesToDelete(oldMessage, filesToDelete, idsToDelete, namesToDelete, false);
+                                     }
+                                     NativeByteBuffer customParams = cursor.byteBufferValue(6);
+diff --git a/TMessagesProj/src/main/res/values/mg_strings.xml b/TMessagesProj/src/main/res/values/mg_strings.xml
+index a5bccc5..de87c25 100644
+--- a/TMessagesProj/src/main/res/values/mg_strings.xml
++++ b/TMessagesProj/src/main/res/values/mg_strings.xml
+@@ -113,7 +113,7 @@
+     <string name="MercurygramShowCharCounter">Show character counter</string>
+     <string name="MercurygramShowCharCounterAbout">Show how many characters the message you are typing contains. Useful in groups where a bot deletes messages longer than a limit. It is hidden while Telegram shows its own remaining-characters counter.</string>
+     <string name="MercurygramSavedMessagesHistory">Save deleted &amp; edited messages</string>
+-    <string name="MercurygramSavedMessagesHistoryAbout">Deleted messages stay in the chat, grayed out and non-replyable; edited messages keep their previous versions accessible from the message menu. Stored separately from the Telegram cache. Self-destructing messages and secret chats are never saved.</string>
++    <string name="MercurygramSavedMessagesHistoryAbout">Deleted messages stay in the chat, grayed out and non-replyable; edited messages keep their previous versions accessible from the message menu. Photos, videos, voice messages and files are copied to private storage, so they survive clearing the Telegram cache; self-destructing and view-once media are kept too. Secret chats are never saved.</string>
+     <string name="MercurygramSavedMessagesDeleted">deleted</string>
+     <string name="MercurygramSavedMessagesEmpty">(no text)</string>
+     <string name="MercurygramClearSavedHistory">Clear saved message history</string>
