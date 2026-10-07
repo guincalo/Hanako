@@ -1,0 +1,35 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java b/TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java
+index eb9f06f6..1876845b 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MediaController.java
+@@ -1814,7 +1814,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
+                 }
+             }
+         }
+-        if (send) {
++        if (send && !SharedConfig.disableSecureFlags) { // plus: no screenshot notifications
+             if (lastSecretChat != null) {
+                 SecretChatHelper.getInstance(lastChatAccount).sendScreenshotMessage(lastSecretChat, lastChatVisibleMessages, null);
+             } else {
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/SharedConfig.java b/TMessagesProj/src/main/java/org/telegram/messenger/SharedConfig.java
+index a741782a..3e2958b4 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/SharedConfig.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/SharedConfig.java
+@@ -690,7 +690,7 @@ public class SharedConfig {
+     public static volatile byte[] webPushAuthSecret;    // 16-byte random auth secret
+ 
+     // Mercurygram: UI settings
+-    public static boolean disableSecureFlags = false;
++    public static boolean disableSecureFlags = true;
+     public static boolean removeAdsAndProxySponsor = false;
+     public static boolean disableAutoUpdate = false;
+     public static boolean acceptPreReleaseUpdates = false;
+@@ -1125,7 +1125,7 @@ public class SharedConfig {
+             mgEmbeddedFcmChosen = it.belloworld.mercurygram.push.MgEmbeddedFcmDistributor.looksLikeFcmEndpoint(
+                     preferences.getString("mg_unifiedPushEndpointUrl", ""));
+         }
+-        disableSecureFlags = preferences.getBoolean("mg_disableSecureFlags", false);
++        disableSecureFlags = preferences.getBoolean("mg_disableSecureFlags", true);
+         removeAdsAndProxySponsor = preferences.getBoolean("mg_removeAdsAndProxySponsor", false);
+         disableAutoUpdate = preferences.getBoolean("mg_disableAutoUpdate", false);
+         acceptPreReleaseUpdates = preferences.getBoolean("mg_acceptPreReleaseUpdates", false);
