@@ -1,0 +1,212 @@
+diff --git a/TMessagesProj/src/main/java/it/belloworld/mercurygram/PlusGhost.java b/TMessagesProj/src/main/java/it/belloworld/mercurygram/PlusGhost.java
+new file mode 100644
+index 0000000..4884cc7
+--- /dev/null
++++ b/TMessagesProj/src/main/java/it/belloworld/mercurygram/PlusGhost.java
+@@ -0,0 +1,120 @@
++package it.belloworld.mercurygram;
++
++import android.content.Context;
++import android.content.SharedPreferences;
++import android.os.SystemClock;
++
++import org.telegram.messenger.ApplicationLoader;
++import org.telegram.messenger.UserConfig;
++import org.telegram.messenger.Utilities;
++import org.telegram.tgnet.ConnectionsManager;
++import org.telegram.tgnet.TLObject;
++import org.telegram.tgnet.TLRPC;
++import org.telegram.tgnet.tl.TL_account;
++import org.telegram.tgnet.tl.TL_stories;
++
++/**
++ * plus: per-account ghost mode. Hooked into ConnectionsManager.sendRequestInternal,
++ * so every outgoing request passes through {@link #intercept}. Blocked requests are
++ * dropped before serialization; their callbacks never fire.
++ */
++public final class PlusGhost {
++
++    public static final int OPT_READS = 0;
++    public static final int OPT_TYPING = 1;
++    public static final int OPT_ONLINE = 2;
++    public static final int OPT_STORIES = 3;
++
++    private static final String[] OPT_KEYS = {"reads", "typing", "online", "stories"};
++    private static final long[] allowReadsUntil = new long[UserConfig.MAX_ACCOUNT_COUNT];
++
++    private PlusGhost() {
++    }
++
++    private static SharedPreferences prefs() {
++        return ApplicationLoader.applicationContext.getSharedPreferences("plus_ghost", Context.MODE_PRIVATE);
++    }
++
++    public static boolean isEnabled(int account) {
++        return prefs().getBoolean("on_" + account, true);
++    }
++
++    public static void setEnabled(int account, boolean value) {
++        prefs().edit().putBoolean("on_" + account, value).apply();
++    }
++
++    /** true = this kind of packet is hidden (not sent) while ghost mode is on. */
++    public static boolean isHidden(int account, int opt) {
++        return prefs().getBoolean(OPT_KEYS[opt] + "_" + account, true);
++    }
++
++    public static void setHidden(int account, int opt, boolean value) {
++        prefs().edit().putBoolean(OPT_KEYS[opt] + "_" + account, value).apply();
++    }
++
++    private static boolean active(int account, int opt) {
++        return isEnabled(account) && isHidden(account, opt);
++    }
++
++    /** Let read receipts through for a short window (manual "mark as read"). */
++    public static void allowReads(int account, long ms) {
++        if (account >= 0 && account < allowReadsUntil.length) {
++            allowReadsUntil[account] = SystemClock.elapsedRealtime() + ms;
++        }
++    }
++
++    private static boolean readsAllowedNow(int account) {
++        return account >= 0 && account < allowReadsUntil.length
++                && SystemClock.elapsedRealtime() < allowReadsUntil[account];
++    }
++
++    private static boolean isReadRequest(TLObject o) {
++        return o instanceof TLRPC.TL_messages_readHistory
++                || o instanceof TLRPC.TL_channels_readHistory
++                || o instanceof TLRPC.TL_messages_readDiscussion
++                || o instanceof TLRPC.TL_messages_readMessageContents
++                || o instanceof TLRPC.TL_channels_readMessageContents
++                || o instanceof TLRPC.TL_messages_readEncryptedHistory;
++    }
++
++    private static boolean isSendRequest(TLObject o) {
++        return o instanceof TLRPC.TL_messages_sendMessage
++                || o instanceof TLRPC.TL_messages_sendMedia
++                || o instanceof TLRPC.TL_messages_sendMultiMedia;
++    }
++
++    /** @return true when the request must be dropped. */
++    public static boolean intercept(int account, TLObject o) {
++        if (o == null || !isEnabled(account)) {
++            return false;
++        }
++        if (o instanceof TL_account.updateStatus) {
++            if (isHidden(account, OPT_ONLINE)) {
++                ((TL_account.updateStatus) o).offline = true;
++            }
++            return false;
++        }
++        if (isHidden(account, OPT_TYPING)
++                && (o instanceof TLRPC.TL_messages_setTyping || o instanceof TLRPC.TL_messages_setEncryptedTyping)) {
++            return true;
++        }
++        if (isHidden(account, OPT_READS) && isReadRequest(o) && !readsAllowedNow(account)) {
++            return true;
++        }
++        if (isHidden(account, OPT_STORIES)
++                && (o instanceof TL_stories.TL_stories_readStories || o instanceof TL_stories.TL_stories_incrementStoryViews)) {
++            return true;
++        }
++        if (isHidden(account, OPT_ONLINE) && isSendRequest(o)) {
++            // sending a message flips us online server-side; go back offline right after
++            Utilities.globalQueue.postRunnable(() -> sendStatus(account, true), 1500);
++        }
++        return false;
++    }
++
++    private static void sendStatus(int account, boolean offline) {
++        TL_account.updateStatus req = new TL_account.updateStatus();
++        req.offline = offline;
++        ConnectionsManager.getInstance(account).sendRequest(req, null);
++    }
++}
+diff --git a/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MercurygramSettingsActivity.java b/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MercurygramSettingsActivity.java
+index 5434737..6907d91 100644
+--- a/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MercurygramSettingsActivity.java
++++ b/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MercurygramSettingsActivity.java
+@@ -37,6 +37,9 @@ import it.belloworld.mercurygram.transcribe.MgWhisperModel;
+ public class MercurygramSettingsActivity extends UniversalFragment {
+ 
+     private static final int ID_HIDDEN_ACCOUNTS = 0;
++    // plus: ghost mode
++    private static final int ID_GHOST_ON = 900;
++    private static final int ID_GHOST_OPT = 910; // + PlusGhost.OPT_*
+     private static final int ID_MESSAGE_DETAILS_MENU = 1;
+     private static final int ID_HIDE_CHAT_KEYBOARD = 2;
+     private static final int ID_HIDE_ALL_TAB = 3;
+@@ -145,6 +148,20 @@ public class MercurygramSettingsActivity extends UniversalFragment {
+                 .setChecked(SharedConfig.mg_disableProximitySensor));
+         items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDisableProximitySensorAbout)));
+ 
++        // plus: ghost mode (this account)
++        final int acc = getCurrentAccount();
++        final boolean ghostOn = it.belloworld.mercurygram.PlusGhost.isEnabled(acc);
++        items.add(UItem.asHeader("Ghost mode"));
++        items.add(UItem.asCheck(ID_GHOST_ON, "Ghost mode").setChecked(ghostOn));
++        if (ghostOn) {
++            String[] ghostLabels = {"Don't send read receipts", "Don't send typing status", "Stay offline", "Don't mark stories as seen"};
++            for (int i = 0; i < ghostLabels.length; i++) {
++                items.add(UItem.asCheck(ID_GHOST_OPT + i, ghostLabels[i])
++                        .setChecked(it.belloworld.mercurygram.PlusGhost.isHidden(acc, i)));
++            }
++        }
++        items.add(UItem.asShadow("Applies to this account. Long-press a chat and pick Mark as read to send a read receipt anyway. Sending a message still marks that chat read for the other side."));
++
+         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
+         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
+                         LocaleController.getString(R.string.MercurygramReduceTrackingFingerprint))
+@@ -275,6 +292,18 @@ public class MercurygramSettingsActivity extends UniversalFragment {
+ 
+     @Override
+     protected void onClick(UItem item, View view, int position, float x, float y) {
++        // plus: ghost mode toggles
++        if (item.id == ID_GHOST_ON) {
++            it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));
++            refreshList();
++            return;
++        }
++        if (item.id >= ID_GHOST_OPT && item.id < ID_GHOST_OPT + 4) {
++            int opt = item.id - ID_GHOST_OPT;
++            it.belloworld.mercurygram.PlusGhost.setHidden(getCurrentAccount(), opt, !it.belloworld.mercurygram.PlusGhost.isHidden(getCurrentAccount(), opt));
++            refreshList();
++            return;
++        }
+         switch (item.id) {
+             case ID_HIDDEN_ACCOUNTS:
+                 presentFragment(new HiddenAccountsActivity());
+diff --git a/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java b/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+index 99ef845..2fae442 100644
+--- a/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
++++ b/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+@@ -388,6 +388,7 @@ public class ConnectionsManager extends BaseController {
+ 
+     private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
+         if (it.belloworld.mercurygram.folders.MgFolders.dropIfMercurygram(object, onComplete)) return; // Mercurygram: folders with a negative id never reach the server
++        if (it.belloworld.mercurygram.PlusGhost.intercept(currentAccount, object)) return; // plus: ghost mode
+         if (BuildVars.LOGS_ENABLED) {
+             FileLog.d("send request " + object + " with token = " + requestToken);
+         }
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
+index 737983a..ecfb77e 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
+@@ -9591,6 +9591,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
+     }
+ 
+     private void markAsRead(long did) {
++        it.belloworld.mercurygram.PlusGhost.allowReads(currentAccount, 5000); // plus: manual mark-as-read passes ghost mode
+         TLRPC.Dialog dialog = getMessagesController().dialogs_dict.get(did);
+         if (dialog instanceof TLRPC.TL_dialogCommunity) {
+             final ArrayList<TLRPC.Dialog> dialogs = getMessagesController().getDialogsByCommunity(dialog.community_id);
+@@ -9651,6 +9652,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
+     }
+ 
+     private void markDialogsAsRead(ArrayList<TLRPC.Dialog> dialogs, boolean skipMuted) {
++        it.belloworld.mercurygram.PlusGhost.allowReads(currentAccount, 5000); // plus: manual mark-as-read passes ghost mode
+         debugLastUpdateAction = 2;
+         int selectedDialogIndex = -1;
+ 

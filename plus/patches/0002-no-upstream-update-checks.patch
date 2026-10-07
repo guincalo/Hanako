@@ -1,0 +1,13 @@
+diff --git a/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgUpdateChecker.java b/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgUpdateChecker.java
+index f2116a1..647bb9d 100644
+--- a/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgUpdateChecker.java
++++ b/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgUpdateChecker.java
+@@ -178,6 +178,8 @@ public class MgUpdateChecker {
+     }
+ 
+     public static void checkForUpdates(boolean force) {
++        // plus: personal build, never offer upstream Mercurygram updates
++        if (true) return;
+         checkInternal(force, null);
+     }
+ 

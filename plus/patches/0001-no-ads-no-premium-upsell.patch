@@ -1,0 +1,40 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+index 5c84137..17bf3bb 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+@@ -741,10 +741,11 @@ public class MessagesController extends BaseController implements NotificationCe
+         return !starsLocked && !BuildVars.IS_BILLING_UNAVAILABLE;
+     }
+     public boolean premiumFeaturesBlocked() {
+-        return premiumLocked && !getUserConfig().isPremium();
++        // plus: hide every Premium upsell unless the account really has Premium
++        return !getUserConfig().isPremium();
+     }
+     public boolean premiumPurchaseBlocked() {
+-        return premiumLocked || BuildVars.IS_BILLING_UNAVAILABLE;
++        return true;
+     }
+ 
+     public List<String> directPaymentsCurrency = new ArrayList<>();
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/SharedConfig.java b/TMessagesProj/src/main/java/org/telegram/messenger/SharedConfig.java
+index a741782..0c6b2bc 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/SharedConfig.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/SharedConfig.java
+@@ -691,7 +691,7 @@ public class SharedConfig {
+ 
+     // Mercurygram: UI settings
+     public static boolean disableSecureFlags = false;
+-    public static boolean removeAdsAndProxySponsor = false;
++    public static boolean removeAdsAndProxySponsor = true;
+     public static boolean disableAutoUpdate = false;
+     public static boolean acceptPreReleaseUpdates = false;
+     // Last 5-dotted prerelease tag this install ran, so MgUpdateChecker can
+@@ -1126,7 +1126,7 @@ public class SharedConfig {
+                     preferences.getString("mg_unifiedPushEndpointUrl", ""));
+         }
+         disableSecureFlags = preferences.getBoolean("mg_disableSecureFlags", false);
+-        removeAdsAndProxySponsor = preferences.getBoolean("mg_removeAdsAndProxySponsor", false);
++        removeAdsAndProxySponsor = preferences.getBoolean("mg_removeAdsAndProxySponsor", true);
+         disableAutoUpdate = preferences.getBoolean("mg_disableAutoUpdate", false);
+         acceptPreReleaseUpdates = preferences.getBoolean("mg_acceptPreReleaseUpdates", false);
+         mgLastPreReleaseTag = preferences.getString("mg_lastPreReleaseTag", "");
