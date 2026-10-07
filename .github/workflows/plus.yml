@@ -1,0 +1,69 @@
+name: Plus build
+
+on:
+  push:
+    branches: [plus]
+  workflow_dispatch:
+
+concurrency:
+  group: plus-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Apply personal patches
+        run: |
+          set -euo pipefail
+          git config user.email ci@local; git config user.name ci
+          shopt -s nullglob
+          for p in plus/patches/*.patch; do
+            echo "Applying $p"
+            git apply --3way --whitespace=nowarn "$p"
+          done
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - name: Version and in-repo signing key
+        id: prep
+        run: |
+          set -euo pipefail
+          APP_VN=$(grep '^APP_VERSION_NAME=' gradle.properties | cut -d= -f2)
+          echo "tag=${APP_VN}.90.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "ks=$(base64 -w0 TMessagesProj/config/release.keystore)" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK
+        id: build
+        uses: ./.github/actions/build-mg
+        with:
+          flavor: afatFdArm64
+          task: assembleAfatFdArm64Release
+          abi: arm64-v8a
+          build-type: release
+          artifact-version: ${{ steps.prep.outputs.tag }}
+          name-infix: '-plus'
+          build-tag: ${{ steps.prep.outputs.tag }}
+          # Telegram's official public Android keys (DrKLO BuildVars.java)
+          app-id: '4'
+          app-hash: '014b35b6184100b085b0d0572f9b5103'
+          release-keystore-b64: ${{ steps.prep.outputs.ks }}
+          release-keystore-password: android
+          release-key-alias: androidkey
+          release-key-password: android
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mercurygram-plus-arm64
+          path: ${{ steps.build.outputs.apk_path }}
