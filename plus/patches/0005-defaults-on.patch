@@ -1,0 +1,43 @@
+diff --git a/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgAccountConfig.java b/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgAccountConfig.java
+index 9534d92..66050d8 100644
+--- a/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgAccountConfig.java
++++ b/TMessagesProj/src/main/java/it/belloworld/mercurygram/MgAccountConfig.java
+@@ -22,10 +22,10 @@ public class MgAccountConfig {
+     public int defaultFolderId = 0;
+     public boolean messageDetailsMenu = false;
+     public boolean disableLivePhotosByDefault = false;
+-    public boolean savedMessagesHistory = false;
++    public boolean savedMessagesHistory = true;
+     public String transcribeLang = SharedConfig.MG_TRANSCRIBE_LANG_DEVICE;
+     public boolean hideStories = false;
+-    public boolean hidePremiumPromo = false;
++    public boolean hidePremiumPromo = true;
+     public boolean disableGlobalSearch = false;
+     public boolean disableAiEditor = false;
+     public boolean disableAiSummary = false;
+@@ -108,10 +108,10 @@ public class MgAccountConfig {
+         defaultFolderId = preferences.getInt("defaultFolderId", 0);
+         messageDetailsMenu = preferences.getBoolean("messageDetailsMenu", false);
+         disableLivePhotosByDefault = preferences.getBoolean("disableLivePhotosByDefault", false);
+-        savedMessagesHistory = preferences.getBoolean("savedMessagesHistory", false);
++        savedMessagesHistory = preferences.getBoolean("savedMessagesHistory", true);
+         transcribeLang = preferences.getString("transcribeLang", SharedConfig.MG_TRANSCRIBE_LANG_DEVICE);
+         hideStories = preferences.getBoolean("hideStories", false);
+-        hidePremiumPromo = preferences.getBoolean("hidePremiumPromo", false);
++        hidePremiumPromo = preferences.getBoolean("hidePremiumPromo", true);
+         disableGlobalSearch = preferences.getBoolean("disableGlobalSearch", false);
+         disableAiEditor = preferences.getBoolean("disableAiEditor", false);
+         disableAiSummary = preferences.getBoolean("disableAiSummary", false);
+@@ -142,10 +142,10 @@ public class MgAccountConfig {
+         defaultFolderId = 0;
+         messageDetailsMenu = false;
+         disableLivePhotosByDefault = false;
+-        savedMessagesHistory = false;
++        savedMessagesHistory = true;
+         transcribeLang = SharedConfig.MG_TRANSCRIBE_LANG_DEVICE;
+         hideStories = false;
+-        hidePremiumPromo = false;
++        hidePremiumPromo = true;
+         disableGlobalSearch = false;
+         disableAiEditor = false;
+         disableAiSummary = false;
