@@ -126,6 +126,12 @@ and live under **Settings → Hanako**.
 - **Disable proxy while a VPN is on**.
 - **Transfer boost**: Normal / Fast / Extreme presets for download and upload speed.
 
+### Fun
+
+- **Smug language**: pick **Smug** in Settings → Language and the app's most visible text (about 500
+  strings: chat list, chats, settings, menus, dialogs, errors, Hanako settings) teases you in a bratty,
+  smug, tsundere voice. Anything it doesn't cover stays in English.
+
 ### No upsells
 
 - Telegram Premium upsells are hidden for accounts without Premium, and the Premium promo rows and

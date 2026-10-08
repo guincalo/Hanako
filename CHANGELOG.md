@@ -15,6 +15,8 @@ First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
   bundled languages). The package id stays `it.belloworld.mercurygram`.
 - New **Hanako launcher icon** (adaptive icon with a themed-icon monochrome layer, plus legacy
   round/square icons).
+- New **Smug** language (Settings → Language): the most visible UI strings rewritten in a bratty,
+  smug, tsundere voice; everything it doesn't cover stays in English.
 
 ### Ghost mode & privacy
 - Per-account ghost mode: no read receipts, typing status, online status or story views; optional

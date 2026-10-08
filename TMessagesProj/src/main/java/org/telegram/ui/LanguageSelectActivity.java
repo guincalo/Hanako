@@ -63,6 +63,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Timer;
 
+import it.belloworld.mercurygram.HanakoSmugLanguage; // hanako: Smug language
+
 public class LanguageSelectActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
 
     private ListAdapter listAdapter;
@@ -376,7 +378,7 @@ public class LanguageSelectActivity extends BaseFragment implements Notification
                     }
                     localeInfo = sortedLanguages.get(position);
                 }
-                if (localeInfo == null || localeInfo.pathToFile == null || localeInfo.isRemote() && localeInfo.serverIndex != Integer.MAX_VALUE) {
+                if (localeInfo == null || localeInfo.pathToFile == null || localeInfo.isRemote() && localeInfo.serverIndex != Integer.MAX_VALUE || HanakoSmugLanguage.isSmug(localeInfo)) { // hanako: Smug language is built in
                     return false;
                 }
                 final LocaleController.LocaleInfo finalLocaleInfo = localeInfo;
