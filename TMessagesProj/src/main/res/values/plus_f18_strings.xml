@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- plus f18: OpenPGP messages via an OpenPGP provider app (OpenKeychain) -->
+    <string name="PlusF18Title">OpenPGP</string>
+    <string name="PlusF18Enable">OpenPGP messages</string>
+    <string name="PlusF18Provider">OpenPGP app</string>
+    <string name="PlusF18DefaultSignKey">Default signing key</string>
+    <string name="PlusF18SignKey">Signing key</string>
+    <string name="PlusF18About">Signs or encrypts text you send in chats where you turn it on (chat menu, OpenPGP), and adds Decrypt / verify to messages that contain a PGP block. Keys stay in the OpenPGP app (for example OpenKeychain); Mercurygram only passes text to it. Only typed text is covered: captions, media, stickers and forwards are sent as usual. Formatting is not kept.</string>
+    <string name="PlusF18NotInstalled">Not installed</string>
+    <string name="PlusF18NoProvider">No OpenPGP app found. Install OpenKeychain, then try again.</string>
+    <string name="PlusF18None">None</string>
+    <string name="PlusF18ChooseKey">Choose a key…</string>
+    <string name="PlusF18ClearKey">Clear</string>
+    <string name="PlusF18UseDefault">default</string>
+    <string name="PlusF18UseDefaultKey">Use the default (%1$s)</string>
+    <string name="PlusF18ChatMenu">OpenPGP</string>
+    <string name="PlusF18ModeOff">Off</string>
+    <string name="PlusF18ModeSign">Sign</string>
+    <string name="PlusF18ModeEncrypt">Encrypt</string>
+    <string name="PlusF18ModeSignEncrypt">Sign and encrypt</string>
+    <string name="PlusF18ModeSet">OpenPGP for this chat: %1$s</string>
+    <string name="PlusF18RecipientsRow">Recipient keys (%1$d chosen)…</string>
+    <string name="PlusF18ChatSignRow">Signing key: %1$s…</string>
+    <string name="PlusF18NoKeysPicked">No keys chosen</string>
+    <string name="PlusF18KeysMissing">Choose the OpenPGP keys for this chat first. Nothing was sent.</string>
+    <string name="PlusF18Busy">OpenPGP is still working on the last message</string>
+    <string name="PlusF18TooLong">The OpenPGP message is longer than one Telegram message. Nothing was sent; shorten the text.</string>
+    <string name="PlusF18SendFailed">OpenPGP failed, nothing was sent: %1$s</string>
+    <string name="PlusF18DecryptFailed">Could not decrypt or verify: %1$s</string>
+    <string name="PlusF18Cancelled">Cancelled</string>
+    <string name="PlusF18ErrorGeneric">The OpenPGP app returned no usable result</string>
+    <string name="PlusF18ErrorInteraction">The OpenPGP app needs input that could not be shown</string>
+    <string name="PlusF18ErrorResponse">The OpenPGP app sent a reply this version cannot read</string>
+    <string name="PlusF18Decrypt">Decrypt / verify</string>
+    <string name="PlusF18Decrypted">Decrypted message</string>
+    <string name="PlusF18Verified">Signed message</string>
+    <string name="PlusF18KeyDetails">Key</string>
+    <string name="PlusF18InsecureEncryption">Warning: the message uses insecure encryption.</string>
+    <string name="PlusF18SigNone">Not signed</string>
+    <string name="PlusF18SigValidConfirmed">Valid signature, confirmed key: %1$s</string>
+    <string name="PlusF18SigValidUnconfirmed">Valid signature, key not confirmed: %1$s</string>
+    <string name="PlusF18SigKeyMissing">Signed by a key you do not have: %1$s</string>
+    <string name="PlusF18SigRevoked">Signature from a revoked key: %1$s</string>
+    <string name="PlusF18SigExpired">Signature from an expired key: %1$s</string>
+    <string name="PlusF18SigInsecure">Signature from an insecure key: %1$s</string>
+    <string name="PlusF18SigNotForYou">Signed by %1$s, but not addressed to you</string>
+    <string name="PlusF18SigInvalid">INVALID signature: the text was changed or the signature is broken</string>
+</resources>

@@ -3837,6 +3837,8 @@ public class ChatActivity extends BaseFragment implements
                     });
                 } else if (id == plus_f08_lock_chat) { // plus f08
                     it.belloworld.mercurygram.PlusChatLock.onChatMenuItemClick(headerItem, currentAccount, dialog_id);
+                } else if (id == it.belloworld.mercurygram.PlusOpenPgp.CHAT_MENU_ID) { // plus f18
+                    it.belloworld.mercurygram.PlusOpenPgp.openChatSettings(ChatActivity.this, currentAccount, dialog_id);
                 } else if (id == chat_enc_timer) {
                     if (getParentActivity() == null) {
                         return;
@@ -4475,6 +4477,9 @@ public class ChatActivity extends BaseFragment implements
             }
             if (currentUser != null && currentUser.self && getDialogId() != UserObject.VERIFY) {
                 headerItem.lazilyAddSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString(R.string.AddShortcut));
+            }
+            if (chatMode == 0) { // plus f18
+                it.belloworld.mercurygram.PlusOpenPgp.addChatMenuItem(headerItem);
             }
             if (!isTopic && !ChatObject.isMonoForum(currentChat)) {
                 clearHistoryItem = headerItem.lazilyAddSubItem(clear_history, R.drawable.msg_clear,
@@ -34413,6 +34418,10 @@ public class ChatActivity extends BaseFragment implements
                 presentFragment(new it.belloworld.mercurygram.ui.MessageDetailsActivity(selectedObject));
                 break;
             }
+            case it.belloworld.mercurygram.PlusOpenPgp.OPTION_DECRYPT: { // plus f18
+                it.belloworld.mercurygram.PlusOpenPgp.decrypt(this, selectedObject);
+                break;
+            }
             case OPTION_EDIT_HISTORY: {
                 presentFragment(new it.belloworld.mercurygram.ui.MgMessageEditHistoryActivity(selectedObject));
                 break;
@@ -46398,6 +46407,11 @@ public class ChatActivity extends BaseFragment implements
                     icons.add(R.drawable.msg_archive_hide);
                 }
                 // plus f04 end
+                if (it.belloworld.mercurygram.PlusOpenPgp.hasArmor(selectedObject)) { // plus f18
+                    items.add(LocaleController.getString(R.string.PlusF18Decrypt));
+                    options.add(it.belloworld.mercurygram.PlusOpenPgp.OPTION_DECRYPT);
+                    icons.add(R.drawable.msg_secret);
+                }
             } else {
                 if ((allowChatActions || isEphemeralFromBot) && (primaryMessage == null || !primaryMessage.isWelcomeMessage()) && !isInsideContainer && chatMode != MODE_WELCOME_MESSAGES) {
                     items.add(LocaleController.getString(R.string.Reply));
@@ -46420,6 +46434,11 @@ public class ChatActivity extends BaseFragment implements
                     items.add(LocaleController.getString(R.string.TranslateMessage));
                     options.add(OPTION_TRANSLATE);
                     icons.add(R.drawable.msg_translate);
+                }
+                if (it.belloworld.mercurygram.PlusOpenPgp.hasArmor(selectedObject)) { // plus f18 (secret chats)
+                    items.add(LocaleController.getString(R.string.PlusF18Decrypt));
+                    options.add(it.belloworld.mercurygram.PlusOpenPgp.OPTION_DECRYPT);
+                    icons.add(R.drawable.msg_secret);
                 }
                 if (!isThreadChat() && chatMode != MODE_SCHEDULED && currentChat != null && primaryMessage != null && (currentChat.has_link || primaryMessage.hasReplies()) && currentChat.megagroup && primaryMessage.canViewThread()) {
                     if (primaryMessage.hasReplies()) {

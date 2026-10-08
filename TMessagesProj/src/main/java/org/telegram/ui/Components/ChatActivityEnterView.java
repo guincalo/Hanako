@@ -7402,7 +7402,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                 sendRichDraft(notify, scheduleDate, scheduleRepeatPeriod, payStars);
                 return;
             }
-            CharSequence message = messageEditText == null ? "" : messageEditText.getTextToUse();
+            CharSequence message = it.belloworld.mercurygram.PlusOpenPgp.takeArmored(messageEditText == null ? "" : messageEditText.getTextToUse()); // plus f18
             if (parentFragment != null) {
                 TLRPC.Chat chat = parentFragment.getCurrentChat();
                 if (chat != null && chat.slowmode_enabled && !ChatObject.hasAdminRights(chat)) {
@@ -7414,6 +7414,10 @@ public class ChatActivityEnterView extends FrameLayout implements
                         return;
                     }
                 }
+            }
+            if (it.belloworld.mercurygram.PlusOpenPgp.interceptSend(this, parentFragment, currentAccount, dialog_id, message,
+                    () -> sendMessageInternal(notify, scheduleDate, scheduleRepeatPeriod, payStars, false))) { // plus f18
+                return;
             }
             if (checkPremiumAnimatedEmoji(currentAccount, dialog_id, parentFragment, null, message)) {
                 return;

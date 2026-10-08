@@ -558,7 +558,7 @@ public final class PlusPlugins {
             if (info.outgoing.length > 0) {
                 try {
                     boolean hasEntities = params.entities != null && !params.entities.isEmpty();
-                    if (!TextUtils.isEmpty(params.message)) {
+                    if (!TextUtils.isEmpty(params.message) && PlusOpenPgp.findArmor(params.message) == null) { // plus f18: never rewrite an armored (encrypted/signed) text
                         params.message = keepLengthIfEntities(params.message, applyRules(info.outgoing, params.message), hasEntities);
                     }
                     if (!TextUtils.isEmpty(params.caption)) {

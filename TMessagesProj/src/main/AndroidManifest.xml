@@ -124,6 +124,11 @@
         <intent>
             <action android:name="dev.davidv.translator.ITranslationService"/>
         </intent>
+        <!-- plus f18: OpenPGP provider apps (OpenKeychain) -->
+        <package android:name="org.sufficientlysecure.keychain" />
+        <intent>
+            <action android:name="org.openintents.openpgp.IOpenPgpService2" />
+        </intent>
     </queries>
 
     <application
@@ -329,6 +334,13 @@
                 <data android:mimeType="vnd.android.cursor.item/vnd.org.telegram.messenger.android.call.video"/>
             </intent-filter>
         </activity-alias>
+        <!-- plus f18: trampoline for OpenPGP provider PendingIntents -->
+        <activity
+            android:name="it.belloworld.mercurygram.PlusOpenPgpProxyActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity
             android:name="org.telegram.ui.BubbleActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"

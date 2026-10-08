@@ -284,6 +284,10 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         it.belloworld.mercurygram.PlusEmojiInteractions.addSettingsItems(items, acc);
         // plus f15 end
 
+        // plus f18 begin: OpenPGP messages
+        it.belloworld.mercurygram.PlusOpenPgp.addSettingsRows(items);
+        // plus f18 end
+
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
                         LocaleController.getString(R.string.MercurygramReduceTrackingFingerprint))
@@ -512,6 +516,11 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             return;
         }
         // plus f17 end
+        // plus f18 begin
+        if (it.belloworld.mercurygram.PlusOpenPgp.onSettingsClick(this, item.id, this::refreshList)) {
+            return;
+        }
+        // plus f18 end
         // plus: ghost mode toggles
         if (item.id == ID_GHOST_ON) {
             it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));

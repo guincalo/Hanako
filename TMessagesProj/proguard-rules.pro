@@ -3,6 +3,7 @@
 -keepclasseswithmembers class * { @androidx.annotation.Keep *; }
 
 -keep class it.belloworld.mercurygram.** { *; }
+-keep class org.openintents.openpgp.** { *; } # plus f18: AIDL + Parcelables unparcelled by class name
 -keep class org.webrtc.* { *; }
 -keep class org.webrtc.audio.* { *; }
 -keep class org.webrtc.voiceengine.* { *; }
