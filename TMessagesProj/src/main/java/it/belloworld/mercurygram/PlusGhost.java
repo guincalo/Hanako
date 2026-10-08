@@ -105,7 +105,7 @@ public final class PlusGhost {
     }
 
     private static boolean validAccount(int account) {
-        return account >= 0 && account < UserConfig.MAX_ACCOUNT_COUNT;
+        return PlusUtil.validAccount(account);
     }
 
     // Defaults are intentionally unchanged (everything on for every account); see 0004/0005.
