@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="MercurygramSettings">Mercurygram</string>
-    <string name="MercurygramSettingsInfo">Recursos específicos do Mercurygram</string>
+    <string name="MercurygramSettings">Hanako</string>
+    <string name="MercurygramSettingsInfo">Recursos específicos do Hanako</string>
     <string name="MercurygramSettingsGeneral">Geral</string>
     <string name="MercurygramSettingsMedia">Mídia</string>
     <string name="MercurygramSettingsUpdates">Atualizações</string>
@@ -12,11 +12,11 @@
     <string name="MercurygramScopeDefaultFooter">Salvo indicação em contrário, estas opções se aplicam apenas à conta atual.</string>
     <string name="MercurygramMessageDetailsMenu">Mostrar \"Detalhes da mensagem\"</string>
     <string name="MercurygramDisableAutoUpdate">Desativar atualizador interno</string>
-    <string name="MercurygramDisableAutoUpdateAbout">O Mercurygram não verificará mais atualizações no GitHub na inicialização. Você ainda pode iniciar uma verificação manual pelo botão abaixo.</string>
+    <string name="MercurygramDisableAutoUpdateAbout">O Hanako não verificará mais atualizações no GitHub na inicialização. Você ainda pode iniciar uma verificação manual pelo botão abaixo.</string>
     <string name="MercurygramAcceptPreReleaseUpdates">Receber atualizações de pré-lançamento</string>
     <string name="MercurygramAcceptPreReleaseUpdatesAbout">Receba builds de pré-lançamento de 5 pontos (por exemplo, 12.6.4.4.42) pelo atualizador interno. São capturas de desenvolvimento entre versões estáveis; podem conter travamentos, recursos parcialmente funcionais ou outras regressões. Você pode desativar esta opção mais tarde para voltar à versão estável (de 4 pontos) correspondente.</string>
     <string name="MercurygramAcceptPreReleaseUpdatesWarningTitle">Ativar atualizações de pré-lançamento?</string>
-    <string name="MercurygramAcceptPreReleaseUpdatesWarningMessage">As builds de pré-lançamento do Mercurygram (de 5 pontos, como 12.6.4.4.42) são capturas de desenvolvimento entre versões estáveis. Podem conter travamentos não descobertos, recursos parcialmente funcionais ou outras regressões. Você pode desativar esta opção mais tarde para voltar à versão estável (de 4 pontos) correspondente. Continuar?</string>
+    <string name="MercurygramAcceptPreReleaseUpdatesWarningMessage">As builds de pré-lançamento do Hanako (de 5 pontos, como 12.6.4.4.42) são capturas de desenvolvimento entre versões estáveis. Podem conter travamentos não descobertos, recursos parcialmente funcionais ou outras regressões. Você pode desativar esta opção mais tarde para voltar à versão estável (de 4 pontos) correspondente. Continuar?</string>
     <string name="MercurygramAcceptPreReleaseUpdatesEnable">Ativar</string>
     <string name="MercurygramPreReleaseBadge">Pré-lançamento</string>
     <string name="MercurygramCheckForUpdatesNow">Verificar atualizações agora</string>
@@ -60,11 +60,11 @@
     <string name="MercurygramEditHistoryCurrent">Versão atual</string>
     <string name="MercurygramEditHistoryRevision">Revisão %1$d de %2$d</string>
     <string name="MercurygramDisableUnifiedPush">Desativar UnifiedPush</string>
-    <string name="MercurygramDisableUnifiedPushAbout">Quando desativado, o Mercurygram deixa de receber notificações push. A entrega em segundo plano passa a depender da própria conexão do Telegram: ative Conexão em segundo plano ou Serviço Keep-Alive em Configurações → Notificações e sons se ainda quiser receber mensagens com o aplicativo fechado.</string>
+    <string name="MercurygramDisableUnifiedPushAbout">Quando desativado, o Hanako deixa de receber notificações push. A entrega em segundo plano passa a depender da própria conexão do Telegram: ative Conexão em segundo plano ou Serviço Keep-Alive em Configurações → Notificações e sons se ainda quiser receber mensagens com o aplicativo fechado.</string>
     <string name="MercurygramReduceTrackingFingerprint">Reduzir rastreamento de rede</string>
     <string name="MercurygramReduceTrackingFingerprintAbout">Atualiza a chave de sessão a cada hora em vez de uma vez por dia. Dificulta a correlação passiva do seu dispositivo. A atividade de rede em segundo plano aumentará um pouco.</string>
     <string name="MercurygramReduceTrackingFingerprintWarningTitle">Reduzir rastreamento de rede?</string>
-    <string name="MercurygramReduceTrackingFingerprintWarningMessage">O Mercurygram rotacionará a chave de sessão a cada hora em vez de uma vez por dia. Isso dificulta para um observador passivo na sua rede correlacionar seu dispositivo, mas não esconde que você usa o Telegram e não impede análise de tráfego (tempo, volume, contatos). A primeira chave de sessão em um novo login ainda é observável uma vez e a atividade de rede em segundo plano aumentará um pouco. Continuar?</string>
+    <string name="MercurygramReduceTrackingFingerprintWarningMessage">O Hanako rotacionará a chave de sessão a cada hora em vez de uma vez por dia. Isso dificulta para um observador passivo na sua rede correlacionar seu dispositivo, mas não esconde que você usa o Telegram e não impede análise de tráfego (tempo, volume, contatos). A primeira chave de sessão em um novo login ainda é observável uma vez e a atividade de rede em segundo plano aumentará um pouco. Continuar?</string>
     <string name="MercurygramReduceTrackingFingerprintEnable">Ativar</string>
     <string name="MercurygramReduceTrackingFingerprintExhaustedToast">A conta %1$s voltou ao modo padrão — o servidor rejeitou a duração reduzida da chave de sessão.</string>
     <string name="MercurygramReduceTrackingFingerprintExhaustedFooter">O servidor rejeitou a duração reduzida da chave de sessão para: %1$s. Essas contas usam a chave padrão de 24h. Desative e reative para tentar novamente.</string>
@@ -73,8 +73,8 @@
     <string name="MercurygramTor">Usar Tor</string>
     <string name="MercurygramTorAbout">Roteia o tráfego do protocolo do Telegram (MTProto) por um daemon Tor incorporado para derrotar o rastreamento passivo do auth_key_id que permite a operadores de rede vincular sua conta ao seu IP real. Downloads de mídia e outro tráfego HTTP continuam diretos para manter o app responsivo. O Tor se desconecta automaticamente quando o app está inativo para economizar bateria e reinicia quando necessário. Recursos sensíveis à latência (chamadas) podem ser afetados; o Telegram ainda vê o nó de saída do Tor.</string>
     <string name="MercurygramTorProxyEntry">Tor (interno)</string>
-    <string name="MercurygramTorEnableTitle">Usar Tor para o Mercurygram?</string>
-    <string name="MercurygramTorEnableMessage">O Mercurygram iniciará um daemon Tor incorporado e roteará o tráfego do protocolo do Telegram (MTProto) por ele. Downloads de mídia e outro tráfego HTTP continuam diretos. O bootstrap leva ~10–30 segundos na primeira vez. O Tor é encerrado automaticamente quando o app fica inativo para economizar bateria, e reinicia ao retomar ou quando chega um push. Continuar?</string>
+    <string name="MercurygramTorEnableTitle">Usar Tor para o Hanako?</string>
+    <string name="MercurygramTorEnableMessage">O Hanako iniciará um daemon Tor incorporado e roteará o tráfego do protocolo do Telegram (MTProto) por ele. Downloads de mídia e outro tráfego HTTP continuam diretos. O bootstrap leva ~10–30 segundos na primeira vez. O Tor é encerrado automaticamente quando o app fica inativo para economizar bateria, e reinicia ao retomar ou quando chega um push. Continuar?</string>
     <string name="MercurygramTorEnable">Ativar</string>
     <string name="MercurygramTorBootstrap">Conectando pelo Tor… %1$d%%</string>
     <string name="MercurygramTorIdleTimeout">Parar Tor após inatividade</string>
@@ -101,7 +101,7 @@
     <string name="MercurygramTorPluginOpenAppInfo">Configurações do plugin</string>
     <string name="MercurygramTorPluginUnavailable">O plugin do Tor não está disponível neste canal de instalação.</string>
     <string name="MercurygramTranslationSettings">Tradução</string>
-    <string name="MercurygramTranslationRowAbout">Escolha como o Mercurygram traduz as mensagens recebidas.</string>
+    <string name="MercurygramTranslationRowAbout">Escolha como o Hanako traduz as mensagens recebidas.</string>
     <string name="MercurygramTranslationEngine">Motor</string>
     <string name="MercurygramTranslationMode">Motor de tradução</string>
     <string name="MercurygramTranslationModeDefault">Padrão (nuvem do Telegram)</string>
@@ -111,7 +111,7 @@
     <string name="MercurygramTranslationAbout">A nuvem do Telegram envia o texto para os servidores do Telegram (que o encaminham para o Google). O HTTP alternativo roteia o texto por um proxy público Mozhi que respeita a privacidade e agrega vários motores (DuckDuckGo, LibreTranslate, Google, MyMemory, Reverso) — escolha motor e instância abaixo. Offline delega cada tradução a um aplicativo FOSS separado (Offline Translator, dev.davidv.translator) por meio de um serviço vinculado em segundo plano — a mensagem nunca sai do seu dispositivo. A formatação negrito, itálico e código pode ser perdida no caminho offline porque o motor devolve apenas texto simples.</string>
     <string name="MercurygramTranslationOfflineSection">Tradutor offline</string>
     <string name="MercurygramTranslationInstallApp">Instalar o Offline Translator pela F-Droid</string>
-    <string name="MercurygramTranslationOfflineNoApp">O Offline Translator (dev.davidv.translator) é o provedor FOSS de referência — inclui modelos Bergamot offline e expõe um serviço vinculado em segundo plano para o qual o Mercurygram envia cada tradução silenciosamente. Até que ele esteja instalado, as traduções seguem o recurso alternativo que você permitir abaixo.</string>
+    <string name="MercurygramTranslationOfflineNoApp">O Offline Translator (dev.davidv.translator) é o provedor FOSS de referência — inclui modelos Bergamot offline e expõe um serviço vinculado em segundo plano para o qual o Hanako envia cada tradução silenciosamente. Até que ele esteja instalado, as traduções seguem o recurso alternativo que você permitir abaixo.</string>
     <string name="MercurygramTranslationOfflineProviderReady">O Offline Translator está instalado. Abra-o uma vez para baixar o(s) par(es) de idiomas a partir do(s) qual(is) e para o(s) qual(is) você deseja traduzir.</string>
     <string name="MercurygramTranslationAutoFallback">Recurso automático em caso de falha</string>
     <string name="MercurygramTranslationAutoFallbackAbout">Se o tradutor offline não devolver nada (sem modelo para o par de idiomas, idioma não detectado, serviço inacessível), recorre ao caminho HTTP alternativo. A nuvem nunca é usada como recurso quando você escolheu o motor offline por privacidade.</string>
@@ -146,7 +146,7 @@
     <string name="MercurygramTranscriptionVad">Pular silêncio (detecção de voz)</string>
     <string name="MercurygramTranscriptionVadInfo">Detecta a fala e pula as partes silenciosas antes de transcrever, para que o modelo não invente palavras durante o silêncio. Recomendado, especialmente para os modelos menores. Usa um modelo extra minúsculo baixado junto com o principal.</string>
     <string name="MercurygramTranscriptionAbout">Os modelos são de código aberto (MIT). Baixe uma vez pela rede ou importe um arquivo que você já tenha. O modelo é armazenado no seu dispositivo e usado totalmente offline.</string>
-    <string name="MercurygramTranscribeOfflineNoModel">Transcrição no dispositivo: nenhum modelo instalado. Baixe um nas configurações do Mercurygram.</string>
+    <string name="MercurygramTranscribeOfflineNoModel">Transcrição no dispositivo: nenhum modelo instalado. Baixe um nas configurações do Hanako.</string>
     <string name="MercurygramTranscribeOfflineFileUnavailable">Transcrição no dispositivo: arquivo de áudio indisponível. Tente reproduzir a mensagem primeiro.</string>
     <string name="MercurygramTranscribeOfflineDecodeFailed">Transcrição no dispositivo: não foi possível decodificar o áudio.</string>
     <string name="MercurygramTranscribeOfflineFailed">A transcrição no dispositivo falhou.</string>
@@ -187,7 +187,7 @@
     <string name="NtfyDefaultServerDisableUP">Desativar UnifiedPush</string>
     <string name="NtfyDefaultServerMessage">O servidor ntfy.sh padrão tem limites de taxa muito baixos e bloqueia o gateway de push do Mercurygram. As notificações push não funcionarão de forma confiável.</string>
     <string name="NtfyDefaultServerNoAlternative">Nenhum distribuidor alternativo instalado. O UnifiedPush será desativado. Você pode reativá-lo após instalar um distribuidor compatível com um servidor autogerenciado.</string>
-    <string name="NtfyDefaultServerSwitched">O Mercurygram mudou automaticamente para: %1$s\n\nSe quiser usar o ntfy, configure-o com um servidor autogerenciado.</string>
+    <string name="NtfyDefaultServerSwitched">O Hanako mudou automaticamente para: %1$s\n\nSe quiser usar o ntfy, configure-o com um servidor autogerenciado.</string>
     <string name="NtfyDefaultServerTitle">ntfy.sh não suportado</string>
     <string name="NtfyDefaultServerWarningRow">⚠ O servidor ntfy.sh padrão está bloqueado. As notificações push não funcionarão. Use um servidor ntfy autogerenciado ou mude para outro distribuidor.</string>
     <string name="MercurygramUnifiedPush">UnifiedPush</string>
@@ -216,7 +216,7 @@
     <string name="Filename">Nome do arquivo</string>
     <string name="Filesize">Tamanho do arquivo</string>
     <string name="MercurygramBatteryOptimization">Desativar otimização de bateria</string>
-    <string name="MercurygramBatteryOptimizationInfo">O Android pode suspender o Mercurygram, o que pode atrasar ou perder notificações até você abrir o app. Uma isenção remove essa restrição.</string>
+    <string name="MercurygramBatteryOptimizationInfo">O Android pode suspender o Hanako, o que pode atrasar ou perder notificações até você abrir o app. Uma isenção remove essa restrição.</string>
     <string name="MercurygramPushDiagnostics">Diagnóstico de notificações</string>
     <string name="MercurygramPushDiagnosticsNever">Nenhum push recebido</string>
     <string name="HiddenAccounts">Contas ocultas</string>
@@ -252,18 +252,18 @@
     <string name="HiddenAccountsUnlockCodeMatchesAppPasscode">Este código de desbloqueio coincide com o código de acesso do app. Use um código diferente.</string>
     <string name="HiddenAccountsUnlockCodesDoNotMatch">Os códigos de desbloqueio não coincidem.</string>
     <string name="MercurygramStripTrackingParams">Remover parâmetros de rastreamento</string>
-    <string name="MercurygramStripTrackingParamsAbout">Remove os parâmetros de rastreamento de cliques (utm_*, fbclid, gclid, igsh e semelhantes) dos links que você abre, dos que você cola no campo de mensagem e dos que você compartilha com o Mercurygram a partir de outro aplicativo. Também remove os específicos de cada site, no YouTube, Instagram, TikTok, X, Amazon e outros. O resto do endereço fica intacto.</string>
+    <string name="MercurygramStripTrackingParamsAbout">Remove os parâmetros de rastreamento de cliques (utm_*, fbclid, gclid, igsh e semelhantes) dos links que você abre, dos que você cola no campo de mensagem e dos que você compartilha com o Hanako a partir de outro aplicativo. Também remove os específicos de cada site, no YouTube, Instagram, TikTok, X, Amazon e outros. O resto do endereço fica intacto.</string>
     <string name="MercurygramDisableCloudDrafts">Manter os rascunhos neste dispositivo</string>
     <string name="MercurygramDisableCloudDraftsAbout">Não enviar para o Telegram os rascunhos não enviados. Os rascunhos ficam neste dispositivo e deixam de aparecer nos seus outros dispositivos.</string>
     <string name="MercurygramConfirmInternalLinks">Confirmar links do Telegram</string>
     <string name="MercurygramConfirmInternalLinksAbout">Pede confirmação antes de abrir links t.me e tg://, mostrando o endereço primeiro. Útil contra links que entram em um canal ou abrem um bot sem avisar.</string>
     <string name="MercurygramKeepAliveNotification">Serviço de conexão persistente</string>
     <string name="MercurygramKeepAliveNotificationHide">Toque para ocultar esta notificação</string>
-    <string name="MercurygramFolder">Pasta Mercurygram</string>
-    <string name="MercurygramFolderInfo">Aparece apenas no Mercurygram, nunca é enviada ao Telegram como pasta, então não há limite de pastas ou conversas. Sincronizada entre seus apps Mercurygram por um arquivo nas Mensagens salvas. Alterar em uma pasta existente move a pasta entre o Telegram e o Mercurygram.</string>
-    <string name="MercurygramFolderTag">Mercurygram</string>
+    <string name="MercurygramFolder">Pasta Hanako</string>
+    <string name="MercurygramFolderInfo">Aparece apenas no Hanako, nunca é enviada ao Telegram como pasta, então não há limite de pastas ou conversas. Sincronizada entre seus apps Hanako por um arquivo nas Mensagens salvas. Alterar em uma pasta existente move a pasta entre o Telegram e o Hanako.</string>
+    <string name="MercurygramFolderTag">Hanako</string>
     <string name="MercurygramLiveLocationPaused">Localização em tempo real pausada</string>
-    <string name="MercurygramLiveLocationPausedInfo">O compartilhamento parou quando o dispositivo reiniciou. Abra o Mercurygram para retomá-lo.</string>
+    <string name="MercurygramLiveLocationPausedInfo">O compartilhamento parou quando o dispositivo reiniciou. Abra o Hanako para retomá-lo.</string>
     <string name="MercurygramQrLogin">Entrar com código QR</string>
     <string name="MercurygramQrLoginInfo">Abra o Telegram em um celular em que você já esteja conectado, vá em Configurações &gt; Dispositivos e escaneie este código.</string>
     <string name="MercurygramGoToFirstMessage">Ir para a primeira mensagem</string>

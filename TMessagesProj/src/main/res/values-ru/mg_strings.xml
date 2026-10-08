@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="MercurygramSettings">Mercurygram</string>
-    <string name="MercurygramSettingsInfo">Функции, специфичные для Mercurygram</string>
+    <string name="MercurygramSettings">Hanako</string>
+    <string name="MercurygramSettingsInfo">Функции, специфичные для Hanako</string>
     <string name="MercurygramSettingsGeneral">Основное</string>
     <string name="MercurygramSettingsMedia">Медиа</string>
     <string name="MercurygramSettingsUpdates">Обновления</string>
@@ -12,11 +12,11 @@
     <string name="MercurygramScopeDefaultFooter">Если не указано иное, эти настройки применяются только к текущему аккаунту.</string>
     <string name="MercurygramMessageDetailsMenu">Показать «Подробности сообщения»</string>
     <string name="MercurygramDisableAutoUpdate">Отключить встроенное обновление</string>
-    <string name="MercurygramDisableAutoUpdateAbout">Mercurygram больше не будет проверять обновления на GitHub при запуске. Вручную проверить можно с помощью кнопки ниже.</string>
+    <string name="MercurygramDisableAutoUpdateAbout">Hanako больше не будет проверять обновления на GitHub при запуске. Вручную проверить можно с помощью кнопки ниже.</string>
     <string name="MercurygramAcceptPreReleaseUpdates">Принимать предварительные обновления</string>
     <string name="MercurygramAcceptPreReleaseUpdatesAbout">Получайте 5-точечные предварительные сборки (например, 12.6.4.4.42) через встроенный обновлятор. Это снимки разработки между стабильными выпусками; они могут содержать сбои, частично работающие функции или другие регрессии. Вы можете отключить эту опцию позже, чтобы вернуться к соответствующему стабильному (4-точечному) выпуску.</string>
     <string name="MercurygramAcceptPreReleaseUpdatesWarningTitle">Включить предварительные обновления?</string>
-    <string name="MercurygramAcceptPreReleaseUpdatesWarningMessage">Предварительные сборки Mercurygram (5-точечные, например 12.6.4.4.42) — это снимки разработки между стабильными выпусками. Они могут содержать ещё не обнаруженные сбои, частично работающие функции или другие регрессии. Вы можете отключить эту опцию позже, чтобы вернуться к соответствующему стабильному (4-точечному) выпуску. Продолжить?</string>
+    <string name="MercurygramAcceptPreReleaseUpdatesWarningMessage">Предварительные сборки Hanako (5-точечные, например 12.6.4.4.42) — это снимки разработки между стабильными выпусками. Они могут содержать ещё не обнаруженные сбои, частично работающие функции или другие регрессии. Вы можете отключить эту опцию позже, чтобы вернуться к соответствующему стабильному (4-точечному) выпуску. Продолжить?</string>
     <string name="MercurygramAcceptPreReleaseUpdatesEnable">Включить</string>
     <string name="MercurygramPreReleaseBadge">Предварительный выпуск</string>
     <string name="MercurygramCheckForUpdatesNow">Проверить обновления сейчас</string>
@@ -60,11 +60,11 @@
     <string name="MercurygramEditHistoryCurrent">Текущая версия</string>
     <string name="MercurygramEditHistoryRevision">Версия %1$d из %2$d</string>
     <string name="MercurygramDisableUnifiedPush">Отключить UnifiedPush</string>
-    <string name="MercurygramDisableUnifiedPushAbout">Если отключено, Mercurygram перестаёт получать push-уведомления. Доставка в фоне тогда зависит от собственного соединения Telegram: включите «Соединение в фоне» или «Keep-Alive» в Настройках → Уведомления и звуки, если сообщения нужны при закрытом приложении.</string>
+    <string name="MercurygramDisableUnifiedPushAbout">Если отключено, Hanako перестаёт получать push-уведомления. Доставка в фоне тогда зависит от собственного соединения Telegram: включите «Соединение в фоне» или «Keep-Alive» в Настройках → Уведомления и звуки, если сообщения нужны при закрытом приложении.</string>
     <string name="MercurygramReduceTrackingFingerprint">Уменьшить сетевое отслеживание</string>
     <string name="MercurygramReduceTrackingFingerprintAbout">Обновляет ключ сессии каждый час вместо одного раза в сутки. Затрудняет пассивную корреляцию вашего устройства. Фоновая сетевая активность немного возрастёт.</string>
     <string name="MercurygramReduceTrackingFingerprintWarningTitle">Уменьшить сетевое отслеживание?</string>
-    <string name="MercurygramReduceTrackingFingerprintWarningMessage">Mercurygram будет ротировать ключ сессии каждый час вместо одного раза в сутки. Это затруднит пассивному наблюдателю в вашей сети корреляцию вашего устройства, но не скроет факт использования Telegram и не защитит от анализа трафика (время, объём, контакты). Первый ключ сессии при новом входе всё ещё наблюдаем один раз, и фоновая сетевая активность немного возрастёт. Продолжить?</string>
+    <string name="MercurygramReduceTrackingFingerprintWarningMessage">Hanako будет ротировать ключ сессии каждый час вместо одного раза в сутки. Это затруднит пассивному наблюдателю в вашей сети корреляцию вашего устройства, но не скроет факт использования Telegram и не защитит от анализа трафика (время, объём, контакты). Первый ключ сессии при новом входе всё ещё наблюдаем один раз, и фоновая сетевая активность немного возрастёт. Продолжить?</string>
     <string name="MercurygramReduceTrackingFingerprintEnable">Включить</string>
     <string name="MercurygramReduceTrackingFingerprintExhaustedToast">Аккаунт %1$s вернулся в стандартный режим — сервер отклонил сокращённое время жизни ключа сессии.</string>
     <string name="MercurygramReduceTrackingFingerprintExhaustedFooter">Сервер отклонил сокращённое время жизни ключа сессии для: %1$s. Эти аккаунты используют стандартный ключ на 24 часа. Отключите и включите снова, чтобы повторить.</string>
@@ -73,8 +73,8 @@
     <string name="MercurygramTor">Использовать Tor</string>
     <string name="MercurygramTorAbout">Маршрутизирует трафик протокола Telegram (MTProto) через встроенный демон Tor, чтобы победить пассивное отслеживание auth_key_id, позволяющее операторам сети связать ваш аккаунт с вашим реальным IP. Загрузки медиа и другой HTTP-трафик остаются прямыми, чтобы приложение оставалось отзывчивым. Tor автоматически отключается при простое приложения для экономии батареи и запускается снова при необходимости. Функции, чувствительные к задержкам (звонки), могут пострадать; Telegram по-прежнему видит выходной узел Tor.</string>
     <string name="MercurygramTorProxyEntry">Tor (внутренний)</string>
-    <string name="MercurygramTorEnableTitle">Использовать Tor для Mercurygram?</string>
-    <string name="MercurygramTorEnableMessage">Mercurygram запустит встроенный демон Tor и направит трафик протокола Telegram (MTProto) через него. Загрузки медиа и другой HTTP-трафик остаются прямыми. Первичный bootstrap занимает ~10–30 секунд. Tor автоматически останавливается при простое приложения для экономии батареи и снова запускается при возобновлении или при получении push-уведомления. Продолжить?</string>
+    <string name="MercurygramTorEnableTitle">Использовать Tor для Hanako?</string>
+    <string name="MercurygramTorEnableMessage">Hanako запустит встроенный демон Tor и направит трафик протокола Telegram (MTProto) через него. Загрузки медиа и другой HTTP-трафик остаются прямыми. Первичный bootstrap занимает ~10–30 секунд. Tor автоматически останавливается при простое приложения для экономии батареи и снова запускается при возобновлении или при получении push-уведомления. Продолжить?</string>
     <string name="MercurygramTorEnable">Включить</string>
     <string name="MercurygramTorBootstrap">Подключение через Tor… %1$d%%</string>
     <string name="MercurygramTorIdleTimeout">Останавливать Tor после простоя</string>
@@ -101,7 +101,7 @@
     <string name="MercurygramTorPluginOpenAppInfo">Настройки плагина</string>
     <string name="MercurygramTorPluginUnavailable">Плагин Tor недоступен в этом канале установки.</string>
     <string name="MercurygramTranslationSettings">Перевод</string>
-    <string name="MercurygramTranslationRowAbout">Выберите, как Mercurygram переводит полученные сообщения.</string>
+    <string name="MercurygramTranslationRowAbout">Выберите, как Hanako переводит полученные сообщения.</string>
     <string name="MercurygramTranslationEngine">Движок</string>
     <string name="MercurygramTranslationMode">Движок перевода</string>
     <string name="MercurygramTranslationModeDefault">По умолчанию (облако Telegram)</string>
@@ -111,7 +111,7 @@
     <string name="MercurygramTranslationAbout">Облако Telegram отправляет текст на серверы Telegram (которые пересылают его в Google). Альтернативный HTTP маршрутизирует текст через публичный Mozhi-прокси, уважающий приватность и объединяющий несколько движков (DuckDuckGo, LibreTranslate, Google, MyMemory, Reverso) — выберите движок и экземпляр ниже. Офлайн делегирует каждый перевод отдельному FOSS-приложению (Offline Translator, dev.davidv.translator) через привязанную фоновую службу — сообщение никогда не покидает ваше устройство. Форматирование жирным, курсивом и кодом может теряться на офлайн-пути, потому что движок возвращает обычный текст.</string>
     <string name="MercurygramTranslationOfflineSection">Офлайн-переводчик</string>
     <string name="MercurygramTranslationInstallApp">Установить Offline Translator из F-Droid</string>
-    <string name="MercurygramTranslationOfflineNoApp">Offline Translator (dev.davidv.translator) — эталонный FOSS-провайдер: содержит офлайн-модели Bergamot и предоставляет привязанную фоновую службу, которой Mercurygram беззвучно передаёт каждый перевод. Пока он не установлен, переводы выполняются по тому запасному варианту, который вы разрешите ниже.</string>
+    <string name="MercurygramTranslationOfflineNoApp">Offline Translator (dev.davidv.translator) — эталонный FOSS-провайдер: содержит офлайн-модели Bergamot и предоставляет привязанную фоновую службу, которой Hanako беззвучно передаёт каждый перевод. Пока он не установлен, переводы выполняются по тому запасному варианту, который вы разрешите ниже.</string>
     <string name="MercurygramTranslationOfflineProviderReady">Offline Translator установлен. Откройте его один раз, чтобы скачать языковую пару (или пары), с которой и на которую вы хотите переводить.</string>
     <string name="MercurygramTranslationAutoFallback">Авто-фолбэк при ошибке</string>
     <string name="MercurygramTranslationAutoFallbackAbout">Если офлайн-переводчик ничего не возвращает (нет модели для языковой пары, язык не определён, служба недоступна), происходит откат на путь Альтернативный HTTP. Облако никогда не используется как запасной вариант, если вы выбрали офлайн-движок ради приватности.</string>
@@ -146,7 +146,7 @@
     <string name="MercurygramTranscriptionVad">Пропускать тишину (детектор речи)</string>
     <string name="MercurygramTranscriptionVadInfo">Определяет речь и пропускает тихие участки перед расшифровкой, чтобы модель не выдумывала слова во время тишины. Рекомендуется, особенно для меньших моделей. Использует крошечную дополнительную модель, загружаемую вместе с основной.</string>
     <string name="MercurygramTranscriptionAbout">Модели имеют открытый исходный код (MIT). Загрузите один раз по сети или импортируйте уже имеющийся файл. Модель хранится на вашем устройстве и используется полностью офлайн.</string>
-    <string name="MercurygramTranscribeOfflineNoModel">Расшифровка на устройстве: модель не установлена. Загрузите её в настройках Mercurygram.</string>
+    <string name="MercurygramTranscribeOfflineNoModel">Расшифровка на устройстве: модель не установлена. Загрузите её в настройках Hanako.</string>
     <string name="MercurygramTranscribeOfflineFileUnavailable">Расшифровка на устройстве: аудиофайл недоступен. Сначала попробуйте воспроизвести сообщение.</string>
     <string name="MercurygramTranscribeOfflineDecodeFailed">Расшифровка на устройстве: не удалось декодировать аудио.</string>
     <string name="MercurygramTranscribeOfflineFailed">Расшифровка на устройстве не удалась.</string>
@@ -187,7 +187,7 @@
     <string name="NtfyDefaultServerDisableUP">Отключить UnifiedPush</string>
     <string name="NtfyDefaultServerMessage">Сервер ntfy.sh по умолчанию имеет очень низкие лимиты запросов и блокирует push-шлюз Mercurygram. Push-уведомления будут работать нестабильно.</string>
     <string name="NtfyDefaultServerNoAlternative">Альтернативные дистрибьюторы не установлены. UnifiedPush будет отключён. Вы можете снова включить его после установки совместимого дистрибьютора с собственным сервером.</string>
-    <string name="NtfyDefaultServerSwitched">Mercurygram автоматически переключился на: %1$s\n\nЕсли вы хотите использовать ntfy, настройте его с собственным сервером.</string>
+    <string name="NtfyDefaultServerSwitched">Hanako автоматически переключился на: %1$s\n\nЕсли вы хотите использовать ntfy, настройте его с собственным сервером.</string>
     <string name="NtfyDefaultServerTitle">ntfy.sh не поддерживается</string>
     <string name="NtfyDefaultServerWarningRow">⚠ Сервер ntfy.sh по умолчанию заблокирован. Push-уведомления не будут работать. Используйте собственный сервер ntfy или переключитесь на другой дистрибьютор.</string>
     <string name="MercurygramUnifiedPush">UnifiedPush</string>
@@ -216,7 +216,7 @@
     <string name="Filename">Имя файла</string>
     <string name="Filesize">Размер файла</string>
     <string name="MercurygramBatteryOptimization">Отключить оптимизацию батареи</string>
-    <string name="MercurygramBatteryOptimizationInfo">Android может усыпить Mercurygram, из-за чего уведомления задерживаются или теряются до открытия приложения. Исключение снимает это ограничение.</string>
+    <string name="MercurygramBatteryOptimizationInfo">Android может усыпить Hanako, из-за чего уведомления задерживаются или теряются до открытия приложения. Исключение снимает это ограничение.</string>
     <string name="MercurygramPushDiagnostics">Диагностика уведомлений</string>
     <string name="MercurygramPushDiagnosticsNever">Push пока не приходил</string>
     <string name="HiddenAccounts">Скрытые аккаунты</string>
@@ -252,18 +252,18 @@
     <string name="HiddenAccountsUnlockCodeMatchesAppPasscode">Этот код разблокировки совпадает с кодом доступа приложения. Используйте другой код.</string>
     <string name="HiddenAccountsUnlockCodesDoNotMatch">Коды разблокировки не совпадают.</string>
     <string name="MercurygramStripTrackingParams">Удалять параметры отслеживания</string>
-    <string name="MercurygramStripTrackingParamsAbout">Удаляет параметры отслеживания переходов (utm_*, fbclid, gclid, igsh и подобные) из ссылок, которые вы открываете, из ссылок, которые вы вставляете в поле сообщения, и из ссылок, которыми вы делитесь с Mercurygram из другого приложения. Также удаляются параметры, характерные для отдельных сайтов: YouTube, Instagram, TikTok, X, Amazon и других. Остальная часть адреса не меняется.</string>
+    <string name="MercurygramStripTrackingParamsAbout">Удаляет параметры отслеживания переходов (utm_*, fbclid, gclid, igsh и подобные) из ссылок, которые вы открываете, из ссылок, которые вы вставляете в поле сообщения, и из ссылок, которыми вы делитесь с Hanako из другого приложения. Также удаляются параметры, характерные для отдельных сайтов: YouTube, Instagram, TikTok, X, Amazon и других. Остальная часть адреса не меняется.</string>
     <string name="MercurygramDisableCloudDrafts">Хранить черновики только на устройстве</string>
     <string name="MercurygramDisableCloudDraftsAbout">Не загружать неотправленные черновики в Telegram. Черновики остаются на этом устройстве и больше не появляются на других ваших устройствах.</string>
     <string name="MercurygramConfirmInternalLinks">Подтверждать ссылки Telegram</string>
     <string name="MercurygramConfirmInternalLinksAbout">Спрашивать подтверждение перед открытием ссылок t.me и tg://, показывая сначала адрес. Помогает против ссылок, которые незаметно подписывают на канал или открывают бота.</string>
     <string name="MercurygramKeepAliveNotification">Служба поддержания соединения</string>
     <string name="MercurygramKeepAliveNotificationHide">Нажмите, чтобы скрыть это уведомление</string>
-    <string name="MercurygramFolder">Папка Mercurygram</string>
-    <string name="MercurygramFolderInfo">Показывается только в Mercurygram, не отправляется в Telegram как папка, поэтому без ограничений на число папок и чатов. Синхронизируется между вашими приложениями Mercurygram через один файл в Избранном. Переключение у существующей папки переносит папку между Telegram и Mercurygram.</string>
-    <string name="MercurygramFolderTag">Mercurygram</string>
+    <string name="MercurygramFolder">Папка Hanako</string>
+    <string name="MercurygramFolderInfo">Показывается только в Hanako, не отправляется в Telegram как папка, поэтому без ограничений на число папок и чатов. Синхронизируется между вашими приложениями Hanako через один файл в Избранном. Переключение у существующей папки переносит папку между Telegram и Hanako.</string>
+    <string name="MercurygramFolderTag">Hanako</string>
     <string name="MercurygramLiveLocationPaused">Трансляция геопозиции приостановлена</string>
-    <string name="MercurygramLiveLocationPausedInfo">Передача остановилась после перезагрузки устройства. Откройте Mercurygram, чтобы возобновить её.</string>
+    <string name="MercurygramLiveLocationPausedInfo">Передача остановилась после перезагрузки устройства. Откройте Hanako, чтобы возобновить её.</string>
     <string name="MercurygramQrLogin">Войти по QR-коду</string>
     <string name="MercurygramQrLoginInfo">Откройте Telegram на телефоне, где вы уже вошли, перейдите в Настройки &gt; Устройства и отсканируйте этот код.</string>
     <string name="MercurygramGoToFirstMessage">К первому сообщению</string>
