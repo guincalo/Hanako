@@ -82,6 +82,7 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     private static final int ID_F07_LOG_DIALOGS = 700;
     private static final int ID_F07_OPEN_LOG = 701;
     private static final int ID_F07_KEEP_REACTIONS = 702;
+    private static final int ID_PLUS_PLUGINS = 1100; // plus f11
 
     @Override
     protected CharSequence getTitle() {
@@ -364,6 +365,12 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         }
         items.add(UItem.asButton(ID_UNIFIED_PUSH, LocaleController.getString(R.string.MercurygramUnifiedPush), pushValue));
         items.add(UItem.asShadow(null));
+
+        // plus f11: plugins
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF11Plugins)));
+        items.add(UItem.asButton(ID_PLUS_PLUGINS, LocaleController.getString(R.string.PlusF11Plugins), it.belloworld.mercurygram.PlusPlugins.summary()));
+        items.add(UItem.asShadow(null));
+        // plus f11 end
     }
 
     @Override
@@ -394,6 +401,10 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             return;
         }
         // plus f08 end
+        if (item.id == ID_PLUS_PLUGINS) { // plus f11
+            presentFragment(new PlusPluginsActivity());
+            return;
+        }
         // plus: ghost mode toggles
         if (item.id == ID_GHOST_ON) {
             it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));

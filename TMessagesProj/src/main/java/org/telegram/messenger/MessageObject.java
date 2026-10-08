@@ -6089,6 +6089,7 @@ public class MessageObject {
                 } else {
                     messageText = messageOwner.message;
                 }
+                messageText = it.belloworld.mercurygram.PlusPlugins.onMessageText(currentAccount, this, messageText); // plus f11: plugin display hook (plain text messages, display only)
             }
         }
 

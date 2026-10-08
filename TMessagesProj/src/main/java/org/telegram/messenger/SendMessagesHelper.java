@@ -4265,6 +4265,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     public void sendMessage(SendMessageParams sendMessageParams) {
+        if (it.belloworld.mercurygram.PlusPlugins.onSendMessage(currentAccount, sendMessageParams)) return; // plus f11: plugin outgoing-message hook (before f03, so a cancelled or rewritten send is never ghost-scheduled)
         it.belloworld.mercurygram.PlusScheduledSend.apply(currentAccount, sendMessageParams); // plus f03: ghost "send as scheduled"
         final SendMessageChatArguments sendMessageChatArguments = sendMessageParams.sendMessageChatArguments != null ?
                 sendMessageParams.sendMessageChatArguments : SendMessageChatArguments.EMPTY;

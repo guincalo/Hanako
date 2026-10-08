@@ -388,6 +388,7 @@ public class ConnectionsManager extends BaseController {
 
     private void sendRequestInternal(TLObject object, RequestDelegate onCompleteIn, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
         if (it.belloworld.mercurygram.folders.MgFolders.dropIfMercurygram(object, onCompleteIn)) return; // Mercurygram: folders with a negative id never reach the server
+        if (it.belloworld.mercurygram.PlusPlugins.interceptRequest(currentAccount, object, onCompleteIn)) return; // plus f11: plugin request hook (runs before ghost mode; cancelled requests complete locally with an error)
         if (it.belloworld.mercurygram.PlusGhost.intercept(currentAccount, object, onCompleteIn)) return; // plus: ghost mode (dropped requests get a fake empty result)
         final RequestDelegate onComplete = it.belloworld.mercurygram.PlusGhost.wrapCompletion(currentAccount, object, onCompleteIn); // plus: go back offline after write requests
         it.belloworld.mercurygram.PlusGhostSilent.apply(currentAccount, object); // plus f09: silent sends in ghost mode

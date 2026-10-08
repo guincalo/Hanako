@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- plus f11: plugin engine -->
+<resources>
+    <string name="PlusF11Plugins">Plugins</string>
+    <string name="PlusF11Installed">Installed plugins</string>
+    <string name="PlusF11None">No plugins yet. Import a plugin manifest (.json) to get started.</string>
+    <string name="PlusF11CodeTag">code</string>
+    <string name="PlusF11LongPress">Tap to switch a plugin on or off. Long-press for details or to delete it.</string>
+    <string name="PlusF11Import">Import plugin file…</string>
+    <string name="PlusF11Reload">Reload plugins</string>
+    <string name="PlusF11ImportAbout">A plugin is a .json manifest. Rule plugins replace text in messages you send or in how messages are shown, or cancel requests by name; they can\'t run code. A code plugin also needs its .dex/.jar file; import both. New plugins start switched off. Files are kept in Mercurygram\'s private storage.</string>
+    <string name="PlusF11Security">Security</string>
+    <string name="PlusF11AllowCode">Allow code plugins</string>
+    <string name="PlusF11AllowCodeAbout">Code plugins are Java code running inside Mercurygram with full access to your chats and accounts. They are not sandboxed. A code plugin is switched off again automatically when its code file changes.</string>
+    <string name="PlusF11AllowCodeWarning">Code plugins can read and send messages, see your account data and send network requests as you. Only allow this for plugins you built or fully trust.</string>
+    <string name="PlusF11EnableCodeWarning">This plugin runs code with Mercurygram\'s full access to your chats and accounts. Enable it only if you trust its author.</string>
+    <string name="PlusF11Continue">Continue</string>
+    <string name="PlusF11Delete">Delete</string>
+    <string name="PlusF11DeleteConfirm">Delete this plugin, its code file and its saved data?</string>
+    <string name="PlusF11Author">Author</string>
+    <string name="PlusF11Hooks">Hooks</string>
+    <string name="PlusF11File">File</string>
+</resources>
