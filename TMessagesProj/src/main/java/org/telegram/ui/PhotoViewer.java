@@ -14794,6 +14794,19 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 galleryGap.setVisibility(View.VISIBLE);
                 menuItem.showSubItem(gallery_menu_share);
             }
+            if (it.belloworld.mercurygram.PlusDeletedMedia.isBrowserObject(newMessageObject)) { // plus f20: local read-only copy, no server actions
+                final int[] plusHidden = {gallery_menu_delete, gallery_menu_showinchat, gallery_menu_reply, gallery_menu_showall,
+                        gallery_menu_share, gallery_menu_savegif, gallery_menu_openin, gallery_menu_create_sticker, gallery_menu_report};
+                for (int plusId : plusHidden) {
+                    menuItem.hideSubItem(plusId);
+                }
+                allowShare = false;
+                galleryButton.setVisibility(View.GONE);
+                galleryGap.setVisibility(View.GONE);
+                setItemVisible(sendItem, false, false);
+                setItemVisible(editItem, false, false);
+                menuItem.checkHideMenuItem();
+            }
             groupedPhotosListView.fillList();
         } else if (!secureDocuments.isEmpty()) {
             allowShare = false;

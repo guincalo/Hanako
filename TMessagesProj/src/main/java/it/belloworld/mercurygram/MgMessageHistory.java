@@ -590,6 +590,92 @@ public class MgMessageHistory {
         });
     }
 
+    // plus f20 begin: saved deleted-media browser (PlusDeletedMedia)
+    /**
+     * Entries that have a saved media copy, newest first: deleted messages and,
+     * when {@code includeEdited}, pre-edit / expired view-once versions.
+     * {@code dialogId == 0} means every chat of the account. Call off the UI thread.
+     */
+    public List<Entry> getMediaEntries(int account, long dialogId, boolean includeEdited, int limit) {
+        ArrayList<Entry> out = new ArrayList<>();
+        loadMediaKind(TBL_DELETED, KIND_DELETED, account, dialogId, limit, out);
+        if (includeEdited) {
+            loadMediaKind(TBL_EDITED, KIND_EDITED, account, dialogId, limit, out);
+        }
+        out.sort((a, b) -> Long.compare(b.whenMs, a.whenMs));
+        return out;
+    }
+
+    private void loadMediaKind(String table, int kind, int account, long dialogId, int limit, List<Entry> out) {
+        String sql = "SELECT dialog_id, mid, when_ms, data, media_path, thumb_path FROM " + table
+                + " WHERE account=? AND media_path IS NOT NULL" + (dialogId != 0 ? " AND dialog_id=?" : "")
+                + " ORDER BY when_ms DESC LIMIT " + Math.max(1, limit);
+        String[] args = dialogId != 0
+                ? new String[]{Integer.toString(account), Long.toString(dialogId)}
+                : new String[]{Integer.toString(account)};
+        readCursor(sql, args, c -> {
+            while (c.moveToNext()) {
+                TLRPC.Message m = deserialize(c.getBlob(3));
+                if (m == null) {
+                    continue;
+                }
+                String mediaPath = c.isNull(4) ? null : c.getString(4);
+                String thumbPath = c.isNull(5) ? null : c.getString(5);
+                MgHistoryMedia.apply(m, mediaPath, thumbPath);
+                out.add(new Entry(kind, c.getLong(0), c.getInt(1), c.getLong(2), m, mediaPath, thumbPath));
+            }
+        });
+    }
+
+    /**
+     * Drops one saved entry, identified by its media copy, and deletes its files.
+     * {@code onDone} runs on a background queue once the row is gone.
+     */
+    public void forgetMediaEntry(int account, int kind, long dialogId, int mid, String mediaPath, Runnable onDone) {
+        if (mediaPath == null) {
+            return;
+        }
+        final String table = kind == KIND_EDITED ? TBL_EDITED : TBL_DELETED;
+        Utilities.globalQueue.postRunnable(() -> {
+            ArrayList<String> files = new ArrayList<>();
+            String where = " WHERE account=? AND dialog_id=? AND mid=? AND media_path=?";
+            String[] args = {Integer.toString(account), Long.toString(dialogId), Integer.toString(mid), mediaPath};
+            synchronized (writeLock) {
+                Cursor c = null;
+                try {
+                    android.database.sqlite.SQLiteDatabase db = dbHelper.getWritableDatabase();
+                    c = db.rawQuery("SELECT media_path, thumb_path FROM " + table + where, args);
+                    while (c.moveToNext()) {
+                        if (!c.isNull(0)) {
+                            files.add(c.getString(0));
+                        }
+                        if (!c.isNull(1)) {
+                            files.add(c.getString(1));
+                        }
+                    }
+                    c.close();
+                    c = null;
+                    db.execSQL("DELETE FROM " + table + where, args);
+                } catch (Exception e) {
+                    FileLog.e(e);
+                    files.clear();
+                } finally {
+                    if (c != null) {
+                        try {
+                            c.close();
+                        } catch (Exception ignore) {
+                        }
+                    }
+                }
+            }
+            MgHistoryMedia.deleteAsync(files);
+            if (onDone != null) {
+                onDone.run();
+            }
+        });
+    }
+    // plus f20 end
+
     public void clearAll() {
         synchronized (writeLock) {
             try {

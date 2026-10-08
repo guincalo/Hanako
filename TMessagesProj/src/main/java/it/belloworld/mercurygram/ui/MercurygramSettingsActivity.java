@@ -98,6 +98,10 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     private static final int ID_F07_OPEN_LOG = 701;
     private static final int ID_F07_KEEP_REACTIONS = 702;
     private static final int ID_PLUS_PLUGINS = 1100; // plus f11
+    // plus f20: saved deleted-media browser (ids 2000-2099)
+    private static final int ID_F20_OPEN = 2000;
+    private static final int ID_F20_CHAT_MENU = 2001;
+    private static final int ID_F20_INCLUDE_EDITS = 2002;
 
     @Override
     protected CharSequence getTitle() {
@@ -180,6 +184,15 @@ public class MercurygramSettingsActivity extends UniversalFragment {
                 .setChecked(it.belloworld.mercurygram.PlusDeletedReactions.isKeepEnabled()));
         items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF07SettingsAbout)));
         // plus f07 end
+
+        // plus f20 begin: saved deleted-media browser
+        items.add(UItem.asButton(ID_F20_OPEN, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title), ""));
+        items.add(UItem.asCheck(ID_F20_CHAT_MENU, LocaleController.getString(R.string.PlusF20ChatMenu))
+                .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isChatMenuEnabled()));
+        items.add(UItem.asCheck(ID_F20_INCLUDE_EDITS, LocaleController.getString(R.string.PlusF20IncludeEdits))
+                .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isIncludeEdits()));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF20SettingsAbout)));
+        // plus f20 end
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsMedia)));
         items.add(UItem.asCheck(ID_REAR_ROUND_VIDEOS, LocaleController.getString(R.string.RearRoundVideos))
@@ -602,6 +615,22 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             return;
         }
         // plus f14 end
+        // plus f20 begin: saved deleted-media browser
+        if (item.id == ID_F20_OPEN) {
+            presentFragment(new PlusDeletedMediaActivity(0));
+            return;
+        }
+        if (item.id == ID_F20_CHAT_MENU) {
+            it.belloworld.mercurygram.PlusDeletedMedia.setChatMenuEnabled(!it.belloworld.mercurygram.PlusDeletedMedia.isChatMenuEnabled());
+            refreshList();
+            return;
+        }
+        if (item.id == ID_F20_INCLUDE_EDITS) {
+            it.belloworld.mercurygram.PlusDeletedMedia.setIncludeEdits(!it.belloworld.mercurygram.PlusDeletedMedia.isIncludeEdits());
+            refreshList();
+            return;
+        }
+        // plus f20 end
         switch (item.id) {
             case ID_HIDDEN_ACCOUNTS:
                 presentFragment(new HiddenAccountsActivity());
