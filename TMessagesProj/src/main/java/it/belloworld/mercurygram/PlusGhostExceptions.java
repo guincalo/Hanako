@@ -168,6 +168,11 @@ public final class PlusGhostExceptions {
         return PlusUtil.validAccount(account) && onlineChat[account] != 0;
     }
 
+    /** plus f03: this dialog is the "online while open" chat on screen right now. */
+    public static boolean onlineExceptedNow(int account, long dialogId) {
+        return PlusUtil.validAccount(account) && dialogId != 0 && onlineChat[account] == dialogId;
+    }
+
     // ---- ChatActivity hooks (UI thread) ----
 
     /** Dialog of the chat currently resumed on screen, per account (0 = none). */

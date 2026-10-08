@@ -22036,7 +22036,7 @@ public class ChatActivity extends BaseFragment implements
                 int mode = (Integer) args[3];
                 if (mode != chatMode && chatMode != MODE_SAVED && chatMode != MODE_SUGGESTIONS) {
                     if (chatMode != MODE_SCHEDULED && mode == MODE_SCHEDULED && !isPaused && LaunchActivity.getSafeLastFragment() == this && messagePreviewParams == null) {
-                        if (!arr.isEmpty() && arr.get(0).getId() < 0) {
+                        if (!arr.isEmpty() && arr.get(0).getId() < 0 && !it.belloworld.mercurygram.PlusScheduledSend.keepInChat(this, currentAccount, arr.get(0))) { // plus f03
                             openScheduledMessages(arr.get(0).getId(), arr.get(0).messageOwner != null && arr.get(0).messageOwner.video_processing_pending);
                         }
                     }

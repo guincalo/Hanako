@@ -2080,6 +2080,10 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         if (messages == null || messages.isEmpty()) {
             return 0;
         }
+        final int plusSchedule = it.belloworld.mercurygram.PlusScheduledSend.forwardDate(currentAccount, peer, scheduleDate, replyToTopMsg, payStars, monoForumPeerId, suggestionParams); // plus f03
+        if (plusSchedule != scheduleDate) {
+            return sendMessage(messages, peer, forwardFromMyName, hideCaption, notify, plusSchedule, 0, replyToTopMsg, video_timestamp, payStars, monoForumPeerId, suggestionParams);
+        }
         int sendResult = 0;
         long myId = getUserConfig().getClientUserId();
         boolean isChannel = false;
@@ -4261,6 +4265,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     public void sendMessage(SendMessageParams sendMessageParams) {
+        it.belloworld.mercurygram.PlusScheduledSend.apply(currentAccount, sendMessageParams); // plus f03: ghost "send as scheduled"
         final SendMessageChatArguments sendMessageChatArguments = sendMessageParams.sendMessageChatArguments != null ?
                 sendMessageParams.sendMessageChatArguments : SendMessageChatArguments.EMPTY;
         String message = sendMessageParams.message;
@@ -9903,7 +9908,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 TLRPC.TL_messages_messages messagesRes = new TLRPC.TL_messages_messages();
                 messagesRes.messages.add(prevMessage.messageOwner);
                 if (!message.paidMedia && !message.pollMedia) {
-                    accountInstance.getMessagesStorage().putMessages(messagesRes, message.peer, -2, 0, false, scheduleDate != 0 ? 1 : 0, 0);
+                    accountInstance.getMessagesStorage().putMessages(messagesRes, message.peer, -2, 0, false, (scheduleDate != 0 || message.scheduled) ? 1 : 0, 0); // plus f03: the group may have been scheduled inside sendMessage
                 }
                 instance.sendReadyToSendGroup(message, true, true);
             }

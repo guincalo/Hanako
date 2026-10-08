@@ -172,6 +172,13 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             items.add(UItem.asShadow(LocaleController.getString(R.string.PlusGhostExcSettingsInfo)));
         }
         // plus f01 end
+        // plus f03 begin: ghost "send as scheduled"
+        if (ghostOn) {
+            items.add(UItem.asCheck(it.belloworld.mercurygram.PlusScheduledSend.SETTINGS_ROW_ID, LocaleController.getString(R.string.PlusF03ScheduledSend))
+                    .setChecked(it.belloworld.mercurygram.PlusScheduledSend.isEnabled(acc)));
+            items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF03ScheduledSendInfo)));
+        }
+        // plus f03 end
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
@@ -307,6 +314,13 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             presentFragment(new PlusGhostExceptionsActivity());
             return;
         }
+        // plus f03 begin
+        if (item.id == it.belloworld.mercurygram.PlusScheduledSend.SETTINGS_ROW_ID) {
+            it.belloworld.mercurygram.PlusScheduledSend.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusScheduledSend.isEnabled(getCurrentAccount()));
+            refreshList();
+            return;
+        }
+        // plus f03 end
         // plus: ghost mode toggles
         if (item.id == ID_GHOST_ON) {
             it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));

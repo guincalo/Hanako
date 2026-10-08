@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="PlusF03ScheduledSend">Send messages as scheduled</string>
+    <string name="PlusF03ScheduledSendInfo">Needs Stay offline. Your messages, media, albums and forwards are sent as scheduled messages about 12 seconds ahead (longer for large media), and the server posts them for you, so sending does not put you online. They show up in the chat once posted; edits and replies work as usual. Not used for secret chats, Saved Messages, comment threads, paid messages or dice. Recipients may see a \"scheduled\" marker on these messages in some apps. On a slow or high-latency connection messages can go out late or out of order.</string>
+    <string name="PlusF03ScheduledSendBulletin">Sending in %1$d s without going online</string>
+</resources>

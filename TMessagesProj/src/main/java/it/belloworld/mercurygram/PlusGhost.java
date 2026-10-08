@@ -295,6 +295,7 @@ public final class PlusGhost {
 
     /** @return true when the request must be dropped (its callback is completed with a fake result). */
     public static boolean intercept(int account, TLObject o, RequestDelegate onComplete) {
+        PlusScheduledSend.onRequest(account, o); // plus f03: re-stamp ghost-scheduled sends
         if (o == null || !validAccount(account) || !isEnabled(account)) {
             return false;
         }
@@ -349,6 +350,9 @@ public final class PlusGhost {
     public static RequestDelegate wrapCompletion(int account, TLObject o, RequestDelegate onComplete) {
         if (o == null || !validAccount(account) || !isEnabled(account)) {
             return onComplete;
+        }
+        if (PlusScheduledSend.isGhostRequest(o)) {
+            return onComplete; // plus f03: sent as scheduled, never showed us online; read happens when it is posted
         }
         final boolean goOffline = isHidden(account, OPT_ONLINE) && isActivityRequest(o);
         final long readDialog = (isHidden(account, OPT_READS) && isHidden(account, OPT_READ_ON_SEND)) ? interactionDialogId(o) : 0;

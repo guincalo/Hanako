@@ -1073,6 +1073,9 @@ public class NotificationsController extends BaseController implements Notificat
 
             for (int a = 0; a < messageObjects.size(); a++) {
                 MessageObject messageObject = messageObjects.get(a);
+                if (it.belloworld.mercurygram.PlusScheduledSend.onPostedOwnMessage(currentAccount, messageObject)) {
+                    continue; // plus f03: our ghost-scheduled message was posted; no "scheduled message sent" notification
+                }
                 if (messageObject.messageOwner != null && (messageObject.isImportedForward() ||
                         messageObject.messageOwner.action instanceof TLRPC.TL_messageActionSetMessagesTTL ||
                         messageObject.messageOwner.silent && (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionContactSignUp || messageObject.messageOwner.action instanceof TLRPC.TL_messageActionUserJoined)) ||
