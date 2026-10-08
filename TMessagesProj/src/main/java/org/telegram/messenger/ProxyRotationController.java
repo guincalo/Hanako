@@ -62,6 +62,7 @@ public class ProxyRotationController implements NotificationCenter.NotificationC
         if (!SharedConfig.proxyRotationEnabled) {
             return;
         }
+        if (it.belloworld.mercurygram.PlusProxySwitch.isEnabled()) return; // plus f17: fastest-proxy auto-switch owns switching
 
         // While the Tor toggle is ON, the synthetic mgInternal entry is the
         // ONLY proxy MTProto may use — otherwise rotation could rank a

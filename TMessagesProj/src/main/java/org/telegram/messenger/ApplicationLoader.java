@@ -367,6 +367,8 @@ public class ApplicationLoader extends Application {
 
         LauncherIconController.tryFixLauncherIconIfNeeded();
         ProxyRotationController.init();
+        it.belloworld.mercurygram.PlusProxySwitch.init(); // plus f17
+        it.belloworld.mercurygram.PlusVpnProxy.init(applicationContext); // plus f17
 
         it.belloworld.mercurygram.MgNetworkChangeWatcher.init(applicationContext);
         SharedConfig.applyReduceTrackingFingerprintToNative();

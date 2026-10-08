@@ -642,7 +642,8 @@ public class ConnectionsManager extends BaseController {
     public void init(int version, int layer, int apiId, String deviceModel, String systemVersion, String appVersion, String langCode, String systemLangCode, String configPath, String logPath, String regId, String cFingerprint, int timezoneOffset, long userId, boolean userPremium, boolean enablePushConnection) {
         final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
         final ProxySettings proxySettings = ProxySettings.fromSharedPreferences(preferences);
-        if (preferences.getBoolean("proxy_enabled", false) && proxySettings.isValid()) {
+        if (preferences.getBoolean("proxy_enabled", false) && proxySettings.isValid()
+                && !it.belloworld.mercurygram.PlusVpnProxy.shouldBypass()) { // plus f17
             if (proxySettings.getType() == ProxySettings.Type.WEB) {
                 int localPort = WebProxyTransport.start(proxySettings.getAddress(), proxySettings.getSecret());
                 native_setProxySettings(currentAccount, "127.0.0.1", localPort != 0 ? localPort : 9, "", "",
@@ -995,6 +996,7 @@ public class ConnectionsManager extends BaseController {
     }
 
     public static void setProxySettings(boolean enabled, ProxySettings settings) {
+        if (enabled && it.belloworld.mercurygram.PlusVpnProxy.shouldBypass()) enabled = false; // plus f17
         String address = "";
         int port = 0;
         String username = "";
@@ -1212,6 +1214,8 @@ public class ConnectionsManager extends BaseController {
 
         protected ResolvedDomain doInBackground(Void... voids) {
             try {
+                ArrayList<String> plusDoh = it.belloworld.mercurygram.PlusDoh.resolveHost(currentHostName); // plus f17
+                if (plusDoh != null) return new ResolvedDomain(plusDoh, SystemClock.elapsedRealtime()); // plus f17
                 InetAddress[] resolved = InetAddress.getAllByName(currentHostName);
                 ArrayList<String> addresses = new ArrayList<>(resolved.length);
                 for (InetAddress a : resolved) {
@@ -1255,6 +1259,15 @@ public class ConnectionsManager extends BaseController {
             InputStream httpConnectionStream = null;
             try {
                 String domain = native_isTestBackend(currentAccount) != 0 ? "tapv3.stel.com" : AccountInstance.getInstance(currentAccount).getMessagesController().dcDomainName;
+                // plus f17: custom DoH resolver for the DC config TXT lookup (null = stock path below)
+                it.belloworld.mercurygram.PlusDoh.TxtConfig plusCfg = it.belloworld.mercurygram.PlusDoh.loadDcConfig(domain);
+                if (plusCfg != null) {
+                    responseDate = plusCfg.date;
+                    NativeByteBuffer plusBuf = new NativeByteBuffer(plusCfg.bytes.length);
+                    plusBuf.writeBytes(plusCfg.bytes);
+                    return plusBuf;
+                }
+                // plus f17 end
                 int len = Utilities.random.nextInt(116) + 13;
                 final String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 

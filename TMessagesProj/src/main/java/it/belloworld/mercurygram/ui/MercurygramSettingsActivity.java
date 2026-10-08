@@ -52,6 +52,12 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     private static final int ID_F14_SHOW_DC = 1400;
     private static final int ID_F14_SHOW_REG_DATE = 1401;
     private static final int ID_SEND_PROMPT = 1600; // plus f16: + PlusSendPrompts.KIND_*
+    // plus f17: network
+    private static final int ID_PLUS_DOH = 1700;
+    private static final int ID_PLUS_DOH_URL = 1701;
+    private static final int ID_PLUS_PROXY_SWITCH = 1710;
+    private static final int ID_PLUS_VPN_NO_PROXY = 1720;
+    // plus f17 end
     private static final int ID_MESSAGE_DETAILS_MENU = 1;
     private static final int ID_HIDE_CHAT_KEYBOARD = 2;
     private static final int ID_HIDE_ALL_TAB = 3;
@@ -364,6 +370,24 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(
                 LocaleController.getString(R.string.MercurygramTranscriptionEnableInfo))));
 
+        // plus f17: custom DoH, proxy auto-switch, disable proxy on VPN (app-wide)
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusNetworkHeader)));
+        items.add(UItem.asCheck(ID_PLUS_DOH, LocaleController.getString(R.string.PlusDohEnable))
+                .setChecked(it.belloworld.mercurygram.PlusDoh.isEnabled()));
+        if (it.belloworld.mercurygram.PlusDoh.isEnabled()) {
+            items.add(UItem.asButton(ID_PLUS_DOH_URL, LocaleController.getString(R.string.PlusDohResolver),
+                    it.belloworld.mercurygram.PlusDoh.getLabel()));
+        }
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusDohAbout)));
+        items.add(UItem.asCheck(ID_PLUS_PROXY_SWITCH, LocaleController.getString(R.string.PlusProxyAutoSwitch))
+                .setChecked(it.belloworld.mercurygram.PlusProxySwitch.isEnabled()));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusProxyAutoSwitchAbout)));
+        items.add(UItem.asCheck(ID_PLUS_VPN_NO_PROXY, LocaleController.getString(R.string.PlusVpnDisableProxy))
+                .setChecked(it.belloworld.mercurygram.PlusVpnProxy.isEnabled()));
+        items.add(UItem.asShadow(LocaleController.getString(
+                it.belloworld.mercurygram.PlusVpnProxy.shouldBypass() ? R.string.PlusVpnDisableProxyActive : R.string.PlusVpnDisableProxyAbout)));
+        // plus f17 end
+
         if (MgUpdateChecker.canSelfInstall()) {
             items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsUpdates)));
             items.add(MgSettingsScope.globalCheck(ID_DISABLE_AUTO_UPDATE, LocaleController.getString(R.string.MercurygramDisableAutoUpdate))
@@ -467,6 +491,27 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             refreshList();
             return;
         }
+        // plus f17: network
+        if (item.id == ID_PLUS_DOH) {
+            it.belloworld.mercurygram.PlusDoh.setEnabled(!it.belloworld.mercurygram.PlusDoh.isEnabled());
+            refreshList();
+            return;
+        }
+        if (item.id == ID_PLUS_DOH_URL) {
+            showPlusDohPicker();
+            return;
+        }
+        if (item.id == ID_PLUS_PROXY_SWITCH) {
+            it.belloworld.mercurygram.PlusProxySwitch.setEnabled(!it.belloworld.mercurygram.PlusProxySwitch.isEnabled());
+            refreshList();
+            return;
+        }
+        if (item.id == ID_PLUS_VPN_NO_PROXY) {
+            it.belloworld.mercurygram.PlusVpnProxy.setEnabled(!it.belloworld.mercurygram.PlusVpnProxy.isEnabled());
+            refreshList();
+            return;
+        }
+        // plus f17 end
         // plus: ghost mode toggles
         if (item.id == ID_GHOST_ON) {
             it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));
@@ -922,4 +967,85 @@ public class MercurygramSettingsActivity extends UniversalFragment {
                 })
                 .show();
     }
+
+    // plus f17: DoH resolver picker (presets + custom url), then a one-shot test lookup
+    private void showPlusDohPicker() {
+        Context context = getParentActivity();
+        if (context == null) return;
+        final String current = it.belloworld.mercurygram.PlusDoh.getUrl();
+        AtomicReference<Dialog> dialogRef = new AtomicReference<>();
+        LinearLayout linearLayout = new LinearLayout(context);
+        linearLayout.setOrientation(LinearLayout.VERTICAL);
+        boolean isPreset = false;
+        int count = it.belloworld.mercurygram.PlusDoh.PRESET_URLS.length;
+        for (int i = 0; i <= count; i++) {
+            final boolean custom = i == count;
+            final String url = custom ? null : it.belloworld.mercurygram.PlusDoh.PRESET_URLS[i];
+            boolean checked = !custom && url.equals(current);
+            isPreset |= checked;
+            RadioColorCell cell = new RadioColorCell(context);
+            cell.setPadding(AndroidUtilities.dp(4), 0, AndroidUtilities.dp(4), 0);
+            cell.setCheckColor(Theme.getColor(Theme.key_radioBackground),
+                    Theme.getColor(Theme.key_dialogRadioBackgroundChecked));
+            cell.setTextAndValue(custom ? LocaleController.getString(R.string.PlusDohCustom)
+                    : it.belloworld.mercurygram.PlusDoh.PRESET_NAMES[i], custom ? !isPreset : checked);
+            cell.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), Theme.RIPPLE_MASK_ALL));
+            linearLayout.addView(cell);
+            cell.setOnClickListener(v -> {
+                Dialog d = dialogRef.get();
+                if (d != null) d.dismiss();
+                if (custom) {
+                    showPlusDohCustom();
+                } else {
+                    applyPlusDohUrl(url);
+                }
+            });
+        }
+        Dialog dialog = new AlertDialog.Builder(context)
+                .setTitle(LocaleController.getString(R.string.PlusDohResolver))
+                .setView(linearLayout)
+                .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
+                .create();
+        dialogRef.set(dialog);
+        showDialog(dialog);
+    }
+
+    private void showPlusDohCustom() {
+        Context context = getParentActivity();
+        if (context == null) return;
+        org.telegram.ui.Components.EditTextBoldCursor editText = new org.telegram.ui.Components.EditTextBoldCursor(context);
+        editText.setSingleLine(true);
+        editText.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
+        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextHint));
+        editText.setHint(LocaleController.getString(R.string.PlusDohCustomHint));
+        editText.setText(it.belloworld.mercurygram.PlusDoh.getUrl());
+        editText.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(8), AndroidUtilities.dp(24), AndroidUtilities.dp(8));
+        new AlertDialog.Builder(context)
+                .setTitle(LocaleController.getString(R.string.PlusDohResolver))
+                .setView(editText)
+                .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
+                .setPositiveButton(LocaleController.getString(R.string.OK), (d, which) -> {
+                    String url = it.belloworld.mercurygram.PlusDoh.normalizeUrl(editText.getText().toString());
+                    if (url == null) {
+                        Toast.makeText(context, LocaleController.getString(R.string.PlusDohInvalid), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    applyPlusDohUrl(url);
+                })
+                .show();
+    }
+
+    private void applyPlusDohUrl(String url) {
+        if (!it.belloworld.mercurygram.PlusDoh.setUrl(url)) return;
+        refreshList();
+        final Context appContext = ApplicationLoader.applicationContext;
+        org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+            String ip = it.belloworld.mercurygram.PlusDoh.test(url);
+            AndroidUtilities.runOnUIThread(() -> Toast.makeText(appContext, ip != null
+                    ? LocaleController.formatString(R.string.PlusDohTestOk, ip)
+                    : LocaleController.getString(R.string.PlusDohTestFail), Toast.LENGTH_LONG).show());
+        });
+    }
+    // plus f17 end
 }

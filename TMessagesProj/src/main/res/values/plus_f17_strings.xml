@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- plus f17: custom DoH, proxy auto-switch, disable proxy on VPN -->
+    <string name="PlusNetworkHeader">Network</string>
+    <string name="PlusDohEnable">Custom DNS-over-HTTPS</string>
+    <string name="PlusDohResolver">DoH resolver</string>
+    <string name="PlusDohCustom">Custom…</string>
+    <string name="PlusDohCustomHint">https://example.com/dns-query</string>
+    <string name="PlusDohInvalid">Enter an https:// DoH address</string>
+    <string name="PlusDohTestOk">Resolver works (telegram.org → %1$s)</string>
+    <string name="PlusDohTestFail">Resolver did not answer (servers that only speak HTTP/2 are not supported). The default lookup is used instead.</string>
+    <string name="PlusDohAbout">Resolves proxy host names and the backup data-centre list through this DNS-over-HTTPS server instead of the system DNS and the built-in Cloudflare lookup. If it does not answer, the default lookup is used. Not used while Tor is on.</string>
+    <string name="PlusProxyAutoSwitch">Auto-switch proxy</string>
+    <string name="PlusProxyAutoSwitchAbout">If the current proxy cannot connect for 10 seconds, test the other saved proxies and switch to the fastest one that works. Replaces the switching step of the built-in proxy rotation while on.</string>
+    <string name="PlusVpnDisableProxy">Disable proxy while a VPN is active</string>
+    <string name="PlusVpnDisableProxyAbout">Connect directly through the VPN instead of the saved proxy while one is up. Your proxy stays selected and comes back when the VPN goes down. Tor is never bypassed.</string>
+    <string name="PlusVpnDisableProxyActive">Applies to all accounts. A VPN is active now, so the proxy is bypassed.</string>
+</resources>
