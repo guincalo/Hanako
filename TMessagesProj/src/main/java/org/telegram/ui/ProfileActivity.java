@@ -2545,6 +2545,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (getParentActivity() == null) {
                     return;
                 }
+                if (it.belloworld.mercurygram.PlusActivityLog.onProfileMenuClick(ProfileActivity.this, id, userId)) { // plus f05
+                    return;
+                }
                 if (id == -1) {
                     if (sharedMediaLayout != null && sharedMediaLayout.scrollSlidingTextTabStrip != null && sharedMediaLayout.scrollSlidingTextTabStrip.isReordering()) {
                         stopTabsReorder();
@@ -12253,6 +12256,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
                 if (!isBot && getContactsController().contactsDict.get(userId) != null) {
                     otherItem.addSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString(R.string.AddShortcut));
+                }
+                if (it.belloworld.mercurygram.PlusActivityLog.showInProfile(currentAccount, user)) { // plus f05
+                    otherItem.addSubItem(it.belloworld.mercurygram.PlusActivityLog.MENU_ID, R.drawable.msg_log, getString(R.string.PlusF05ActivityLog));
                 }
             }
         } else if (chatId != 0) {

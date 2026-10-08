@@ -18889,6 +18889,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 } else {
                     markAsReadMessagesOutbox.put(update.peer.user_id, update.max_id);
                     dialogId = update.peer.user_id;
+                    it.belloworld.mercurygram.PlusActivityLog.onReadOutbox(currentAccount, update.peer.user_id, update.max_id, date, fromGetDifference); // plus f05
                     TLRPC.User user = getUser(update.peer.user_id);
                     if (user != null && user.status != null && user.status.expires <= 0 && Math.abs(getConnectionsManager().getCurrentTime() - date) < 30) {
                         onlinePrivacy.put(update.peer.user_id, date);
@@ -20004,6 +20005,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         } else if (update.status instanceof TLRPC.TL_userStatusLastMonth) {
                             update.status.expires = -102;
                         }
+                        it.belloworld.mercurygram.PlusActivityLog.onUserStatus(currentAccount, update.user_id, update.status); // plus f05
                         if (currentUser != null) {
                             currentUser.id = update.user_id;
                             currentUser.status = update.status;
