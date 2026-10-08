@@ -1,0 +1,146 @@
+name: Hanako build
+
+# Branch pushes build a signed arm64 APK and keep it as a workflow artifact.
+# Pushing a tag v* (e.g. v1.0.0) does the same and then publishes a GitHub
+# Release with the APK and that version's CHANGELOG.md section as notes.
+# Adapted from the earlier plus.yml personal build.
+
+on:
+  push:
+    branches: [plus, hanako]
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: hanako-${{ github.ref }}
+  # never cancel a release build half way
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      apk_name: ${{ steps.out.outputs.apk_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Apply personal patches (legacy plus/patches, if any)
+        run: |
+          set -euo pipefail
+          git config user.email ci@local; git config user.name ci
+          shopt -s nullglob
+          for p in plus/patches/*.patch; do
+            echo "Applying $p"
+            git apply --3way --whitespace=nowarn "$p"
+          done
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - name: Version and in-repo signing key
+        id: prep
+        run: |
+          set -euo pipefail
+          APP_VN=$(grep '^APP_VERSION_NAME=' gradle.properties | cut -d= -f2)
+          # MG_BUILD_TAG must stay numeric X.Y.Z.M.K (gradle/mg-version.gradle);
+          # M=90 marks Hanako builds, K = run number.
+          BUILD_TAG="${APP_VN}.90.${GITHUB_RUN_NUMBER}"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            LABEL="${GITHUB_REF_NAME}"
+          else
+            LABEL="${BUILD_TAG}"
+          fi
+          echo "tag=${BUILD_TAG}" >> "$GITHUB_OUTPUT"
+          echo "label=${LABEL}" >> "$GITHUB_OUTPUT"
+          echo "ks=$(base64 -w0 TMessagesProj/config/release.keystore)" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK
+        id: build
+        uses: ./.github/actions/build-mg
+        with:
+          flavor: afatFdArm64
+          task: assembleAfatFdArm64Release
+          abi: arm64-v8a
+          build-type: release
+          artifact-version: ${{ steps.prep.outputs.tag }}
+          name-infix: '-plus'
+          build-tag: ${{ steps.prep.outputs.tag }}
+          # Telegram's official public Android keys (DrKLO BuildVars.java)
+          app-id: '4'
+          app-hash: '014b35b6184100b085b0d0572f9b5103'
+          release-keystore-b64: ${{ steps.prep.outputs.ks }}
+          release-keystore-password: android
+          release-key-alias: androidkey
+          release-key-password: android
+
+      - name: Name APK
+        id: out
+        run: |
+          set -euo pipefail
+          NAME="Hanako-${{ steps.prep.outputs.label }}-arm64-v8a.apk"
+          mkdir -p dist
+          cp "${{ steps.build.outputs.apk_path }}" "dist/${NAME}"
+          (cd dist && sha256sum "${NAME}" > "${NAME}.sha256")
+          echo "apk_name=${NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanako-arm64
+          path: dist/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: hanako-arm64
+          path: dist
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          set -euo pipefail
+          VER="${GITHUB_REF_NAME#v}"
+          # body of "## [VER] ..." up to the next "## [" heading or link refs
+          awk -v ver="$VER" '
+            /^## \[/ { if (found) exit; if (index($0, "## [" ver "]") == 1) { found = 1; next } }
+            /^\[[^]]+\]: / { if (found) exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::warning::No CHANGELOG.md section for ${VER}"
+            echo "See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/CHANGELOG.md)." > notes.md
+          fi
+          {
+            echo
+            echo "---"
+            echo "**Install:** download \`${{ needs.build.outputs.apk_name }}\` (arm64-v8a) below."
+            echo "Fully vibecoded fork: use at your own risk. Not affiliated with Telegram or upstream Mercurygram."
+          } >> notes.md
+          cat notes.md
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Hanako ${{ github.ref_name }}
+          body_path: notes.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            dist/*.apk
+            dist/*.sha256
+          fail_on_unmatched_files: true
