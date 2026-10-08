@@ -156,6 +156,9 @@ public class VoIPHelper {
 		if (activity == null || user == null && chat == null) {
 			return;
 		}
+		if (chat == null && it.belloworld.mercurygram.PlusSendPrompts.interceptCall(activity, user, videoCall, () -> initiateCall(user, null, hash, videoCall, canVideoCall, createCall, checkJoiner, activity, fragment, accountInstance))) { // plus f16
+			return;
+		}
 		VoIPService voIPService = VoIPService.getSharedInstance();
 		if (voIPService != null) {
 			long newId = user != null ? user.id : -chat.id;

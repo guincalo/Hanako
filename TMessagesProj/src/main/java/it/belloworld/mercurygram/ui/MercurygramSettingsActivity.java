@@ -51,6 +51,7 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     // plus f14: profile ID / DC / registration date
     private static final int ID_F14_SHOW_DC = 1400;
     private static final int ID_F14_SHOW_REG_DATE = 1401;
+    private static final int ID_SEND_PROMPT = 1600; // plus f16: + PlusSendPrompts.KIND_*
     private static final int ID_MESSAGE_DETAILS_MENU = 1;
     private static final int ID_HIDE_CHAT_KEYBOARD = 2;
     private static final int ID_HIDE_ALL_TAB = 3;
@@ -187,6 +188,15 @@ public class MercurygramSettingsActivity extends UniversalFragment {
                 .setChecked(it.belloworld.mercurygram.PlusMessageShot.isEnabled()));
         items.add(UItem.asShadow(LocaleController.getString(R.string.PlusMessageShotSettingAbout)));
         // plus f13 end
+
+        // plus f16: ask before sending voice / round / sticker / GIF and before calls (all accounts)
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusPromptHeader)));
+        for (int k = 0; k < it.belloworld.mercurygram.PlusSendPrompts.KIND_COUNT; k++) {
+            items.add(UItem.asCheck(ID_SEND_PROMPT + k, it.belloworld.mercurygram.PlusSendPrompts.label(k))
+                    .setChecked(it.belloworld.mercurygram.PlusSendPrompts.isEnabled(k)));
+        }
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusPromptAbout))));
+        // plus f16 end
 
         // plus: ghost mode (this account)
         final int acc = getCurrentAccount();
@@ -450,6 +460,13 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             return;
         }
         // plus f15 end
+        // plus f16: send / call prompts
+        if (item.id >= ID_SEND_PROMPT && item.id < ID_SEND_PROMPT + it.belloworld.mercurygram.PlusSendPrompts.KIND_COUNT) {
+            int kind = item.id - ID_SEND_PROMPT;
+            it.belloworld.mercurygram.PlusSendPrompts.setEnabled(kind, !it.belloworld.mercurygram.PlusSendPrompts.isEnabled(kind));
+            refreshList();
+            return;
+        }
         // plus: ghost mode toggles
         if (item.id == ID_GHOST_ON) {
             it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));

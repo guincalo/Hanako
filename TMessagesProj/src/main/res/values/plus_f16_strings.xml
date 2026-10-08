@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- plus f16: confirm before sending voice / round / sticker / GIF and before calls -->
+    <string name="PlusPromptHeader">Ask before sending</string>
+    <string name="PlusPromptVoiceRow">Voice messages</string>
+    <string name="PlusPromptRoundRow">Round videos</string>
+    <string name="PlusPromptStickerRow">Stickers</string>
+    <string name="PlusPromptGifRow">GIFs</string>
+    <string name="PlusPromptVoiceCallRow">Voice calls</string>
+    <string name="PlusPromptVideoCallRow">Video calls</string>
+    <string name="PlusPromptAbout">Shows a confirmation first, to stop sends and calls from a mis-tap. A recording stops into its preview, so after Cancel you can still play, trim, send or delete it. Scheduled and paid messages are not asked again.</string>
+    <string name="PlusPromptVoiceTitle">Send voice message?</string>
+    <string name="PlusPromptRoundTitle">Send video message?</string>
+    <string name="PlusPromptStickerTitle">Send sticker?</string>
+    <string name="PlusPromptGifTitle">Send GIF?</string>
+    <string name="PlusPromptSendMessage">It will be sent to this chat.</string>
+    <string name="PlusPromptVoiceCallMessage">Start a voice call with %1$s?</string>
+    <string name="PlusPromptVideoCallMessage">Start a video call with %1$s?</string>
+</resources>
