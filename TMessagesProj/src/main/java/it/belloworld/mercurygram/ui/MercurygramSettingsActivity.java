@@ -42,6 +42,7 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     private static final int ID_GHOST_OPT = 910; // + PlusGhost.OPT_*
     private static final int ID_PLUS_GHOST_EXCEPTIONS = 9101; // plus f01
     private static final int ID_F04_MESSAGE_FILTERS = 400; // plus f04
+    private static final int ID_GHOST_SEND_SILENT = 950; // plus f09
     private static final int ID_MESSAGE_DETAILS_MENU = 1;
     private static final int ID_HIDE_CHAT_KEYBOARD = 2;
     private static final int ID_HIDE_ALL_TAB = 3;
@@ -183,6 +184,10 @@ public class MercurygramSettingsActivity extends UniversalFragment {
                 items.add(UItem.asCheck(ID_GHOST_OPT + i, ghostLabels[i])
                         .setChecked(it.belloworld.mercurygram.PlusGhost.isHidden(acc, i)));
             }
+            // plus f09: send without sound while ghost mode is on
+            items.add(UItem.asCheck(ID_GHOST_SEND_SILENT, LocaleController.getString(R.string.PlusGhostSendSilent))
+                    .setChecked(it.belloworld.mercurygram.PlusGhostSilent.isEnabled(acc)));
+            // plus f09 end
         }
         items.add(UItem.asShadow("Applies to this account. Mark as read (long-press a chat, or the notification button) sends a read receipt for that chat only; for a chat that already looks read, mark it unread first. With \"Read the chat when I reply\", replying, reacting or voting in a chat reads it too, as a normal client would. Stay offline never sends online and sends nothing on app start; it only sends one offline right after your own sends, reactions, votes, edits or calls (or on the next start, if the app was closed within 5 minutes of one). Channel views are not counted. Not covered: reacting to or replying to a story marks it seen, and Premium voice-to-text marks a voice message as listened (server side)."));
         // plus f01 begin: per-chat ghost exceptions
@@ -379,6 +384,13 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             refreshList();
             return;
         }
+        // plus f09: send without sound while ghost mode is on
+        if (item.id == ID_GHOST_SEND_SILENT) {
+            it.belloworld.mercurygram.PlusGhostSilent.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhostSilent.isEnabled(getCurrentAccount()));
+            refreshList();
+            return;
+        }
+        // plus f09 end
         if (item.id >= ID_GHOST_OPT && item.id < ID_GHOST_OPT + it.belloworld.mercurygram.PlusGhost.OPT_COUNT) {
             int opt = item.id - ID_GHOST_OPT;
             it.belloworld.mercurygram.PlusGhost.setHidden(getCurrentAccount(), opt, !it.belloworld.mercurygram.PlusGhost.isHidden(getCurrentAccount(), opt));
