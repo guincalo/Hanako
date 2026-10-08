@@ -535,6 +535,9 @@ public final class PlusChatLock {
         ensureLifecycle();
         if (params.preview) {
             // No peeking into a locked chat with a long-press preview.
+            if (gateType(fragment) == GATE_DIALOG) {
+                toast(LocaleController.getString(R.string.PlusF12PeekLocked)); // plus f12: say why instead of failing silently
+            }
             return true;
         }
         final int account = fragment.getCurrentAccount();

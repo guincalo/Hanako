@@ -157,6 +157,14 @@ public final class PlusGhost {
         if (PlusGhostExceptions.readsExcepted(account, dialogId)) {
             return true; // plus f01: per-chat ghost exception
         }
+        return manualReadWindowOpen(account, dialogId);
+    }
+
+    /** plus f12: the timed "Mark as read" window only (not the f01 per-chat exceptions). */
+    private static boolean manualReadWindowOpen(int account, long dialogId) {
+        if (!validAccount(account) || dialogId == 0) {
+            return false;
+        }
         Long until = allowedReads[account].get(dialogId);
         if (until == null) {
             return false;
@@ -168,12 +176,20 @@ public final class PlusGhost {
         return true;
     }
 
+    /**
+     * plus f12: is a manual "mark as read" window open for this dialog? (PlusPeek honours it.)
+     * A per-chat read exception (f01) does not count: a peek never sends read receipts.
+     */
+    public static boolean isReadAllowed(int account, long dialogId) {
+        return manualReadWindowOpen(account, dialogId);
+    }
+
     /** Called by SecretChatHelper before it sends decryptedMessageActionReadMessages. */
     public static boolean blockSecretRead(int account, long encryptedDialogId) {
         return active(account, OPT_READS) && !readsAllowed(account, encryptedDialogId);
     }
 
-    private static long peerDialogId(TLRPC.InputPeer peer) {
+    static long peerDialogId(TLRPC.InputPeer peer) { // plus f12: also used by PlusPeek
         if (peer == null) {
             return 0;
         }
@@ -262,12 +278,21 @@ public final class PlusGhost {
 
     // ---- fake completion for dropped requests ----
 
-    private static TLObject fakeResult(TLObject o) {
+    static TLObject fakeResult(TLObject o) { // plus f12: also used by PlusPeek
         if (o instanceof TLRPC.TL_messages_readHistory || o instanceof TLRPC.TL_messages_readMessageContents) {
             // real return type is messages.affectedMessages; pts=-1 makes processNewDifferenceParams a no-op
             TLRPC.TL_messages_affectedMessages res = new TLRPC.TL_messages_affectedMessages();
             res.pts = -1;
             res.pts_count = 0;
+            return res;
+        }
+        if (o instanceof TLRPC.TL_messages_readMentions || o instanceof TLRPC.TL_messages_readReactions
+                || o instanceof TLRPC.TL_messages_readPollVotes) {
+            // plus f12 (PlusPeek drops these): real return type is messages.affectedHistory
+            TLRPC.TL_messages_affectedHistory res = new TLRPC.TL_messages_affectedHistory();
+            res.pts = -1;
+            res.pts_count = 0;
+            res.offset = 0;
             return res;
         }
         // channels.readHistory, channels.readMessageContents, messages.readDiscussion,

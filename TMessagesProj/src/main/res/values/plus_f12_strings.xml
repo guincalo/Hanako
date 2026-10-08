@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- plus f12: peek a chat without opening it -->
+    <string name="PlusF12Header">Peek</string>
+    <string name="PlusF12Guard">Peeking leaves the chat untouched</string>
+    <string name="PlusF12LongPressAnywhere">Long-press anywhere on a chat to peek</string>
+    <string name="PlusF12PeekLocked">Unlock the chat to peek</string>
+    <string name="PlusF12About">Peek shows a chat over the list without opening it. With the first option on, a peek sends no read receipts, does not count channel views, and keeps unread reactions, poll votes and mentions as they were, even with ghost mode off. Mark as read in the peek menu still works. Tapping the peek opens the chat for real. With the second option on, long-press a chat to peek and long-press its avatar to select it (normally the other way round). Secret chats and forums can\'t be peeked.</string>
+</resources>
