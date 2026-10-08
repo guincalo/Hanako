@@ -161,7 +161,7 @@ public class MercurygramSettingsActivity extends UniversalFragment {
                         .setChecked(it.belloworld.mercurygram.PlusGhost.isHidden(acc, i)));
             }
         }
-        items.add(UItem.asShadow("Applies to this account. Mark as read (long-press a chat, or the notification button) sends a read receipt for that chat only; for a chat that already looks read, mark it unread first. With \"Read the chat when I reply\", replying, reacting or voting in a chat reads it too, as a normal client would. Stay offline sends no status packets at all; you go offline once after each send, reaction, vote, edit or call. Channel views are not counted. Not covered: reacting to or replying to a story marks it seen, and Premium voice-to-text marks a voice message as listened (server side)."));
+        items.add(UItem.asShadow("Applies to this account. Mark as read (long-press a chat, or the notification button) sends a read receipt for that chat only; for a chat that already looks read, mark it unread first. With \"Read the chat when I reply\", replying, reacting or voting in a chat reads it too, as a normal client would. Stay offline never sends online and sends nothing on app start; it only sends one offline right after your own sends, reactions, votes, edits or calls (or on the next start, if the app was closed within 5 minutes of one). Channel views are not counted. Not covered: reacting to or replying to a story marks it seen, and Premium voice-to-text marks a voice message as listened (server side)."));
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,

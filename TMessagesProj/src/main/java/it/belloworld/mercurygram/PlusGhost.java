@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicIntegerArray;
 
 /**
  * plus: per-account ghost mode. Hooked into ConnectionsManager.sendRequestInternal,
@@ -40,6 +41,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * after each request that makes the server show us online (sending, forwarding, reacting,
  * voting, editing, calls, ...). Optionally (OPT_FORCE_OFFLINE) also when the server reports
  * our own account online while this device is in use.
+ *
+ * Cold start: 0008 sent one offline=true on every process start. Its only real use was clearing
+ * an "online" left by a previous process that died between an action and its offline packet
+ * (the server keeps userStatusOnline until it expires, ~5 min). Connecting, initConnection and
+ * getDifference do not make the server show us online (Telegram Desktop and AyuGram send nothing
+ * at start either), so 0009 keeps that benefit without the leak: the start-up offline goes out
+ * only when a persisted marker says an action may have left us online less than
+ * STALE_ONLINE_MS ago and no offline was confirmed after it.
  */
 public final class PlusGhost {
 
@@ -59,6 +68,9 @@ public final class PlusGhost {
 
     private static final long FORCE_OFFLINE_MIN_INTERVAL_MS = 15000;
     private static final long RECENT_ACTIVITY_MS = 30000;
+    /** Upper bound for how long the server keeps us "online" after an action without a new status. */
+    private static final long STALE_ONLINE_MS = 5 * 60 * 1000;
+    private static final String MAYBE_ONLINE_KEY = "maybe_online_";
 
     private static final String[] OPT_KEYS = {"reads", "typing", "online", "stories", "read_on_send", "force_offline"};
     private static final boolean[] OPT_DEFAULTS = {true, true, true, true, true, false};
@@ -76,6 +88,8 @@ public final class PlusGhost {
     private static final Runnable[] offlineRunnables = new Runnable[UserConfig.MAX_ACCOUNT_COUNT];
     private static final long[] lastActivityAt = new long[UserConfig.MAX_ACCOUNT_COUNT];
     private static final long[] lastForcedOfflineAt = new long[UserConfig.MAX_ACCOUNT_COUNT];
+    /** 1 = the start-up stale-online check already ran for this account in this process. */
+    private static final AtomicIntegerArray startChecked = new AtomicIntegerArray(UserConfig.MAX_ACCOUNT_COUNT);
 
     static {
         for (int i = 0; i < UserConfig.MAX_ACCOUNT_COUNT; i++) {
@@ -270,6 +284,9 @@ public final class PlusGhost {
         if (o == null || !validAccount(account) || !isEnabled(account)) {
             return false;
         }
+        if (startChecked.compareAndSet(account, 0, 1)) {
+            checkStaleOnline(account);
+        }
         if (o instanceof TL_account.updateStatus) {
             if (!isHidden(account, OPT_ONLINE)) {
                 return false;
@@ -278,7 +295,7 @@ public final class PlusGhost {
                 ((TL_account.updateStatus) o).offline = true; // one of our own offline packets
                 return false;
             }
-            return drop(o, onComplete); // no online packets, no periodic last-seen refresh
+            return drop(o, onComplete); // no online packets, no periodic last-seen refresh, nothing at start
         }
         if (isHidden(account, OPT_TYPING)
                 && (o instanceof TLRPC.TL_messages_setTyping || o instanceof TLRPC.TL_messages_setEncryptedTyping)) {
@@ -318,6 +335,7 @@ public final class PlusGhost {
         }
         if (goOffline) {
             lastActivityAt[account] = SystemClock.elapsedRealtime();
+            markMaybeOnline(account);
         }
         if (onComplete == null) {
             // Never wrap a null callback: ConnectionsManager then routes Updates/timestamp
@@ -416,6 +434,51 @@ public final class PlusGhost {
         scheduleOffline(account, OFFLINE_DELAY_MS);
     }
 
+    /** An action that shows us online went out; remembered across process death until an offline is confirmed. */
+    private static void markMaybeOnline(int account) {
+        try {
+            prefs().edit().putLong(MAYBE_ONLINE_KEY + account, System.currentTimeMillis()).apply();
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    private static void clearMaybeOnline(int account, long offlineSentAt) {
+        try {
+            SharedPreferences p = prefs();
+            long mark = p.getLong(MAYBE_ONLINE_KEY + account, 0);
+            if (mark != 0 && mark <= offlineSentAt) { // keep a mark set by a newer action
+                p.edit().remove(MAYBE_ONLINE_KEY + account).apply();
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    /**
+     * Once per process and account: if the previous process may have died while the server still
+     * shows us online (an action without a confirmed offline, less than STALE_ONLINE_MS ago), send
+     * one offline. Otherwise send nothing: an offline=true on a quiet start would stamp a fresh
+     * "last seen" every time the app process starts.
+     */
+    private static void checkStaleOnline(int account) {
+        try {
+            SharedPreferences p = prefs();
+            long mark = p.getLong(MAYBE_ONLINE_KEY + account, 0);
+            if (mark == 0) {
+                return;
+            }
+            long age = System.currentTimeMillis() - mark;
+            if (age >= 0 && age < STALE_ONLINE_MS && isHidden(account, OPT_ONLINE)) {
+                scheduleOffline(account, OFFLINE_DELAY_MS); // posted to globalQueue, never re-enters intercept
+            } else {
+                p.edit().remove(MAYBE_ONLINE_KEY + account).apply(); // already expired server-side
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
     private static synchronized void scheduleOffline(int account, long delay) {
         if (offlineRunnables[account] != null) {
             Utilities.globalQueue.cancelRunnable(offlineRunnables[account]);
@@ -428,7 +491,12 @@ public final class PlusGhost {
                 TL_account.updateStatus req = new TL_account.updateStatus();
                 req.offline = true;
                 ownStatusRequests.add(req); // lets exactly this object through intercept()
-                ConnectionsManager.getInstance(account).sendRequest(req, null);
+                final long sentAt = System.currentTimeMillis();
+                ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
+                    if (error == null) {
+                        clearMaybeOnline(account, sentAt);
+                    }
+                });
             }
         };
         offlineRunnables[account] = r;
