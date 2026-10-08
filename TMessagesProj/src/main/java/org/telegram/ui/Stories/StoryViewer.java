@@ -385,6 +385,18 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
             doOnAnimationReadyRunnables.clear();
             return;
         }
+        // plus f06: ask before opening when the view would be visible (or always)
+        if (it.belloworld.mercurygram.PlusStoryGuard.confirmOpen(context, account, storyItem, peerIds, position, storiesList,
+                () -> open(account, context, storyItem, peerIds, position, storiesList, userStories, placeProvider, reversed),
+                () -> {
+                    ArrayList<Runnable> pending = new ArrayList<>(doOnAnimationReadyRunnables);
+                    doOnAnimationReadyRunnables.clear();
+                    for (int i = 0; i < pending.size(); i++) {
+                        pending.get(i).run();
+                    }
+                })) {
+            return;
+        }
         setSpeed(1f);
         ATTACH_TO_FRAGMENT = !AndroidUtilities.isTablet() && !fromBottomSheet;
         USE_SURFACE_VIEW = SharedConfig.useSurfaceInStories && ATTACH_TO_FRAGMENT;

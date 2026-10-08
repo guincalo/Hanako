@@ -296,6 +296,9 @@ public final class PlusGhost {
     /** @return true when the request must be dropped (its callback is completed with a fake result). */
     public static boolean intercept(int account, TLObject o, RequestDelegate onComplete) {
         PlusScheduledSend.onRequest(account, o); // plus f03: re-stamp ghost-scheduled sends
+        if (o != null && PlusStoryGuard.dropStoryView(account, o)) { // plus f06: "Open without being seen"
+            return drop(o, onComplete);
+        }
         if (o == null || !validAccount(account) || !isEnabled(account)) {
             return false;
         }

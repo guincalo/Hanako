@@ -526,7 +526,7 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
                     ReactionsLayoutInBubble.VisibleReaction newReaction = ReactionsLayoutInBubble.VisibleReaction.fromTL(v.mediaArea.reaction);
                     ReactionsLayoutInBubble.VisibleReaction currentReaction = ReactionsLayoutInBubble.VisibleReaction.fromTL(currentStory.storyItem.sent_reaction);
                     if (!Objects.equals(newReaction, currentReaction)) {
-                        likeStory(newReaction);
+                        applyMessageToChat(() -> likeStory(newReaction)); // plus f06: was likeStory(newReaction), bypassing the confirm gate
                     }
                 }
                 v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
@@ -3716,6 +3716,11 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
     private boolean applyMessageToChat(Runnable runnable) {
         if (MessagesController.getInstance(currentAccount).isFrozen()) {
             AccountFrozenAlert.show(currentAccount);
+            return true;
+        }
+        // plus f06: reacting/replying marks the story seen server-side even in ghost mode
+        if (!currentStory.isLive && it.belloworld.mercurygram.PlusStoryGuard.confirmInteraction(getContext(), currentAccount, dialogId, resourcesProvider,
+                SharedConfig.stealthModeSendMessageConfirm > 0 && stealthModeIsActive, () -> applyMessageToChat(runnable))) {
             return true;
         }
         if (SharedConfig.stealthModeSendMessageConfirm > 0 && stealthModeIsActive) {

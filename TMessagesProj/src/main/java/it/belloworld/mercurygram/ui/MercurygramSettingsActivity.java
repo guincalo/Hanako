@@ -191,6 +191,10 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         PlusActivityLogActivity.fillSettings(items, getCurrentAccount());
         // plus f05 end
 
+        // plus f06 begin
+        it.belloworld.mercurygram.PlusStoryGuard.addSettingsItems(items, acc);
+        // plus f06 end
+
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
                         LocaleController.getString(R.string.MercurygramReduceTrackingFingerprint))
@@ -353,6 +357,11 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             refreshList();
             return;
         }
+        // plus f06 begin
+        if (it.belloworld.mercurygram.PlusStoryGuard.onSettingsClick(getParentActivity(), getCurrentAccount(), item.id, this::refreshList)) {
+            return;
+        }
+        // plus f06 end
         switch (item.id) {
             case ID_HIDDEN_ACCOUNTS:
                 presentFragment(new HiddenAccountsActivity());

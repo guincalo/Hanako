@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- plus f06: story ghost guard -->
+    <string name="PlusF06Header">Story ghost guard</string>
+    <string name="PlusF06OpenMode">Ask before opening stories</string>
+    <string name="PlusF06ModeIfVisible">When my view would be seen</string>
+    <string name="PlusF06ModeAlways">Always</string>
+    <string name="PlusF06ModeNever">Never</string>
+    <string name="PlusF06ConfirmInteract">Confirm before reacting or replying to a story</string>
+    <string name="PlusF06About">Applies to this account. Opening a story while ghost mode doesn\'t hide story views shows you in the viewers list; you can open it without being seen for that one session instead. Reacting to or replying to a story always marks it as seen on Telegram\'s servers, even in ghost mode. Preloading stories never marks them as seen.</string>
+    <string name="PlusF06OpenVisibleTitle">Your view will be visible</string>
+    <string name="PlusF06OpenVisibleMessage">Ghost mode isn\'t hiding story views for this account, so the author will see you in the viewers list.</string>
+    <string name="PlusF06OpenUnseen">Open without being seen</string>
+    <string name="PlusF06OpenSeen">Open normally</string>
+    <string name="PlusF06OpenHiddenTitle">Open story?</string>
+    <string name="PlusF06OpenHiddenMessage">Ghost mode hides your view. Reacting or replying will still mark the story as seen.</string>
+    <string name="PlusF06Open">Open</string>
+    <string name="PlusF06InteractTitle">This will mark the story as seen</string>
+    <string name="PlusF06InteractMessage">Telegram marks a story as seen when you react to it or reply to it, even with ghost mode on. The author will see you in the viewers list.</string>
+    <string name="PlusF06InteractProceed">Send anyway</string>
+</resources>
