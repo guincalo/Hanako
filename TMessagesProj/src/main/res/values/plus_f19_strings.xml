@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- plus f19: upload / download speed boost -->
+    <string name="PlusF19Header">Transfer speed</string>
+    <string name="PlusF19DownloadBoost">Download boost</string>
+    <string name="PlusF19UploadBoost">Upload boost</string>
+    <string name="PlusF19ModeNormal">Normal</string>
+    <string name="PlusF19ModeFast">Fast</string>
+    <string name="PlusF19ModeExtreme">Extreme</string>
+    <string name="PlusF19About">Uses larger file parts and more requests at once. Fast is usually safe; Extreme can help on fast connections but uses more memory and data bursts, and may get throttled by Telegram (FLOOD_WAIT). Not applied to streaming playback, and uploads ignore it on a slow network. Applies to new transfers.</string>
+</resources>

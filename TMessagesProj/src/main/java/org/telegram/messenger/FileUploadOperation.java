@@ -317,7 +317,8 @@ public class FileUploadOperation {
                     }
                     uploadChunkSize = chunkSize;
                 }
-                maxRequestsCount = Math.max(1, (slowNetwork ? maxUploadingSlowNetworkKBytes : maxUploadingKBytes) / uploadChunkSize);
+                uploadChunkSize = it.belloworld.mercurygram.PlusTransferBoost.uploadChunkKb(uploadChunkSize, slowNetwork); // plus f19
+                maxRequestsCount = Math.max(1, it.belloworld.mercurygram.PlusTransferBoost.uploadInFlightKb(slowNetwork ? maxUploadingSlowNetworkKBytes : maxUploadingKBytes, slowNetwork) / uploadChunkSize); // plus f19
 
                 if (isEncrypted) {
                     freeRequestIvs = new ArrayList<>(maxRequestsCount);
@@ -330,7 +331,7 @@ public class FileUploadOperation {
                 calcTotalPartsCount();
                 readBuffer = new byte[uploadChunkSize];
 
-                fileKey = Utilities.MD5(uploadingFilePath + (isEncrypted ? "enc" : ""));
+                fileKey = Utilities.MD5(uploadingFilePath + (isEncrypted ? "enc" : "") + it.belloworld.mercurygram.PlusTransferBoost.uploadKeySuffix(slowNetwork)); // plus f19
                 long fileSize = preferences.getLong(fileKey + "_size", 0);
                 uploadStartTime = (int)(System.currentTimeMillis() / 1000);
                 boolean rewrite = false;

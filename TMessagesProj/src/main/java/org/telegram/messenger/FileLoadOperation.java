@@ -296,6 +296,12 @@ public class FileLoadOperation {
             maxDownloadRequests = 4;
             maxDownloadRequestsBig = 4;
         }
+        if (!forceSmallChunk && it.belloworld.mercurygram.PlusTransferBoost.downloadBoosted()) { // plus f19
+            downloadChunkSize = it.belloworld.mercurygram.PlusTransferBoost.downloadChunkSizeSmall(); // plus f19
+            downloadChunkSizeBig = it.belloworld.mercurygram.PlusTransferBoost.downloadChunkSizeBig(); // plus f19
+            maxDownloadRequests = it.belloworld.mercurygram.PlusTransferBoost.maxDownloadRequestsSmall(); // plus f19
+            maxDownloadRequestsBig = it.belloworld.mercurygram.PlusTransferBoost.maxDownloadRequestsBig(); // plus f19
+        } // plus f19
         maxCdnParts = (int) (FileLoader.DEFAULT_MAX_FILE_SIZE / downloadChunkSizeBig);
     }
 

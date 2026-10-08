@@ -58,6 +58,9 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     private static final int ID_PLUS_PROXY_SWITCH = 1710;
     private static final int ID_PLUS_VPN_NO_PROXY = 1720;
     // plus f17 end
+    // plus f19: transfer boost
+    private static final int ID_PLUS_F19_DOWNLOAD = 1900;
+    private static final int ID_PLUS_F19_UPLOAD = 1901;
     private static final int ID_MESSAGE_DETAILS_MENU = 1;
     private static final int ID_HIDE_CHAT_KEYBOARD = 2;
     private static final int ID_HIDE_ALL_TAB = 3;
@@ -203,6 +206,15 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         }
         items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusPromptAbout))));
         // plus f16 end
+
+        // plus f19: transfer boost (all accounts)
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF19Header)));
+        items.add(UItem.asButton(ID_PLUS_F19_DOWNLOAD, LocaleController.getString(R.string.PlusF19DownloadBoost),
+                it.belloworld.mercurygram.PlusTransferBoost.modeLabel(it.belloworld.mercurygram.PlusTransferBoost.getDownloadMode())));
+        items.add(UItem.asButton(ID_PLUS_F19_UPLOAD, LocaleController.getString(R.string.PlusF19UploadBoost),
+                it.belloworld.mercurygram.PlusTransferBoost.modeLabel(it.belloworld.mercurygram.PlusTransferBoost.getUploadMode())));
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusF19About))));
+        // plus f19 end
 
         // plus: ghost mode (this account)
         final int acc = getCurrentAccount();
@@ -521,6 +533,11 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             return;
         }
         // plus f18 end
+        // plus f19: transfer boost pickers
+        if (item.id == ID_PLUS_F19_DOWNLOAD || item.id == ID_PLUS_F19_UPLOAD) {
+            it.belloworld.mercurygram.PlusTransferBoost.showModePicker(this, item.id == ID_PLUS_F19_UPLOAD, this::refreshList);
+            return;
+        }
         // plus: ghost mode toggles
         if (item.id == ID_GHOST_ON) {
             it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));
