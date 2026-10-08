@@ -74,6 +74,10 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     private static final int ID_CONFIRM_INTERNAL_LINKS = 63;
     private static final int ID_SHOW_CHAR_COUNTER = 64;
     private static final int ID_DISABLE_PROXIMITY_SENSOR = 65;
+    // plus f07: vanished-chat log + deleted-message reactions (ids 700-799)
+    private static final int ID_F07_LOG_DIALOGS = 700;
+    private static final int ID_F07_OPEN_LOG = 701;
+    private static final int ID_F07_KEEP_REACTIONS = 702;
 
     @Override
     protected CharSequence getTitle() {
@@ -145,6 +149,17 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             items.add(UItem.asButton(ID_CLEAR_SAVED_HISTORY, LocaleController.getString(R.string.MercurygramClearSavedHistory), ""));
         }
         items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramSavedMessagesHistoryAbout)));
+
+        // plus f07 begin: vanished-chat log + deleted-message reactions
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF07Header)));
+        items.add(UItem.asCheck(ID_F07_LOG_DIALOGS, LocaleController.getString(R.string.PlusF07LogDialogs))
+                .setChecked(it.belloworld.mercurygram.PlusDeletedDialogs.isEnabled(getCurrentAccount())));
+        items.add(UItem.asButton(ID_F07_OPEN_LOG, LocaleController.getString(R.string.PlusF07DeletedDialogsTitle),
+                Integer.toString(it.belloworld.mercurygram.PlusDeletedDialogs.count(getCurrentAccount()))));
+        items.add(UItem.asCheck(ID_F07_KEEP_REACTIONS, LocaleController.getString(R.string.PlusF07KeepReactions))
+                .setChecked(it.belloworld.mercurygram.PlusDeletedReactions.isKeepEnabled()));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF07SettingsAbout)));
+        // plus f07 end
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsMedia)));
         items.add(UItem.asCheck(ID_REAR_ROUND_VIDEOS, LocaleController.getString(R.string.RearRoundVideos))
@@ -362,6 +377,22 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             return;
         }
         // plus f06 end
+        // plus f07 begin
+        if (item.id == ID_F07_LOG_DIALOGS) {
+            it.belloworld.mercurygram.PlusDeletedDialogs.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusDeletedDialogs.isEnabled(getCurrentAccount()));
+            refreshList();
+            return;
+        }
+        if (item.id == ID_F07_OPEN_LOG) {
+            presentFragment(new PlusDeletedDialogsActivity());
+            return;
+        }
+        if (item.id == ID_F07_KEEP_REACTIONS) {
+            it.belloworld.mercurygram.PlusDeletedReactions.setKeepEnabled(!it.belloworld.mercurygram.PlusDeletedReactions.isKeepEnabled());
+            refreshList();
+            return;
+        }
+        // plus f07 end
         switch (item.id) {
             case ID_HIDDEN_ACCOUNTS:
                 presentFragment(new HiddenAccountsActivity());

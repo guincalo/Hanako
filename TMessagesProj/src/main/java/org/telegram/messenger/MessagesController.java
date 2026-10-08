@@ -14110,6 +14110,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                     FileLog.d("checkLastDialogMessage for " + dialog.id + " current dialog top message " + currentDialog.top_message);
                                 }
                                 if (currentDialog.top_message == 0) {
+                                    it.belloworld.mercurygram.PlusDeletedDialogs.onServerRemoved(currentAccount, dialog.id, it.belloworld.mercurygram.PlusDeletedDialogs.SITE_HISTORY_GONE); // plus f07
                                     deleteDialog(dialog.id, 3);
                                 }
                             }
@@ -20334,6 +20335,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             if (dialog == null && chat instanceof TLRPC.TL_channel && !chat.left) {
                                 Utilities.stageQueue.postRunnable(() -> getChannelDifference(update.channel_id, 1, 0, null));
                             } else if (ChatObject.isNotInChat(chat) && dialog != null && (promoDialog == null || promoDialog.id != dialog.id)) {
+                                it.belloworld.mercurygram.PlusDeletedDialogs.onServerRemoved(currentAccount, dialog.id, it.belloworld.mercurygram.PlusDeletedDialogs.SITE_CHANNEL_UPDATE); // plus f07
                                 deleteDialog(dialog.id, 0);
                             }
                             if (chat instanceof TLRPC.TL_channelForbidden || chat.kicked) {
@@ -20373,6 +20375,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             }
                             TLRPC.Dialog dialog = dialogs_dict.get(-chat.id);
                             if (dialog != null) {
+                                it.belloworld.mercurygram.PlusDeletedDialogs.onServerRemoved(currentAccount, dialog.id, it.belloworld.mercurygram.PlusDeletedDialogs.SITE_CHAT_UPDATE); // plus f07
                                 deleteDialog(dialog.id, 0);
                             }
                         }

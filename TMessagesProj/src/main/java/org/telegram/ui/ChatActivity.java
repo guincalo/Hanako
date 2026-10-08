@@ -23195,14 +23195,14 @@ public class ChatActivity extends BaseFragment implements
                 int msgId = (Integer) args[1];
                 if (filteredMessagesDict != null) {
                     MessageObject messageObject = filteredMessagesDict.get(msgId);
-                    if (messageObject != null) {
+                    if (messageObject != null && !it.belloworld.mercurygram.PlusDeletedReactions.isFrozen(messageObject)) { // plus f07
                         MessageObject.updateReactions(messageObject.messageOwner, (TLRPC.TL_messageReactions) args[2]);
                         messageObject.forceUpdate = true;
                         messageObject.reactionsChanged = true;
                     }
                 }
                 MessageObject messageObject = messagesDict[did == dialog_id ? 0 : 1].get(msgId);
-                if (messageObject != null) {
+                if (messageObject != null && !it.belloworld.mercurygram.PlusDeletedReactions.isFrozen(messageObject)) { // plus f07
                     MessageObject.updateReactions(messageObject.messageOwner, (TLRPC.TL_messageReactions) args[2]);
                     messageObject.forceUpdate = true;
                     messageObject.reactionsChanged = true;
@@ -32999,6 +32999,9 @@ public class ChatActivity extends BaseFragment implements
 
     public void selectReaction(View cell, MessageObject primaryMessage, ReactionsContainerLayout reactionsLayout, View fromView, float x, float y, ReactionsLayoutInBubble.VisibleReaction visibleReaction, boolean fromDoubleTap, boolean bigEmoji, boolean addToRecent, boolean withoutAnimation) {
         if (isInScheduleMode() || primaryMessage == null) {
+            return;
+        }
+        if (it.belloworld.mercurygram.PlusDeletedReactions.blockInteraction(getParentActivity(), primaryMessage)) { // plus f07: ghost reactions are read-only
             return;
         }
         if (getMessagesController().isFrozen()) {
@@ -45364,6 +45367,7 @@ public class ChatActivity extends BaseFragment implements
             return;
         }
         if (messageObject == null) return;
+        if (it.belloworld.mercurygram.PlusDeletedReactions.blockInteraction(getParentActivity(), messageObject)) return; // plus f07: ghost reactions are read-only
         if (getUserConfig().getClientUserId() == getDialogId() && messageObject.areTags() && !getUserConfig().isPremium()) {
             if (longpress) return;
             new PremiumFeatureBottomSheet(ChatActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_SAVED_TAGS, true).show();
