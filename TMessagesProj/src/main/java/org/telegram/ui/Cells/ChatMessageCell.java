@@ -18427,10 +18427,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (isMegagroup && messageObject.getFromChatId() == messageObject.getDialogId()) {
                 signString = null;
             } else {
-                signString = messageObject.messageOwner.post_author.replace("\n", "");
+                signString = plusShotName(messageObject.messageOwner.post_author.replace("\n", "")); // plus f13
             }
         } else if (messageObject.messageOwner.fwd_from != null && messageObject.messageOwner.fwd_from.post_author != null) {
-            signString = messageObject.messageOwner.fwd_from.post_author.replace("\n", "");
+            signString = plusShotName(messageObject.messageOwner.fwd_from.post_author.replace("\n", "")); // plus f13
         } else if (messageObject.messageOwner.fwd_from != null && messageObject.messageOwner.fwd_from.imported) {
             if (messageObject.messageOwner.fwd_from.date == messageObject.messageOwner.date) {
                 signString = getString("ImportedMessage", R.string.ImportedMessage);
@@ -18878,7 +18878,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (messageObject.isWelcomeMessage()) {
                 adminString = null;
             } else if (isMegagroup && currentChat != null && messageObject.messageOwner.post_author != null && currentChat.id == -currentMessageObject.getFromChatId()) {
-                adminString = new SpannableStringBuilder(messageObject.messageOwner.post_author.replace("\n", ""));
+                adminString = new SpannableStringBuilder(plusShotName(messageObject.messageOwner.post_author.replace("\n", ""))); // plus f13
             } else if (isMegagroup && currentChat != null && currentMessageObject.isForwardedChannelPost()) {
                 adminString = new SpannableStringBuilder(getString(R.string.DiscussChannel));
             } else if ((currentUser != null || currentChat != null) && !currentMessageObject.isOutOwner() && !currentMessageObject.isAnyKindOfSticker() && currentMessageObject.type != MessageObject.TYPE_ROUND_VIDEO && delegate != null) {
@@ -19141,20 +19141,20 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     boolean includeAvatar = true;
                     if (currentForwardChannel != null) {
                         if (currentForwardUser != null) {
-                            currentForwardNameString = String.format("%s (%s)", currentForwardChannel.title, UserObject.getUserName(currentForwardUser));
+                            currentForwardNameString = String.format("%s (%s)", plusShotTitle(currentForwardChannel), UserObject.getUserName(currentForwardUser)); // plus f13
                             forwardAvatar.setUser(currentForwardUser);
                         } else if (!TextUtils.isEmpty(messageObject.messageOwner.fwd_from.post_author)) {
-                            currentForwardNameString = String.format("%s (%s)", currentForwardChannel.title, messageObject.messageOwner.fwd_from.post_author);
+                            currentForwardNameString = String.format("%s (%s)", plusShotTitle(currentForwardChannel), plusShotName(messageObject.messageOwner.fwd_from.post_author)); // plus f13
                             forwardAvatar.setChat(currentForwardChannel);
                         } else {
-                            currentForwardNameString = currentForwardChannel.title;
+                            currentForwardNameString = plusShotTitle(currentForwardChannel); // plus f13
                             forwardAvatar.setChat(currentForwardChannel);
                         }
                     } else if (currentForwardUser != null) {
                         currentForwardNameString = UserObject.getUserName(currentForwardUser);
                         forwardAvatar.setUser(currentForwardUser);
                     } else {
-                        currentForwardNameString = currentForwardName;
+                        currentForwardNameString = plusShotName(currentForwardName); // plus f13
                         includeAvatar = false;
                     }
 
@@ -19382,7 +19382,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                             if (messageObject.sendAsPeer.channel_id != 0) {
                                 TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(messageObject.sendAsPeer.channel_id);
                                 if (chat != null) {
-                                    name = AndroidUtilities.removeDiacritics(chat.title);
+                                    name = AndroidUtilities.removeDiacritics(plusShotTitle(chat)); // plus f13
                                 }
                             } else {
                                 TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(messageObject.sendAsPeer.user_id);
@@ -19410,12 +19410,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                             } else if (fromId < 0) {
                                 TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-fromId);
                                 if (chat != null) {
-                                    name = AndroidUtilities.removeDiacritics(chat.title);
+                                    name = AndroidUtilities.removeDiacritics(plusShotTitle(chat)); // plus f13
                                 }
                             } else if (messageObject.replyMessageObject.messageOwner != null && messageObject.replyMessageObject.messageOwner.peer_id != null) {
                                 TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(messageObject.replyMessageObject.messageOwner.peer_id.channel_id);
                                 if (chat != null) {
-                                    name = AndroidUtilities.removeDiacritics(chat.title);
+                                    name = AndroidUtilities.removeDiacritics(plusShotTitle(chat)); // plus f13
                                 }
                             }
                         }
@@ -19557,17 +19557,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         boolean includeAvatar = true;
                         if (currentForwardChannel != null) {
                             if (currentForwardUser != null) {
-                                currentForwardNameString = String.format("%s (%s)", currentForwardChannel.title, UserObject.getUserName(currentForwardUser));
+                                currentForwardNameString = String.format("%s (%s)", plusShotTitle(currentForwardChannel), UserObject.getUserName(currentForwardUser)); // plus f13
                                 forwardAvatar.setUser(currentForwardUser);
                             } else {
-                                currentForwardNameString = currentForwardChannel.title;
+                                currentForwardNameString = plusShotTitle(currentForwardChannel); // plus f13
                                 forwardAvatar.setChat(currentForwardChannel);
                             }
                         } else if (currentForwardUser != null) {
                             currentForwardNameString = UserObject.getUserName(currentForwardUser);
                             forwardAvatar.setUser(currentForwardUser);
                         } else {
-                            currentForwardNameString = currentForwardName;
+                            currentForwardNameString = plusShotName(currentForwardName); // plus f13
                             includeAvatar = false;
                         }
                         name = getForwardedMessageText(messageObject);
@@ -19750,7 +19750,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         } else if (fromId < 0) {
             TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-fromId);
             if (chat != null) {
-                name = chat.title;
+                name = plusShotTitle(chat); // plus f13
             }
         }
         return name;
@@ -19786,6 +19786,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         );
     }
 
+    /** plus f13: set on the cells of a message shot; their names and titles follow streamer mode (f10). */
+    public boolean plusShot;
+
+    private String plusShotTitle(TLRPC.Chat chat) { // plus f13
+        return plusShot ? it.belloworld.mercurygram.PlusStreamer.chatTitle(chat) : chat.title;
+    }
+
+    private String plusShotName(String name) { // plus f13
+        return plusShot ? it.belloworld.mercurygram.PlusStreamer.freeName(name) : name;
+    }
+
     private String getAuthorName() {
         if (currentUser != null) {
             return UserObject.getUserName(currentUser);
@@ -19797,10 +19808,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     if (user != null) return UserObject.getUserName(user);
                 } else {
                     TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-did);
-                    if (chat != null) return chat.title;
+                    if (chat != null) return plusShotTitle(chat); // plus f13
                 }
             }
-            return currentChat.title;
+            return plusShotTitle(currentChat); // plus f13
         } else if (currentMessageObject != null && currentMessageObject.isSponsored()) {
             return currentMessageObject.sponsoredTitle;
         }

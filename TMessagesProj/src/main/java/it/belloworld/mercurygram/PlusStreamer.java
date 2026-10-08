@@ -246,6 +246,17 @@ public final class PlusStreamer {
         return masked != null ? masked : original;
     }
 
+    /**
+     * A person's name given as plain text with no peer behind it (hidden forwarder, channel
+     * signature): masked by its text, otherwise as given. Used for f13 message shots.
+     */
+    public static String freeName(String name) {
+        if (TextUtils.isEmpty(name) || !hideNames()) {
+            return name;
+        }
+        return LocaleController.formatString(R.string.PlusF10MaskedUser, tag(name.hashCode()));
+    }
+
     private static boolean isServiceUser(TLRPC.User user) {
         // Telegram service accounts and the replies bot are not people.
         return UserObject.isService(user.id) || UserObject.isReplyUser(user.id);

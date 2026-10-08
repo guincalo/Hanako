@@ -46,6 +46,8 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     // plus f10: streamer mode
     private static final int ID_STREAMER_ON = 1000;
     private static final int ID_STREAMER_OPT = 1010; // + PlusStreamer.OPT_*
+    // plus f13: message shot
+    private static final int ID_MESSAGE_SHOT = 1300;
     private static final int ID_MESSAGE_DETAILS_MENU = 1;
     private static final int ID_HIDE_CHAT_KEYBOARD = 2;
     private static final int ID_HIDE_ALL_TAB = 3;
@@ -175,6 +177,13 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         items.add(MgSettingsScope.globalCheck(ID_DISABLE_PROXIMITY_SENSOR, LocaleController.getString(R.string.MercurygramDisableProximitySensor))
                 .setChecked(SharedConfig.mg_disableProximitySensor));
         items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDisableProximitySensorAbout)));
+
+        // plus f13: message shot (all accounts)
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusMessageShot)));
+        items.add(MgSettingsScope.globalCheck(ID_MESSAGE_SHOT, LocaleController.getString(R.string.PlusMessageShotSetting))
+                .setChecked(it.belloworld.mercurygram.PlusMessageShot.isEnabled()));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusMessageShotSettingAbout)));
+        // plus f13 end
 
         // plus: ghost mode (this account)
         final int acc = getCurrentAccount();
@@ -414,6 +423,12 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             return;
         }
         // plus f12 end
+        // plus f13: message shot toggle
+        if (item.id == ID_MESSAGE_SHOT) {
+            it.belloworld.mercurygram.PlusMessageShot.setEnabled(!it.belloworld.mercurygram.PlusMessageShot.isEnabled());
+            refreshList();
+            return;
+        }
         // plus: ghost mode toggles
         if (item.id == ID_GHOST_ON) {
             it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));

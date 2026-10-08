@@ -3757,6 +3757,15 @@ public class ChatActivity extends BaseFragment implements
                         undoView.showWithAction(0, UndoView.ACTION_TEXT_COPIED, null);
                     }
                     clearSelectionMode();
+                } else if (id == it.belloworld.mercurygram.PlusMessageShot.MENU_ID) { // plus f13
+                    ArrayList<MessageObject> shotMessages = new ArrayList<>();
+                    for (int a = 1; a >= 0; a--) {
+                        for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
+                            shotMessages.add(selectedMessagesIds[a].valueAt(b));
+                        }
+                    }
+                    clearSelectionMode();
+                    it.belloworld.mercurygram.PlusMessageShot.show(ChatActivity.this, shotMessages);
                 } else if (id == delete) {
                     if (getParentActivity() == null) {
                         return;
@@ -10366,6 +10375,9 @@ public class ChatActivity extends BaseFragment implements
             actionModeViews.add(actionMode.addItemWithWidth(star, R.drawable.msg_fave, dp(48), LocaleController.getString(R.string.AddToFavorites)));
             actionModeViews.add(actionMode.addItemWithWidth(copy, R.drawable.msg_copy, dp(48), LocaleController.getString(R.string.Copy)));
             actionModeViews.add(actionMode.addItemWithWidth(delete, R.drawable.msg_delete, dp(48), LocaleController.getString(R.string.Delete)));
+        }
+        if (it.belloworld.mercurygram.PlusMessageShot.isEnabled()) { // plus f13
+            actionModeViews.add(actionMode.addItemWithWidth(it.belloworld.mercurygram.PlusMessageShot.MENU_ID, R.drawable.msg_photos, dp(48), LocaleController.getString(R.string.PlusMessageShot)));
         }
         actionMode.setItemVisibility(edit, canEditMessagesCount == 1 && selectedMessagesIds[0].size() + selectedMessagesIds[1].size() == 1 ? View.VISIBLE : View.GONE);
         actionMode.setItemVisibility(copy, !isPeerNoForwards() && selectedMessagesCanCopyIds[0].size() + selectedMessagesCanCopyIds[1].size() != 0 ? View.VISIBLE : View.GONE);
