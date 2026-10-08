@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src=".github/assets/hanako.png" alt="Hanako icon" width="160" height="160">
+
 # Hanako
 
 **An unofficial Telegram client for Android, forked from [Mercurygram](https://github.com/Mercurygram/Mercurygram).**

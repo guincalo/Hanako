@@ -13,6 +13,8 @@ First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
 ### Branding
 - App renamed to **Hanako** (launcher label, settings entry, version footer and in-app text, in all
   bundled languages). The package id stays `it.belloworld.mercurygram`.
+- New **Hanako launcher icon** (adaptive icon with a themed-icon monochrome layer, plus legacy
+  round/square icons).
 
 ### Ghost mode & privacy
 - Per-account ghost mode: no read receipts, typing status, online status or story views; optional
