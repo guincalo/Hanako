@@ -1690,6 +1690,7 @@ public class ChatActivity extends BaseFragment implements
     private final static int chat_menu_topic_create = 73;
     // Mercurygram: chat menu "Go to first message"
     private final static int mg_go_to_first_message = 75;
+    private final static int plus_ghost_exceptions = 9101; // plus f01
 
     private final static int id_chat_compose_panel = 1000;
 
@@ -3969,6 +3970,8 @@ public class ChatActivity extends BaseFragment implements
                     getSendMessagesHelper().sendMessage(SendMessagesHelper.SendMessageParams.of("/settings", dialog_id, null, null, null, false, null, null, null, true, 0, 0, null, false));
                 } else if (id == search) {
                     openSearchWithText(isSupportedTags() ? "" : null);
+                } else if (id == plus_ghost_exceptions) { // plus f01
+                    it.belloworld.mercurygram.PlusGhostExceptions.showDialog(ChatActivity.this, dialog_id, null);
                 } else if (id == mg_go_to_first_message) {
                     // Mercurygram: jump to the oldest message by reusing the calendar
                     // jump with a date before any chat can exist (Telegram's launch,
@@ -4427,6 +4430,9 @@ public class ChatActivity extends BaseFragment implements
             }
             if (!DialogObject.isEncryptedDialog(dialog_id)) {
                 headerItem.lazilyAddSubItem(mg_go_to_first_message, R.drawable.msg_go_up, LocaleController.getString(R.string.MercurygramGoToFirstMessage));
+            }
+            if (chatMode == 0 && dialog_id != getUserConfig().getClientUserId() && it.belloworld.mercurygram.PlusGhost.isEnabled(currentAccount)) { // plus f01
+                headerItem.lazilyAddSubItem(plus_ghost_exceptions, R.drawable.msg_secret, LocaleController.getString(R.string.PlusGhostExcMenu));
             }
             if (ChatObject.isBoostSupported(currentChat) && (getUserConfig().isPremium() || ChatObject.isBoosted(chatInfo) || ChatObject.hasAdminRights(currentChat))) {
                 RLottieDrawable drawable = new RLottieDrawable(R.raw.boosts, dp(24), dp(24));
@@ -29926,6 +29932,7 @@ public class ChatActivity extends BaseFragment implements
     @Override
     public void onResume() {
         super.onResume();
+        if (!inPreviewMode) it.belloworld.mercurygram.PlusGhostExceptions.onChatResumed(currentAccount, dialog_id); // plus f01 (not for long-press previews)
         checkShowBlur(false);
         activityResumeTime = System.currentTimeMillis();
         if (openImport && getSendMessagesHelper().getImportingHistory(dialog_id) != null) {
@@ -30138,6 +30145,7 @@ public class ChatActivity extends BaseFragment implements
     @Override
     public void onPause() {
         super.onPause();
+        it.belloworld.mercurygram.PlusGhostExceptions.onChatPaused(currentAccount, dialog_id); // plus f01
         scrolling = false;
         if (scrimPopupWindow != null) {
             scrimPopupWindow.setPauseNotifications(false);

@@ -154,6 +154,9 @@ public final class PlusGhost {
         if (!validAccount(account) || dialogId == 0) {
             return false;
         }
+        if (PlusGhostExceptions.readsExcepted(account, dialogId)) {
+            return true; // plus f01: per-chat ghost exception
+        }
         Long until = allowedReads[account].get(dialogId);
         if (until == null) {
             return false;
@@ -203,6 +206,17 @@ public final class PlusGhost {
             return peerDialogId(((TLRPC.TL_messages_readSavedHistory) o).parent_peer);
         }
         return 0; // messages.readMessageContents has ids only
+    }
+
+    /** plus f01: dialog a typing request belongs to, or 0. */
+    private static long typingDialogId(TLObject o) {
+        if (o instanceof TLRPC.TL_messages_setTyping) {
+            return peerDialogId(((TLRPC.TL_messages_setTyping) o).peer);
+        } else if (o instanceof TLRPC.TL_messages_setEncryptedTyping) {
+            TLRPC.TL_inputEncryptedChat p = ((TLRPC.TL_messages_setEncryptedTyping) o).peer;
+            return p != null ? DialogObject.makeEncryptedDialogId(p.chat_id) : 0;
+        }
+        return 0;
     }
 
     private static boolean isReadRequest(TLObject o) {
@@ -295,16 +309,24 @@ public final class PlusGhost {
                 ((TL_account.updateStatus) o).offline = true; // one of our own offline packets
                 return false;
             }
+            if (PlusGhostExceptions.onlineExceptedNow(account)) {
+                if (!((TL_account.updateStatus) o).offline) {
+                    markMaybeOnline(account); // plus f01 (landed 0009): an online packet goes out, so arm the cold-start check
+                }
+                return false; // plus f01: an "online while open" exception chat is on screen
+            }
             return drop(o, onComplete); // no online packets, no periodic last-seen refresh, nothing at start
         }
         if (isHidden(account, OPT_TYPING)
-                && (o instanceof TLRPC.TL_messages_setTyping || o instanceof TLRPC.TL_messages_setEncryptedTyping)) {
+                && (o instanceof TLRPC.TL_messages_setTyping || o instanceof TLRPC.TL_messages_setEncryptedTyping)
+                && !PlusGhostExceptions.typingExcepted(account, typingDialogId(o))) { // plus f01
             return drop(o, onComplete);
         }
         if (isHidden(account, OPT_READS) && isReadRequest(o) && !readsAllowed(account, readDialogId(o))) {
             return drop(o, onComplete);
         }
-        if (isHidden(account, OPT_READS) && o instanceof TLRPC.TL_messages_getMessagesViews) {
+        if (isHidden(account, OPT_READS) && o instanceof TLRPC.TL_messages_getMessagesViews
+                && !PlusGhostExceptions.readsExcepted(account, peerDialogId(((TLRPC.TL_messages_getMessagesViews) o).peer))) { // plus f01
             // 0009: still fetch view counts, but don't count our view (AyuGram Desktop api_views.cpp does the same)
             ((TLRPC.TL_messages_getMessagesViews) o).increment = false;
             return false;
@@ -479,6 +501,13 @@ public final class PlusGhost {
         }
     }
 
+    /** plus f01: send one offline packet now (only while Stay offline is in effect). */
+    public static void goOfflineNow(int account) {
+        if (validAccount(account) && active(account, OPT_ONLINE)) {
+            scheduleOffline(account, 0);
+        }
+    }
+
     private static synchronized void scheduleOffline(int account, long delay) {
         if (offlineRunnables[account] != null) {
             Utilities.globalQueue.cancelRunnable(offlineRunnables[account]);
@@ -487,7 +516,7 @@ public final class PlusGhost {
             synchronized (PlusGhost.class) {
                 offlineRunnables[account] = null;
             }
-            if (active(account, OPT_ONLINE)) {
+            if (active(account, OPT_ONLINE) && !PlusGhostExceptions.onlineExceptedNow(account)) { // plus f01: not while an "online while open" chat is on screen
                 TL_account.updateStatus req = new TL_account.updateStatus();
                 req.offline = true;
                 ownStatusRequests.add(req); // lets exactly this object through intercept()

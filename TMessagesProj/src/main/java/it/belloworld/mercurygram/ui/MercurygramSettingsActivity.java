@@ -40,6 +40,7 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     // plus: ghost mode
     private static final int ID_GHOST_ON = 900;
     private static final int ID_GHOST_OPT = 910; // + PlusGhost.OPT_*
+    private static final int ID_PLUS_GHOST_EXCEPTIONS = 9101; // plus f01
     private static final int ID_MESSAGE_DETAILS_MENU = 1;
     private static final int ID_HIDE_CHAT_KEYBOARD = 2;
     private static final int ID_HIDE_ALL_TAB = 3;
@@ -162,6 +163,15 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             }
         }
         items.add(UItem.asShadow("Applies to this account. Mark as read (long-press a chat, or the notification button) sends a read receipt for that chat only; for a chat that already looks read, mark it unread first. With \"Read the chat when I reply\", replying, reacting or voting in a chat reads it too, as a normal client would. Stay offline never sends online and sends nothing on app start; it only sends one offline right after your own sends, reactions, votes, edits or calls (or on the next start, if the app was closed within 5 minutes of one). Channel views are not counted. Not covered: reacting to or replying to a story marks it seen, and Premium voice-to-text marks a voice message as listened (server side)."));
+        // plus f01 begin: per-chat ghost exceptions
+        if (ghostOn) {
+            int plusExcCount = it.belloworld.mercurygram.PlusGhostExceptions.count(acc);
+            items.add(UItem.asButton(ID_PLUS_GHOST_EXCEPTIONS, R.drawable.msg_secret,
+                    LocaleController.getString(R.string.PlusGhostExcTitle),
+                    plusExcCount > 0 ? Integer.toString(plusExcCount) : LocaleController.getString(R.string.PlusGhostExcNone)));
+            items.add(UItem.asShadow(LocaleController.getString(R.string.PlusGhostExcSettingsInfo)));
+        }
+        // plus f01 end
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
@@ -293,6 +303,10 @@ public class MercurygramSettingsActivity extends UniversalFragment {
 
     @Override
     protected void onClick(UItem item, View view, int position, float x, float y) {
+        if (item.id == ID_PLUS_GHOST_EXCEPTIONS) { // plus f01
+            presentFragment(new PlusGhostExceptionsActivity());
+            return;
+        }
         // plus: ghost mode toggles
         if (item.id == ID_GHOST_ON) {
             it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));
