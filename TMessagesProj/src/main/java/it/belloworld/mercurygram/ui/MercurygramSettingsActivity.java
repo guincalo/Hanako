@@ -48,6 +48,9 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     private static final int ID_STREAMER_OPT = 1010; // + PlusStreamer.OPT_*
     // plus f13: message shot
     private static final int ID_MESSAGE_SHOT = 1300;
+    // plus f14: profile ID / DC / registration date
+    private static final int ID_F14_SHOW_DC = 1400;
+    private static final int ID_F14_SHOW_REG_DATE = 1401;
     private static final int ID_MESSAGE_DETAILS_MENU = 1;
     private static final int ID_HIDE_CHAT_KEYBOARD = 2;
     private static final int ID_HIDE_ALL_TAB = 3;
@@ -251,6 +254,15 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         // plus f12 begin
         it.belloworld.mercurygram.PlusPeek.addSettingsItems(items);
         // plus f12 end
+
+        // plus f14: profile ID / DC / registration date
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF14Header)));
+        items.add(UItem.asCheck(ID_F14_SHOW_DC, LocaleController.getString(R.string.PlusF14ShowDc))
+                .setChecked(it.belloworld.mercurygram.PlusProfileInfo.isShowDc()));
+        items.add(UItem.asCheck(ID_F14_SHOW_REG_DATE, LocaleController.getString(R.string.PlusF14ShowRegDate))
+                .setChecked(it.belloworld.mercurygram.PlusProfileInfo.isShowRegDate()));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF14About)));
+        // plus f14 end
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
@@ -481,6 +493,18 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             refreshList();
             return;
         }
+        // plus f14: profile ID / DC / registration date
+        if (item.id == ID_F14_SHOW_DC) {
+            it.belloworld.mercurygram.PlusProfileInfo.setShowDc(!it.belloworld.mercurygram.PlusProfileInfo.isShowDc());
+            refreshList();
+            return;
+        }
+        if (item.id == ID_F14_SHOW_REG_DATE) {
+            it.belloworld.mercurygram.PlusProfileInfo.setShowRegDate(!it.belloworld.mercurygram.PlusProfileInfo.isShowRegDate());
+            refreshList();
+            return;
+        }
+        // plus f14 end
         switch (item.id) {
             case ID_HIDDEN_ACCOUNTS:
                 presentFragment(new HiddenAccountsActivity());

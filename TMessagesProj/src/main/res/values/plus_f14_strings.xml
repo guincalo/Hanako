@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- plus f14: profile ID / DC / registration date -->
+    <string name="PlusF14Header">Profile info</string>
+    <string name="PlusF14ShowDc">Show data centre</string>
+    <string name="PlusF14ShowRegDate">Show approximate registration date</string>
+    <string name="PlusF14About">Shown under the ID on profiles. The data centre comes from the profile or chat photo (unknown when there is none). The registration date is an estimate from the user ID and can be off by months. Nothing is requested from the server. Long-press the ID to copy any of these.</string>
+    <string name="PlusF14IdMenuTitle">Copy</string>
+    <string name="PlusF14CopyId">ID: %1$s</string>
+    <string name="PlusF14CopyRawId">Raw ID: %1$s</string>
+    <string name="PlusF14CopyDc">Data centre: %1$s</string>
+    <string name="PlusF14CopyRegDate">Registered: %1$s</string>
+    <string name="PlusF14RegDate">Registered</string>
+    <string name="PlusF14CopyAll">Copy all</string>
+    <string name="PlusF14DcMiami">Miami</string>
+    <string name="PlusF14DcAmsterdam">Amsterdam</string>
+    <string name="PlusF14DcSingapore">Singapore</string>
+</resources>

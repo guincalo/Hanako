@@ -5068,6 +5068,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 } else if (position == noteRow) {
                     editNotes(view, position);
                     return true;
+                } else if (position == idRow && mgDialogIdForProfile() != 0) { // plus f14
+                    return it.belloworld.mercurygram.PlusProfileInfo.showIdMenu(ProfileActivity.this, currentAccount, userId, chatId, mgDialogIdForProfile()); // plus f14
                 } else {
                     if (editRow(view, position)) return true;
                     return processOnClickOrPress(position, view, view.getWidth() / 2f, (int) (view.getHeight() * .75f));
@@ -13570,7 +13572,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     } else if (position == idRow) {
                         final long did = mgDialogIdForProfile();
                         if (did != 0) {
-                            detailCell.setTextAndValue(did + "", "ID", false);
+                            detailCell.setTextAndValue(it.belloworld.mercurygram.PlusProfileInfo.idRowText(currentAccount, userId, chatId, did), it.belloworld.mercurygram.PlusProfileInfo.idRowSubtitle(currentAccount, userId, chatId), false); // plus f14
                         }
                     } else if (position == noteRow) {
                         final TLRPC.UserFull userInfo = getMessagesController().getUserFull(userId);
