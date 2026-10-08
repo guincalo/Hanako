@@ -3278,6 +3278,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             downloadsItem.addView(downloadProgressIcon = new DownloadProgressIcon(currentAccount, context));
             downloadsItem.setContentDescription(getString(R.string.DownloadsTabs));
             downloadsItem.setVisibility(View.GONE);
+            it.belloworld.mercurygram.PlusGhostQuick.addIndicator(DialogsActivity.this, menu); // plus f02: ghost mode indicator
 
             updateProxyButton(false, false);
         }
@@ -13825,6 +13826,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             args.putLong("user_id", UserConfig.getInstance(currentAccount).getClientUserId());
             presentFragment(new ChatActivity(args));
         });
+        it.belloworld.mercurygram.PlusGhostQuick.addMenuToggle(this, io); // plus f02: quick ghost mode toggle
         if (ApplicationLoader.applicationLoaderInstance != null) {
             ApplicationLoader.applicationLoaderInstance.addItemOptions(io);
         }
@@ -14218,6 +14220,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         final float factor3 = 1f - animatorDoneButtonVisible.getFloatValue();
         final float factor = factor0 * factor1 * factor2 * factor3;
         FragmentFloatingButton.setAnimatedVisibility(passcodeItem, factor);
+        it.belloworld.mercurygram.PlusGhostQuick.updateIndicator(this, factor1 * factor2 * factor3); // plus f02
     }
 
     private void checkUi_itemDownloadsVisibility() {

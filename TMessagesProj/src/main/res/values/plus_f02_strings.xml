@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- plus f02: quick ghost-mode controls -->
+    <string name="PlusGhostSendReadReceipt">Send read receipt</string>
+    <string name="PlusGhostReadReceiptSent">Read receipt sent for this chat</string>
+    <string name="PlusGhostReadReceiptNothing">Nothing to mark as read here</string>
+    <string name="PlusGhostMode">Ghost mode</string>
+    <string name="PlusGhostModeOn">Ghost mode on for this account</string>
+    <string name="PlusGhostModeOff">Ghost mode off for this account</string>
+    <string name="PlusGhostModeIndicator">Ghost mode is on</string>
+    <string name="PlusGhostModeIsOn">Ghost mode is on for this account</string>
+    <string name="PlusGhostTurnOff">Turn off ghost mode</string>
+    <string name="PlusGhostSettings">Ghost mode settings</string>
+</resources>

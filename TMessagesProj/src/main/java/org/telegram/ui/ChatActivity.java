@@ -3972,6 +3972,8 @@ public class ChatActivity extends BaseFragment implements
                     openSearchWithText(isSupportedTags() ? "" : null);
                 } else if (id == plus_ghost_exceptions) { // plus f01
                     it.belloworld.mercurygram.PlusGhostExceptions.showDialog(ChatActivity.this, dialog_id, null);
+                } else if (id == it.belloworld.mercurygram.PlusGhostQuick.MENU_SEND_READ) { // plus f02
+                    it.belloworld.mercurygram.PlusGhostQuick.sendReadReceipt(ChatActivity.this);
                 } else if (id == mg_go_to_first_message) {
                     // Mercurygram: jump to the oldest message by reusing the calendar
                     // jump with a date before any chat can exist (Telegram's launch,
@@ -4433,6 +4435,9 @@ public class ChatActivity extends BaseFragment implements
             }
             if (chatMode == 0 && dialog_id != getUserConfig().getClientUserId() && it.belloworld.mercurygram.PlusGhost.isEnabled(currentAccount)) { // plus f01
                 headerItem.lazilyAddSubItem(plus_ghost_exceptions, R.drawable.msg_secret, LocaleController.getString(R.string.PlusGhostExcMenu));
+            }
+            if (it.belloworld.mercurygram.PlusGhostQuick.canSendReadReceipt(ChatActivity.this)) { // plus f02
+                headerItem.lazilyAddSubItem(it.belloworld.mercurygram.PlusGhostQuick.MENU_SEND_READ, R.drawable.msg_markread, it.belloworld.mercurygram.PlusGhostQuick.sendReadReceiptLabel());
             }
             if (ChatObject.isBoostSupported(currentChat) && (getUserConfig().isPremium() || ChatObject.isBoosted(chatInfo) || ChatObject.hasAdminRights(currentChat))) {
                 RLottieDrawable drawable = new RLottieDrawable(R.raw.boosts, dp(24), dp(24));
