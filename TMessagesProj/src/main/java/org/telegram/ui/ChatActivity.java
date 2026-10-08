@@ -34392,6 +34392,14 @@ public class ChatActivity extends BaseFragment implements
                 presentFragment(new it.belloworld.mercurygram.ui.MgMessageEditHistoryActivity(selectedObject));
                 break;
             }
+            case it.belloworld.mercurygram.PlusMessageFilters.OPTION_MESSAGE_FILTERS: { // plus f04
+                it.belloworld.mercurygram.PlusMessageFilters.showChatMenu(this, selectedObject, dialog_id, () -> {
+                    if (chatAdapter != null) {
+                        chatAdapter.notifyDataSetChanged();
+                    }
+                });
+                break;
+            }
             case OPTION_SUGGESTION_ADD_OFFER:
             case OPTION_SUGGESTION_EDIT_PRICE: {
                 final MessageObject msg = selectedObjectGroup != null ? selectedObjectGroup.findPrimaryMessageObject() : selectedObject;
@@ -37529,6 +37537,8 @@ public class ChatActivity extends BaseFragment implements
                 ChatMessageUnsupportedCell cell = new ChatMessageUnsupportedCell(mContext, themeDelegate);
                 cell.setDelegate(getChatMessageCellDelegate());
                 view = cell;
+            } else if (it.belloworld.mercurygram.PlusMessageFilters.isOwnViewType(viewType)) { // plus f04
+                view = it.belloworld.mercurygram.PlusMessageFilters.createView(mContext, viewType, themeDelegate);
             }
             view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
             return new RecyclerListView.Holder(view);
@@ -38137,6 +38147,12 @@ public class ChatActivity extends BaseFragment implements
                     if (createUnreadMessageAfterId != 0) {
                         createUnreadMessageAfterId = 0;
                     }
+                } else { // plus f04
+                    it.belloworld.mercurygram.PlusMessageFilters.bindView(view, message, () -> {
+                        if (chatAdapter != null) {
+                            chatAdapter.notifyDataSetChanged();
+                        }
+                    });
                 }
             }
         }
@@ -38160,6 +38176,15 @@ public class ChatActivity extends BaseFragment implements
                 } else {
                     messages = ChatActivity.this.messages;
                 }
+                // plus f04 begin
+                if (chatMode != MODE_SCHEDULED) {
+                    final MessageObject plusMsg = messages.get(position - messagesStartRow);
+                    final int plusType = it.belloworld.mercurygram.PlusMessageFilters.getViewType(plusMsg, plusMsg.getGroupId() != 0 ? getValidGroupedMessage(plusMsg) : null);
+                    if (plusType != 0) {
+                        return plusType;
+                    }
+                }
+                // plus f04 end
                 return messages.get(position - messagesStartRow).contentType;
             } else if (position == botInfoRow) {
                 return 3;
@@ -46340,6 +46365,13 @@ public class ChatActivity extends BaseFragment implements
                     options.add(OPTION_DETAILS);
                     icons.add(R.drawable.menu_info);
                 }
+                // plus f04 begin
+                if (it.belloworld.mercurygram.PlusMessageFilters.canShowMenu(selectedObject, chatMode)) {
+                    items.add(LocaleController.getString(R.string.PlusF04MenuItem));
+                    options.add(it.belloworld.mercurygram.PlusMessageFilters.OPTION_MESSAGE_FILTERS);
+                    icons.add(R.drawable.msg_archive_hide);
+                }
+                // plus f04 end
             } else {
                 if ((allowChatActions || isEphemeralFromBot) && (primaryMessage == null || !primaryMessage.isWelcomeMessage()) && !isInsideContainer && chatMode != MODE_WELCOME_MESSAGES) {
                     items.add(LocaleController.getString(R.string.Reply));

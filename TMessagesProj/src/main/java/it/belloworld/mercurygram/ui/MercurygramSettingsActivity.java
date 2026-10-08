@@ -41,6 +41,7 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     private static final int ID_GHOST_ON = 900;
     private static final int ID_GHOST_OPT = 910; // + PlusGhost.OPT_*
     private static final int ID_PLUS_GHOST_EXCEPTIONS = 9101; // plus f01
+    private static final int ID_F04_MESSAGE_FILTERS = 400; // plus f04
     private static final int ID_MESSAGE_DETAILS_MENU = 1;
     private static final int ID_HIDE_CHAT_KEYBOARD = 2;
     private static final int ID_HIDE_ALL_TAB = 3;
@@ -120,6 +121,12 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         items.add(UItem.asCheck(ID_SHOW_CHAR_COUNTER, LocaleController.getString(R.string.MercurygramShowCharCounter))
                 .setChecked(getUserConfig().mg.showCharCounter));
         items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramShowCharCounterAbout)));
+
+        // plus f04 begin
+        items.add(UItem.asButton(ID_F04_MESSAGE_FILTERS, R.drawable.msg_archive_hide, LocaleController.getString(R.string.PlusF04Title),
+                LocaleController.getString(it.belloworld.mercurygram.PlusMessageFilters.isEnabled() ? R.string.PlusF04FilterEnabled : R.string.PlusF04Off)));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF04EnableInfo)));
+        // plus f04 end
 
         items.add(UItem.asButton(ID_EMOJI_PACK,
                 LocaleController.getString(R.string.MercurygramEmojiTitle),
@@ -321,6 +328,10 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             return;
         }
         // plus f03 end
+        if (item.id == ID_F04_MESSAGE_FILTERS) { // plus f04: message filters
+            presentFragment(new PlusMessageFiltersActivity());
+            return;
+        }
         // plus: ghost mode toggles
         if (item.id == ID_GHOST_ON) {
             it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));
