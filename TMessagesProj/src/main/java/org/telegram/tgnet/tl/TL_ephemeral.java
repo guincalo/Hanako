@@ -108,7 +108,7 @@ public class TL_ephemeral {
             out = hasFlag(flags, FLAG_0);
             welcome = hasFlag(flags, FLAG_5);
             invert_media = hasFlag(flags, FLAG_7);
-            noforwards = hasFlag(flags, FLAG_12);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_12))
             id = stream.readInt32(exception);
             from_id = TLRPC.Peer.TLdeserialize(stream, stream.readInt32(exception), exception);
             if (hasFlag(flags, FLAG_9)) {

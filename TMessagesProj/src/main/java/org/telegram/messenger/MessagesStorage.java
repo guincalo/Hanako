@@ -4748,6 +4748,8 @@ public class MessagesStorage extends BaseController {
                         message.readAttachPath(data, getUserConfig().clientUserId);
                         data.reuse();
                         if (message.media != null) {
+                            // Mercurygram: keep a copy of self-destructing media before it is emptied.
+                            it.belloworld.mercurygram.MgMessageHistory.getInstance().archiveExpiringSync(currentAccount, dialogId, message);
                             if (!addFilesToDelete(message, filesToDelete, idsToDelete, namesToDelete, true)) {
                                 continue;
                             } else {
@@ -16355,7 +16357,10 @@ public class MessagesStorage extends BaseController {
                                     if (oldMessage.out && !message.out) {
                                         message.out = oldMessage.out;
                                     }
-                                    if (!sameMedia) {
+                                    // Mercurygram: with saved history on, the replaced media file is kept;
+                                    // MgMessageHistory.archiveEditsBefore (queued before this put) copies it
+                                    // into the edit-history entry. It is left to the normal cache cleanup.
+                                    if (!sameMedia && !getUserConfig().mg.savedMessagesHistory) {
                                         addFilesToDelete(oldMessage, filesToDelete, idsToDelete, namesToDelete, false);
                                     }
                                     NativeByteBuffer customParams = cursor.byteBufferValue(6);

@@ -25,6 +25,7 @@ public class AutoMessageHeardReceiver extends BroadcastReceiver {
         if (dialogId == 0 || maxId == 0 || !UserConfig.isValidAccount(currentAccount)) {
             return;
         }
+        it.belloworld.mercurygram.PlusGhost.allowReads(currentAccount, dialogId, it.belloworld.mercurygram.PlusGhost.MANUAL_READ_WINDOW_MS); // plus: notification Mark as read is an explicit read
         AccountInstance accountInstance = AccountInstance.getInstance(currentAccount);
         if (DialogObject.isUserDialog(dialogId)) {
             TLRPC.User user = accountInstance.getMessagesController().getUser(dialogId);

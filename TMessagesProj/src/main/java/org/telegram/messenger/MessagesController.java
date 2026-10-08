@@ -741,10 +741,11 @@ public class MessagesController extends BaseController implements NotificationCe
         return !starsLocked && !BuildVars.IS_BILLING_UNAVAILABLE;
     }
     public boolean premiumFeaturesBlocked() {
-        return premiumLocked && !getUserConfig().isPremium();
+        // plus: hide every Premium upsell unless the account really has Premium
+        return !getUserConfig().isPremium();
     }
     public boolean premiumPurchaseBlocked() {
-        return premiumLocked || BuildVars.IS_BILLING_UNAVAILABLE;
+        return true;
     }
 
     public List<String> directPaymentsCurrency = new ArrayList<>();
@@ -20013,6 +20014,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         dbUsersStatus.add(toDbUser);
                         if (update.user_id == getUserConfig().getClientUserId()) {
                             getNotificationsController().setLastOnlineFromOtherDevice(update.status.expires);
+                            it.belloworld.mercurygram.PlusGhost.onSelfStatus(currentAccount, update.status); // plus: ghost "force offline"
                         }
                     } else if (baseUpdate instanceof TL_update.TL_updateMonoForumNoPaidException) {
                         TL_update.TL_updateMonoForumNoPaidException update = (TL_update.TL_updateMonoForumNoPaidException) baseUpdate;

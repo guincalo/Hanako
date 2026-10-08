@@ -375,6 +375,10 @@ public class ImageLocation {
     }
 
     private static ImageLocation getForPhoto(TLRPC.FileLocation location, int size, TLRPC.Photo photo, TLRPC.Document document, TLRPC.InputPeer photoPeer, int photoPeerType, int dc_id, TLRPC.InputStickerSet stickerSet, String thumbSize) {
+        if (location instanceof it.belloworld.mercurygram.MgFileLocation) {
+            // Mercurygram: saved-history media copy, load straight from the local file.
+            return getForPath(((it.belloworld.mercurygram.MgFileLocation) location).path);
+        }
         if (location == null || photo == null && photoPeer == null && stickerSet == null && document == null) {
             return null;
         }

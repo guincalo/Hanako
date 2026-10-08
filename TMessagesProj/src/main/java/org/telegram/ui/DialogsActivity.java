@@ -9591,6 +9591,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void markAsRead(long did) {
+        it.belloworld.mercurygram.PlusGhost.allowReads(currentAccount, did, it.belloworld.mercurygram.PlusGhost.MANUAL_READ_WINDOW_MS); // plus: manual mark-as-read passes ghost mode for this chat only
         TLRPC.Dialog dialog = getMessagesController().dialogs_dict.get(did);
         if (dialog instanceof TLRPC.TL_dialogCommunity) {
             final ArrayList<TLRPC.Dialog> dialogs = getMessagesController().getDialogsByCommunity(dialog.community_id);
@@ -9651,6 +9652,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void markDialogsAsRead(ArrayList<TLRPC.Dialog> dialogs, boolean skipMuted) {
+        if (dialogs != null) { // plus: manual mark-as-read passes ghost mode for these chats only
+            for (int plusI = 0; plusI < dialogs.size(); plusI++) {
+                TLRPC.Dialog plusD = dialogs.get(plusI);
+                if (plusD != null) {
+                    it.belloworld.mercurygram.PlusGhost.allowReads(currentAccount, plusD.id, it.belloworld.mercurygram.PlusGhost.MANUAL_READ_WINDOW_MS);
+                }
+            }
+        }
         debugLastUpdateAction = 2;
         int selectedDialogIndex = -1;
 

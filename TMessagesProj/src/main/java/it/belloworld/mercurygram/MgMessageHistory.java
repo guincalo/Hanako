@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.LongSparseArray;
+import android.util.SparseArray;
 
 import org.telegram.SQLite.SQLiteCursor;
 import org.telegram.messenger.ApplicationLoader;
@@ -13,6 +14,7 @@ import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.NativeByteBuffer;
+import org.telegram.tgnet.SerializedData;
 import org.telegram.tgnet.TLRPC;
 
 import java.util.ArrayList;
@@ -32,9 +34,14 @@ import java.util.Set;
  * separate from Telegram's {@code cache4.db}, so clearing the Telegram cache
  * does not wipe saved entries.</p>
  *
- * <p>ToS guard (https://core.telegram.org/api/terms §1.4): self-destructing
- * content, secret chats and TTL messages are <b>never</b> archived. The
- * feature is opt-in (per-account {@code UserConfig.mg.savedMessagesHistory}, default off).</p>
+ * <p>Media of archived messages (photo, video + thumb, voice, round video,
+ * GIF, sticker, file) is copied into app-private storage by
+ * {@link MgHistoryMedia}; the copy's path is stored with the entry
+ * ({@code media_path}, {@code thumb_path}) and applied when the entry is read.</p>
+ *
+ * <p>Personal build: self-destructing / view-once media is archived too (when
+ * deleted, or when it expires after viewing). Secret chats are still never
+ * archived. The feature is per-account ({@code UserConfig.mg.savedMessagesHistory}).</p>
  */
 public class MgMessageHistory {
 
@@ -42,7 +49,7 @@ public class MgMessageHistory {
     public static final int KIND_EDITED = 1;
 
     private static final String DB_NAME = "mg_message_history.db";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
     private static final String TBL_DELETED = "deleted_messages";
     private static final String TBL_EDITED = "edited_messages";
     // Cap rows kept per (account, dialog) so an active deleter cannot grow the DB unbounded.
@@ -59,13 +66,18 @@ public class MgMessageHistory {
         public final int mid;
         public final long whenMs;
         public final TLRPC.Message message;
+        /** Saved copy of the media / video thumbnail, or null (may no longer exist). */
+        public final String mediaPath;
+        public final String thumbPath;
 
-        Entry(int kind, long dialogId, int mid, long whenMs, TLRPC.Message message) {
+        Entry(int kind, long dialogId, int mid, long whenMs, TLRPC.Message message, String mediaPath, String thumbPath) {
             this.kind = kind;
             this.dialogId = dialogId;
             this.mid = mid;
             this.whenMs = whenMs;
             this.message = message;
+            this.mediaPath = mediaPath;
+            this.thumbPath = thumbPath;
         }
     }
 
@@ -97,29 +109,49 @@ public class MgMessageHistory {
             // (every retraction must survive), so the edited table has no PK.
             db.execSQL("CREATE TABLE " + TBL_DELETED + " (" +
                     "account INTEGER, dialog_id INTEGER, mid INTEGER, data BLOB, when_ms INTEGER, " +
+                    "media_path TEXT, thumb_path TEXT, " +
                     "PRIMARY KEY(account, dialog_id, mid))");
             db.execSQL("CREATE TABLE " + TBL_EDITED + " (" +
-                    "account INTEGER, dialog_id INTEGER, mid INTEGER, data BLOB, when_ms INTEGER)");
+                    "account INTEGER, dialog_id INTEGER, mid INTEGER, data BLOB, when_ms INTEGER, " +
+                    "media_path TEXT, thumb_path TEXT)");
             db.execSQL("CREATE INDEX idx_deleted_dialog ON " + TBL_DELETED + "(account, dialog_id, when_ms)");
             db.execSQL("CREATE INDEX idx_edited_dialog ON " + TBL_EDITED + "(account, dialog_id, when_ms)");
         }
 
         @Override
         public void onUpgrade(android.database.sqlite.SQLiteDatabase db, int oldVersion, int newVersion) {
+            if (oldVersion < 2) {
+                // v2: saved media copies (MgHistoryMedia).
+                db.execSQL("ALTER TABLE " + TBL_DELETED + " ADD COLUMN media_path TEXT");
+                db.execSQL("ALTER TABLE " + TBL_DELETED + " ADD COLUMN thumb_path TEXT");
+                db.execSQL("ALTER TABLE " + TBL_EDITED + " ADD COLUMN media_path TEXT");
+                db.execSQL("ALTER TABLE " + TBL_EDITED + " ADD COLUMN thumb_path TEXT");
+            }
         }
     }
 
     /**
-     * ToS guard — a message that self-destructs, or lives in a secret chat,
-     * must never be persisted nor kept as an inline ghost (api/terms §1.4
-     * "preventing self-destructing content from disappearing"). Shared by the
-     * archive path and the ChatActivity ghost path so the rule cannot drift.
+     * Messages that are never persisted nor kept as an inline ghost: secret
+     * chats. Self-destructing / view-once messages used to be excluded here
+     * (api/terms §1.4); this personal build saves them on purpose. Shared by
+     * the archive path and the ChatActivity ghost path so the rule cannot drift.
      */
     public static boolean isExcluded(long dialogId, TLRPC.Message message) {
         return DialogObject.isEncryptedDialog(dialogId)
-                || message == null
-                || message.ttl != 0
-                || message.destroyTime != 0;
+                || message == null;
+    }
+
+    private static byte[] serialize(TLRPC.Message message) {
+        try {
+            SerializedData data = new SerializedData(message.getObjectSize());
+            message.serializeToStream(data);
+            byte[] bytes = data.toByteArray();
+            data.cleanup();
+            return bytes;
+        } catch (Exception e) {
+            FileLog.e(e);
+            return null;
+        }
     }
 
     private static TLRPC.Message deserialize(byte[] bytes) {
@@ -153,7 +185,7 @@ public class MgMessageHistory {
             return;
         }
         markRemote(dialogId, mids);
-        archive(account, dialogId, mids, true);
+        archive(account, dialogId, mids, true, null);
     }
 
     // Mids the server reported deleted that the storage read has not been consumed for
@@ -199,16 +231,54 @@ public class MgMessageHistory {
             return;
         }
         ArrayList<Integer> mids = new ArrayList<>(newMessages.size());
+        SparseArray<TLRPC.Message> replacements = new SparseArray<>(newMessages.size());
         for (int a = 0; a < newMessages.size(); a++) {
             TLRPC.Message m = newMessages.get(a);
             if (m != null) {
                 mids.add(m.id);
+                replacements.put(m.id, m);
             }
         }
-        archive(account, dialogId, mids, false);
+        archive(account, dialogId, mids, false, replacements);
     }
 
-    private void archive(int account, long dialogId, ArrayList<Integer> mids, boolean deleted) {
+    /** One row to insert, with the media copy to run once the insert sticks. */
+    private static final class Pending {
+        final long dialogId;
+        final ContentValues cv;
+        final MgHistoryMedia.Plan plan;
+
+        Pending(long dialogId, ContentValues cv, MgHistoryMedia.Plan plan) {
+            this.dialogId = dialogId;
+            this.cv = cv;
+            this.plan = plan;
+        }
+    }
+
+    private static Pending makePending(int account, long uid, TLRPC.Message message, byte[] bytes,
+                                       long now, MgHistoryMedia.Plan plan, boolean runPlan) {
+        ContentValues cv = new ContentValues();
+        cv.put("account", account);
+        cv.put("dialog_id", uid);
+        cv.put("mid", message.id);
+        cv.put("data", bytes);
+        cv.put("when_ms", now);
+        if (plan != null) {
+            cv.put("media_path", plan.mediaPath);
+            if (plan.thumbPath != null) {
+                cv.put("thumb_path", plan.thumbPath);
+            }
+        }
+        return new Pending(uid, cv, runPlan ? plan : null);
+    }
+
+    /**
+     * @param replacements for edits, the new versions by mid: the old media is
+     *                     only copied when the edit replaces it (otherwise the
+     *                     current message still references the same file).
+     */
+    private void archive(int account, long dialogId, ArrayList<Integer> mids, boolean deleted,
+                         SparseArray<TLRPC.Message> replacements) {
         if (!UserConfig.getInstance(account).mg.savedMessagesHistory || mids == null || mids.isEmpty()
                 || DialogObject.isEncryptedDialog(dialogId)) {
             return;
@@ -217,6 +287,7 @@ public class MgMessageHistory {
         final MessagesStorage storage = MessagesStorage.getInstance(account);
         storage.getStorageQueue().postRunnable(() -> {
             SQLiteCursor cursor = null;
+            ArrayList<Pending> rows = new ArrayList<>();
             try {
                 String ids = android.text.TextUtils.join(",", midsCopy);
                 String where = dialogId != 0
@@ -232,13 +303,16 @@ public class MgMessageHistory {
                     if (message == null || isExcluded(uid, message)) {
                         continue;
                     }
-                    ContentValues cv = new ContentValues();
-                    cv.put("account", account);
-                    cv.put("dialog_id", uid);
-                    cv.put("mid", message.id);
-                    cv.put("data", bytes);
-                    cv.put("when_ms", now);
-                    store(deleted ? TBL_DELETED : TBL_EDITED, cv, uid);
+                    MgHistoryMedia.Plan plan = null;
+                    if (deleted) {
+                        plan = MgHistoryMedia.plan(account, uid, message, "d" + now);
+                    } else {
+                        TLRPC.Message replacement = replacements != null ? replacements.get(message.id) : null;
+                        if (replacement == null || !MgHistoryMedia.sameMedia(message, replacement)) {
+                            plan = MgHistoryMedia.plan(account, uid, message, "e" + now);
+                        }
+                    }
+                    rows.add(makePending(account, uid, message, bytes, now, plan, true));
                 }
             } catch (Exception e) {
                 FileLog.e(e);
@@ -247,24 +321,106 @@ public class MgMessageHistory {
                     cursor.dispose();
                 }
             }
+            storeBatch(account, deleted ? TBL_DELETED : TBL_EDITED, rows);
         });
     }
 
-    private void store(String table, ContentValues cv, long dialogId) {
+    /**
+     * Self-destructing (view-once / timed) media is about to be emptied after it
+     * was viewed ({@code MessagesStorage.emptyMessagesMedia}). Runs <b>on the
+     * storage queue</b>, before the cached file is queued for deletion: copies
+     * the media synchronously (one message) and keeps the pre-expiry version as
+     * an edit-history entry of the message (the message itself stays, empty).
+     */
+    public void archiveExpiringSync(int account, long dialogId, TLRPC.Message message) {
+        if (!UserConfig.getInstance(account).mg.savedMessagesHistory || message == null
+                || DialogObject.isEncryptedDialog(dialogId) || !MgHistoryMedia.hasSavableMedia(message)) {
+            return;
+        }
+        try {
+            byte[] bytes = serialize(message);
+            if (bytes == null) {
+                return;
+            }
+            long now = System.currentTimeMillis();
+            MgHistoryMedia.Plan plan = MgHistoryMedia.plan(account, dialogId, message, "x" + now);
+            MgHistoryMedia.runCopy(plan);
+            ArrayList<Pending> rows = new ArrayList<>(1);
+            rows.add(makePending(account, dialogId, message, bytes, now, plan, false));
+            storeBatch(account, TBL_EDITED, rows);
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    /**
+     * Inserts all rows of one archive call in a single transaction and prunes
+     * each touched dialog once, then hands the media copies (for rows that were
+     * actually inserted) and the files of pruned rows to MgHistoryMedia's queue.
+     */
+    private void storeBatch(int account, String table, ArrayList<Pending> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return;
+        }
+        ArrayList<MgHistoryMedia.Plan> toCopy = new ArrayList<>();
+        ArrayList<String> toDelete = new ArrayList<>();
         synchronized (writeLock) {
             try {
                 android.database.sqlite.SQLiteDatabase db = dbHelper.getWritableDatabase();
-                db.insertWithOnConflict(table, null, cv,
-                        android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE);
-                db.execSQL("DELETE FROM " + table + " WHERE account=? AND dialog_id=? AND rowid NOT IN "
-                                + "(SELECT rowid FROM " + table + " WHERE account=? AND dialog_id=? "
-                                + "ORDER BY when_ms DESC LIMIT " + MAX_PER_DIALOG + ")",
-                        new Object[]{cv.getAsInteger("account"), dialogId,
-                                cv.getAsInteger("account"), dialogId});
+                db.beginTransaction();
+                try {
+                    HashSet<Long> dialogs = new HashSet<>();
+                    for (int i = 0; i < rows.size(); i++) {
+                        Pending p = rows.get(i);
+                        long rowId = db.insertWithOnConflict(table, null, p.cv,
+                                android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE);
+                        if (rowId != -1 && p.plan != null) {
+                            toCopy.add(p.plan);
+                        }
+                        dialogs.add(p.dialogId);
+                    }
+                    for (Long did : dialogs) {
+                        prune(db, table, account, did, toDelete);
+                    }
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
+                }
             } catch (Exception e) {
                 FileLog.e(e);
+                toCopy.clear();
+                toDelete.clear();
             }
         }
+        MgHistoryMedia.copyAsync(toCopy);
+        MgHistoryMedia.deleteAsync(toDelete);
+    }
+
+    private static final String PRUNE_WHERE = " WHERE account=? AND dialog_id=? AND rowid NOT IN "
+            + "(SELECT rowid FROM %1$s WHERE account=? AND dialog_id=? ORDER BY when_ms DESC LIMIT " + MAX_PER_DIALOG + ")";
+
+    private static void prune(android.database.sqlite.SQLiteDatabase db, String table, int account, long dialogId,
+                              ArrayList<String> filesOut) {
+        String where = String.format(Locale.US, PRUNE_WHERE, table);
+        String[] args = new String[]{Integer.toString(account), Long.toString(dialogId),
+                Integer.toString(account), Long.toString(dialogId)};
+        Cursor c = null;
+        try {
+            c = db.rawQuery("SELECT media_path, thumb_path FROM " + table + where, args);
+            while (c.moveToNext()) {
+                if (!c.isNull(0)) {
+                    filesOut.add(c.getString(0));
+                }
+                if (!c.isNull(1)) {
+                    filesOut.add(c.getString(1));
+                }
+            }
+        } finally {
+            if (c != null) {
+                c.close();
+            }
+        }
+        db.execSQL("DELETE FROM " + table + where, args);
     }
 
     /** All saved entries (deleted + pre-edit) for a dialog, newest first. */
@@ -305,13 +461,16 @@ public class MgMessageHistory {
                           String table, int kind, List<Entry> out) {
         Cursor c = null;
         try {
-            c = db.rawQuery("SELECT mid, when_ms, data FROM " + table
+            c = db.rawQuery("SELECT mid, when_ms, data, media_path, thumb_path FROM " + table
                             + " WHERE account=? AND dialog_id=? ORDER BY when_ms DESC LIMIT " + MAX_PER_DIALOG,
                     new String[]{Integer.toString(account), Long.toString(dialogId)});
             while (c.moveToNext()) {
                 TLRPC.Message m = deserialize(c.getBlob(2));
                 if (m != null) {
-                    out.add(new Entry(kind, dialogId, c.getInt(0), c.getLong(1), m));
+                    String mediaPath = c.isNull(3) ? null : c.getString(3);
+                    String thumbPath = c.isNull(4) ? null : c.getString(4);
+                    MgHistoryMedia.apply(m, mediaPath, thumbPath);
+                    out.add(new Entry(kind, dialogId, c.getInt(0), c.getLong(1), m, mediaPath, thumbPath));
                 }
             }
         } catch (Exception e) {
@@ -346,7 +505,7 @@ public class MgMessageHistory {
     /** Pre-edit versions of a single message, oldest first. */
     public List<Entry> getEditHistoryFor(int account, long dialogId, int mid) {
         ArrayList<Entry> out = new ArrayList<>();
-        final String sql = "SELECT when_ms, data FROM " + TBL_EDITED
+        final String sql = "SELECT when_ms, data, media_path, thumb_path FROM " + TBL_EDITED
                 + " WHERE account=? AND dialog_id=? AND mid=? ORDER BY when_ms ASC";
         readCursor(sql,
                 new String[]{Integer.toString(account), Long.toString(dialogId), Integer.toString(mid)},
@@ -354,7 +513,10 @@ public class MgMessageHistory {
                     while (c.moveToNext()) {
                         TLRPC.Message m = deserialize(c.getBlob(1));
                         if (m != null) {
-                            out.add(new Entry(KIND_EDITED, dialogId, mid, c.getLong(0), m));
+                            String mediaPath = c.isNull(2) ? null : c.getString(2);
+                            String thumbPath = c.isNull(3) ? null : c.getString(3);
+                            MgHistoryMedia.apply(m, mediaPath, thumbPath);
+                            out.add(new Entry(KIND_EDITED, dialogId, mid, c.getLong(0), m, mediaPath, thumbPath));
                         }
                     }
                 });
@@ -391,15 +553,40 @@ public class MgMessageHistory {
         }
         final String ids = android.text.TextUtils.join(",", mids);
         Utilities.globalQueue.postRunnable(() -> {
+            ArrayList<String> files = new ArrayList<>();
             synchronized (writeLock) {
+                Cursor c = null;
                 try {
-                    dbHelper.getWritableDatabase().execSQL("DELETE FROM " + TBL_DELETED
+                    android.database.sqlite.SQLiteDatabase db = dbHelper.getWritableDatabase();
+                    c = db.rawQuery("SELECT media_path, thumb_path FROM " + TBL_DELETED
+                                    + " WHERE account=? AND dialog_id=? AND mid IN (" + ids + ")",
+                            new String[]{Integer.toString(account), Long.toString(dialogId)});
+                    while (c.moveToNext()) {
+                        if (!c.isNull(0)) {
+                            files.add(c.getString(0));
+                        }
+                        if (!c.isNull(1)) {
+                            files.add(c.getString(1));
+                        }
+                    }
+                    c.close();
+                    c = null;
+                    db.execSQL("DELETE FROM " + TBL_DELETED
                                     + " WHERE account=? AND dialog_id=? AND mid IN (" + ids + ")",
                             new Object[]{account, dialogId});
                 } catch (Exception e) {
                     FileLog.e(e);
+                    files.clear();
+                } finally {
+                    if (c != null) {
+                        try {
+                            c.close();
+                        } catch (Exception ignore) {
+                        }
+                    }
                 }
             }
+            MgHistoryMedia.deleteAsync(files);
         });
     }
 
@@ -413,5 +600,6 @@ public class MgMessageHistory {
                 FileLog.e(e);
             }
         }
+        MgHistoryMedia.deleteAllAsync();
     }
 }

@@ -37,6 +37,9 @@ import it.belloworld.mercurygram.transcribe.MgWhisperModel;
 public class MercurygramSettingsActivity extends UniversalFragment {
 
     private static final int ID_HIDDEN_ACCOUNTS = 0;
+    // plus: ghost mode
+    private static final int ID_GHOST_ON = 900;
+    private static final int ID_GHOST_OPT = 910; // + PlusGhost.OPT_*
     private static final int ID_MESSAGE_DETAILS_MENU = 1;
     private static final int ID_HIDE_CHAT_KEYBOARD = 2;
     private static final int ID_HIDE_ALL_TAB = 3;
@@ -144,6 +147,21 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         items.add(MgSettingsScope.globalCheck(ID_DISABLE_PROXIMITY_SENSOR, LocaleController.getString(R.string.MercurygramDisableProximitySensor))
                 .setChecked(SharedConfig.mg_disableProximitySensor));
         items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDisableProximitySensorAbout)));
+
+        // plus: ghost mode (this account)
+        final int acc = getCurrentAccount();
+        final boolean ghostOn = it.belloworld.mercurygram.PlusGhost.isEnabled(acc);
+        items.add(UItem.asHeader("Ghost mode"));
+        items.add(UItem.asCheck(ID_GHOST_ON, "Ghost mode").setChecked(ghostOn));
+        if (ghostOn) {
+            String[] ghostLabels = {"Don't send read receipts", "Don't send typing status", "Stay offline", "Don't mark stories as seen",
+                    "Read the chat when I reply, react or vote", "Force offline when shown online (blinks if another device is open)"};
+            for (int i = 0; i < ghostLabels.length; i++) {
+                items.add(UItem.asCheck(ID_GHOST_OPT + i, ghostLabels[i])
+                        .setChecked(it.belloworld.mercurygram.PlusGhost.isHidden(acc, i)));
+            }
+        }
+        items.add(UItem.asShadow("Applies to this account. Mark as read (long-press a chat, or the notification button) sends a read receipt for that chat only; for a chat that already looks read, mark it unread first. With \"Read the chat when I reply\", replying, reacting or voting in a chat reads it too, as a normal client would. Stay offline sends no status packets at all; you go offline once after each send, reaction, vote, edit or call. Channel views are not counted. Not covered: reacting to or replying to a story marks it seen, and Premium voice-to-text marks a voice message as listened (server side)."));
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
@@ -275,6 +293,18 @@ public class MercurygramSettingsActivity extends UniversalFragment {
 
     @Override
     protected void onClick(UItem item, View view, int position, float x, float y) {
+        // plus: ghost mode toggles
+        if (item.id == ID_GHOST_ON) {
+            it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));
+            refreshList();
+            return;
+        }
+        if (item.id >= ID_GHOST_OPT && item.id < ID_GHOST_OPT + it.belloworld.mercurygram.PlusGhost.OPT_COUNT) {
+            int opt = item.id - ID_GHOST_OPT;
+            it.belloworld.mercurygram.PlusGhost.setHidden(getCurrentAccount(), opt, !it.belloworld.mercurygram.PlusGhost.isHidden(getCurrentAccount(), opt));
+            refreshList();
+            return;
+        }
         switch (item.id) {
             case ID_HIDDEN_ACCOUNTS:
                 presentFragment(new HiddenAccountsActivity());

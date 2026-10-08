@@ -26,7 +26,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             flags2 = stream.readInt32(exception);
             offline = hasFlag(flags2, FLAG_1);
@@ -262,7 +262,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             flags2 = stream.readInt32(exception);
             offline = hasFlag(flags2, FLAG_1);
@@ -491,7 +491,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             flags2 = stream.readInt32(exception);
             offline = hasFlag(flags2, FLAG_1);
@@ -713,7 +713,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             flags2 = stream.readInt32(exception);
             offline = hasFlag(flags2, FLAG_1);
@@ -929,7 +929,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             flags2 = stream.readInt32(exception);
             offline = hasFlag(flags2, FLAG_1);
@@ -1139,7 +1139,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             flags2 = stream.readInt32(exception);
             offline = hasFlag(flags2, FLAG_1);
@@ -1338,7 +1338,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             flags2 = stream.readInt32(exception);
             offline = hasFlag(flags2, FLAG_1);
@@ -1531,7 +1531,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             flags2 = stream.readInt32(exception);
             offline = hasFlag(flags2, FLAG_1);
@@ -1718,7 +1718,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             flags2 = stream.readInt32(exception);
             offline = hasFlag(flags2, FLAG_1);
@@ -1897,7 +1897,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             flags2 = stream.readInt32(exception);
             offline = hasFlag(flags2, FLAG_1);
@@ -2070,7 +2070,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             id = stream.readInt32(exception);
             if (hasFlag(flags, FLAG_8)) {
@@ -2233,7 +2233,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             id = stream.readInt32(exception);
             if (hasFlag(flags, FLAG_8)) {
@@ -2390,7 +2390,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             id = stream.readInt32(exception);
             if (hasFlag(flags, FLAG_8)) {
@@ -2541,7 +2541,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             invert_media = hasFlag(flags, FLAG_27);
             id = stream.readInt32(exception);
             if (hasFlag(flags, FLAG_8)) {
@@ -2686,7 +2686,7 @@ public class TL_legacy_message {
             legacy = hasFlag(flags, FLAG_19);
             edit_hide = hasFlag(flags, FLAG_21);
             pinned = hasFlag(flags, FLAG_24);
-            noforwards = hasFlag(flags, FLAG_26);
+            noforwards = false; // plus: ignore content protection (was hasFlag(flags, FLAG_26))
             id = stream.readInt32(exception);
             if (hasFlag(flags, FLAG_8)) {
                 from_id = TLRPC.Peer.TLdeserialize(stream, stream.readInt32(exception), exception);

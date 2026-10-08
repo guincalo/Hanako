@@ -352,12 +352,12 @@ public final class MgChatGhostController {
         }
     }
 
-    /** Long-press menu gate for the "Edit history" item. */
+    /** Long-press menu gate for the "Edit history" item. No edit_date check: an
+     * expired view-once media keeps its pre-expiry version as an edit entry. */
     public boolean isEditHistoryCandidate(MessageObject selectedObject) {
         return host.getUserConfig().mg.savedMessagesHistory
                 && selectedObject != null
                 && selectedObject.messageOwner != null
-                && selectedObject.messageOwner.edit_date != 0
                 && editedMids != null
                 && editedMids.contains(selectedObject.getId());
     }

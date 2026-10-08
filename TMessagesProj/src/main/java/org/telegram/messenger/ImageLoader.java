@@ -3218,6 +3218,13 @@ public class ImageLoader {
                                 cacheFile = new File(FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE), imageLocation.location.volume_id + "_" + imageLocation.location.local_id + ".temp");
                             }
                         }
+                        if (imageLocation.document != null) {
+                            // Mercurygram: saved-history copy of a deleted / replaced document (video, GIF, round, sticker).
+                            File mgSaved = it.belloworld.mercurygram.MgHistoryMedia.redirect(imageLocation.document);
+                            if (mgSaved != null) {
+                                cacheFile = mgSaved;
+                            }
+                        }
                         if (hasAutoplayFilter(filter) || isAnimatedAvatar(filter)) {
                             img.imageType = FileLoader.IMAGE_TYPE_ANIMATION;
                             img.size = fileSize;

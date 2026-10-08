@@ -113,7 +113,7 @@
     <string name="MercurygramShowCharCounter">Show character counter</string>
     <string name="MercurygramShowCharCounterAbout">Show how many characters the message you are typing contains. Useful in groups where a bot deletes messages longer than a limit. It is hidden while Telegram shows its own remaining-characters counter.</string>
     <string name="MercurygramSavedMessagesHistory">Save deleted &amp; edited messages</string>
-    <string name="MercurygramSavedMessagesHistoryAbout">Deleted messages stay in the chat, grayed out and non-replyable; edited messages keep their previous versions accessible from the message menu. Stored separately from the Telegram cache. Self-destructing messages and secret chats are never saved.</string>
+    <string name="MercurygramSavedMessagesHistoryAbout">Deleted messages stay in the chat, grayed out and non-replyable; edited messages keep their previous versions accessible from the message menu. Photos, videos, voice messages and files are copied to private storage, so they survive clearing the Telegram cache; self-destructing and view-once media are kept too. Secret chats are never saved.</string>
     <string name="MercurygramSavedMessagesDeleted">deleted</string>
     <string name="MercurygramSavedMessagesEmpty">(no text)</string>
     <string name="MercurygramClearSavedHistory">Clear saved message history</string>

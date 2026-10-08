@@ -166,6 +166,9 @@ public class SecretChatHelper extends BaseController {
         if (!(encryptedChat instanceof TLRPC.TL_encryptedChat)) {
             return;
         }
+        if (resendMessage == null && it.belloworld.mercurygram.PlusGhost.blockSecretRead(currentAccount, DialogObject.makeEncryptedDialogId(encryptedChat.id))) {
+            return; // plus: ghost mode, don't tell the peer we opened timed media / read ttl messages
+        }
         TLRPC.TL_decryptedMessageService reqSend = new TLRPC.TL_decryptedMessageService();
         TLRPC.Message message;
 

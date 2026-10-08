@@ -178,6 +178,8 @@ public class MgUpdateChecker {
     }
 
     public static void checkForUpdates(boolean force) {
+        // plus: personal build, never offer upstream Mercurygram updates
+        if (true) return;
         checkInternal(force, null);
     }
 
