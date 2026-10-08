@@ -3536,6 +3536,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
             if (folderId == 0) {
                 actionBar.setOnLongClickListener(v -> {
+                    if (it.belloworld.mercurygram.PlusChatLock.onDialogsTitleLongPress(DialogsActivity.this)) { // plus f08
+                        return true;
+                    }
                     if (getUserConfig().mg.hideAllTab && filterTabsView != null && filterTabsView.getDefaultTabId() != filterTabsView.getCurrentTabId()) {
                         filterTabsView.toggleAllTabs(true);
                         filterTabsView.selectDefaultTab();

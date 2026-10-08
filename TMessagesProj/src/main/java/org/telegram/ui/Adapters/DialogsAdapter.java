@@ -1626,6 +1626,7 @@ public class DialogsAdapter extends RecyclerListView.SelectionAdapter implements
             if (array == null) {
                 array = new ArrayList<>();
             }
+            array = it.belloworld.mercurygram.PlusChatLock.filterDialogs(currentAccount, array); // plus f08
         }
 
         dialogsCount = array.size();

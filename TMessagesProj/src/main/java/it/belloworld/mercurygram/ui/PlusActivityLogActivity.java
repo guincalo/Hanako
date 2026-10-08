@@ -86,7 +86,7 @@ public class PlusActivityLogActivity extends UniversalFragment {
         if (entries == null) {
             return;
         }
-        if (entries.isEmpty()) {
+        if (entries.isEmpty() || it.belloworld.mercurygram.PlusChatLock.isHiddenFromLists(currentAccount, userId)) { // plus f08: hidden locked chat shows no log
             items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF05Empty)));
             return;
         }

@@ -30,7 +30,12 @@ public class PlusGhostExceptionsActivity extends UniversalFragment {
     protected void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
         final int acc = getCurrentAccount();
         shown.clear();
-        ArrayList<Long> ids = PlusGhostExceptions.list(acc);
+        ArrayList<Long> ids = new ArrayList<>();
+        for (long did : PlusGhostExceptions.list(acc)) {
+            if (!it.belloworld.mercurygram.PlusChatLock.isHiddenFromLists(acc, did)) { // plus f08: hidden locked chats stay out of the list
+                ids.add(did);
+            }
+        }
         ArrayList<String> titles = new ArrayList<>();
         for (int i = 0; i < ids.size(); i++) {
             titles.add(PlusGhostExceptions.dialogTitle(acc, ids.get(i)));

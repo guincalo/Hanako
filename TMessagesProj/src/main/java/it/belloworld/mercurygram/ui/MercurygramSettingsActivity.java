@@ -210,6 +210,13 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         it.belloworld.mercurygram.PlusStoryGuard.addSettingsItems(items, acc);
         // plus f06 end
 
+        // plus f08 begin: chat lock + hidden chats
+        items.add(UItem.asButton(it.belloworld.mercurygram.PlusChatLock.SETTINGS_ROW_ID, R.drawable.msg_secret,
+                LocaleController.getString(R.string.PlusF08Title),
+                it.belloworld.mercurygram.PlusChatLock.settingsSummary(getCurrentAccount())));
+        items.add(UItem.asShadow(null));
+        // plus f08 end
+
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
                         LocaleController.getString(R.string.MercurygramReduceTrackingFingerprint))
@@ -360,6 +367,12 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             return;
         }
         // plus f05 end
+        // plus f08 begin
+        if (item.id == it.belloworld.mercurygram.PlusChatLock.SETTINGS_ROW_ID) {
+            it.belloworld.mercurygram.PlusChatLock.openSettings(this);
+            return;
+        }
+        // plus f08 end
         // plus: ghost mode toggles
         if (item.id == ID_GHOST_ON) {
             it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));

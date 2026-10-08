@@ -1691,6 +1691,7 @@ public class ChatActivity extends BaseFragment implements
     // Mercurygram: chat menu "Go to first message"
     private final static int mg_go_to_first_message = 75;
     private final static int plus_ghost_exceptions = 9101; // plus f01
+    private final static int plus_f08_lock_chat = 9081; // plus f08
 
     private final static int id_chat_compose_panel = 1000;
 
@@ -3824,6 +3825,8 @@ public class ChatActivity extends BaseFragment implements
                             BulletinFactory.of(ChatActivity.this).createDownloadBulletin(isMusic ? BulletinFactory.FileType.AUDIOS : BulletinFactory.FileType.UNKNOWNS, count, themeDelegate).show();
                         }
                     });
+                } else if (id == plus_f08_lock_chat) { // plus f08
+                    it.belloworld.mercurygram.PlusChatLock.onChatMenuItemClick(headerItem, currentAccount, dialog_id);
                 } else if (id == chat_enc_timer) {
                     if (getParentActivity() == null) {
                         return;
@@ -4466,6 +4469,9 @@ public class ChatActivity extends BaseFragment implements
             if (!isTopic && !ChatObject.isMonoForum(currentChat)) {
                 clearHistoryItem = headerItem.lazilyAddSubItem(clear_history, R.drawable.msg_clear,
                     LocaleController.getString(UserObject.isBotForum(currentUser) ? R.string.ClearAllHistory : R.string.ClearHistory));
+            }
+            if (chatMode == 0 && !isTopic) { // plus f08
+                it.belloworld.mercurygram.PlusChatLock.addChatMenuItem(headerItem, plus_f08_lock_chat, currentAccount, dialog_id);
             }
             boolean addedSettings = false;
             if (!isTopic) {

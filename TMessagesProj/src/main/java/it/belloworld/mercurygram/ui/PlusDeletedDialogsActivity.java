@@ -69,12 +69,18 @@ public class PlusDeletedDialogsActivity extends UniversalFragment {
             items.add(UItem.asShadow(LocaleController.getString(R.string.Loading)));
             return;
         }
-        if (entries.isEmpty()) {
+        ArrayList<PlusDeletedDialogs.Entry> visible = new ArrayList<>(); // plus f08: hidden locked chats stay out of the log
+        for (PlusDeletedDialogs.Entry e : entries) {
+            if (!it.belloworld.mercurygram.PlusChatLock.isHiddenFromLists(currentAccount, e.dialogId)) {
+                visible.add(e);
+            }
+        }
+        if (visible.isEmpty()) {
             items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF07DeletedDialogsEmpty)));
             return;
         }
-        for (int i = 0; i < entries.size(); i++) {
-            PlusDeletedDialogs.Entry e = entries.get(i);
+        for (int i = 0; i < visible.size(); i++) {
+            PlusDeletedDialogs.Entry e = visible.get(i);
             UItem item = UItem.asButton(ID_ENTRY, title(e), LocaleController.formatDateTime(e.whenMs / 1000, true));
             item.object = e;
             items.add(item);

@@ -283,6 +283,9 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
     }
 
     private boolean filter(Object obj) {
+        if (it.belloworld.mercurygram.PlusChatLock.isHiddenSearchResult(currentAccount, obj)) { // plus f08
+            return false;
+        }
         if (dialogsType != DialogsActivity.DIALOGS_TYPE_START_ATTACH_BOT) {
             return true;
         }
@@ -653,6 +656,9 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                             long did = MessageObject.getDialogId(message);
                             int maxId = MessagesController.getInstance(currentAccount).deletedHistory.get(did);
                             if (maxId != 0 && message.id <= maxId) {
+                                continue;
+                            }
+                            if (it.belloworld.mercurygram.PlusChatLock.isDialogHidden(currentAccount, did)) { // plus f08
                                 continue;
                             }
                             MessageObject msg = messageObjects.get(a);
