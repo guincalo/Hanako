@@ -1,0 +1,428 @@
+diff --git a/TMessagesProj/src/main/java/it/belloworld/mercurygram/PlusGhost.java b/TMessagesProj/src/main/java/it/belloworld/mercurygram/PlusGhost.java
+index 4884cc7..51527a8 100644
+--- a/TMessagesProj/src/main/java/it/belloworld/mercurygram/PlusGhost.java
++++ b/TMessagesProj/src/main/java/it/belloworld/mercurygram/PlusGhost.java
+@@ -5,18 +5,34 @@ import android.content.SharedPreferences;
+ import android.os.SystemClock;
+ 
+ import org.telegram.messenger.ApplicationLoader;
++import org.telegram.messenger.DialogObject;
++import org.telegram.messenger.FileLog;
+ import org.telegram.messenger.UserConfig;
+ import org.telegram.messenger.Utilities;
+ import org.telegram.tgnet.ConnectionsManager;
++import org.telegram.tgnet.RequestDelegate;
+ import org.telegram.tgnet.TLObject;
+ import org.telegram.tgnet.TLRPC;
+ import org.telegram.tgnet.tl.TL_account;
++import org.telegram.tgnet.tl.TL_phone;
+ import org.telegram.tgnet.tl.TL_stories;
+ 
++import java.util.concurrent.ConcurrentHashMap;
++import java.util.concurrent.atomic.AtomicBoolean;
++
+ /**
+  * plus: per-account ghost mode. Hooked into ConnectionsManager.sendRequestInternal,
+- * so every outgoing request passes through {@link #intercept}. Blocked requests are
+- * dropped before serialization; their callbacks never fire.
++ * so every outgoing request passes through {@link #intercept} and {@link #wrapCompletion}.
++ *
++ * Dropped requests are completed locally with a fake, empty success result (the same idea
++ * AyuGram/NagramX use), so client bookkeeping that waits for the callback (pending
++ * readMessageContents tasks, typing state, status timer) still runs and does not pile up.
++ *
++ * "Stay offline": account.updateStatus(offline=false) is never sent. Exactly one
++ * offline=true goes out after app start, after the option is switched on, and after any
++ * request that makes the server mark us online (sending, forwarding, reacting, voting,
++ * editing, calls, ...). Every other status packet is dropped, so "last seen" stays at the
++ * time of the last real action instead of being refreshed every 55 s.
+  */
+ public final class PlusGhost {
+ 
+@@ -25,8 +41,25 @@ public final class PlusGhost {
+     public static final int OPT_ONLINE = 2;
+     public static final int OPT_STORIES = 3;
+ 
++    /** How long a manual "mark as read" lets read receipts of that one chat through. */
++    public static final long MANUAL_READ_WINDOW_MS = 10000;
++    private static final long OFFLINE_DELAY_MS = 1500;
++
+     private static final String[] OPT_KEYS = {"reads", "typing", "online", "stories"};
+-    private static final long[] allowReadsUntil = new long[UserConfig.MAX_ACCOUNT_COUNT];
++
++    /** account -> (dialogId -> elapsedRealtime deadline) for manual mark-as-read. */
++    @SuppressWarnings("unchecked")
++    private static final ConcurrentHashMap<Long, Long>[] allowedReads = new ConcurrentHashMap[UserConfig.MAX_ACCOUNT_COUNT];
++    /** true = the next account.updateStatus may go out, rewritten to offline=true. */
++    private static final AtomicBoolean[] offlinePending = new AtomicBoolean[UserConfig.MAX_ACCOUNT_COUNT];
++    private static final Runnable[] offlineRunnables = new Runnable[UserConfig.MAX_ACCOUNT_COUNT];
++
++    static {
++        for (int i = 0; i < UserConfig.MAX_ACCOUNT_COUNT; i++) {
++            allowedReads[i] = new ConcurrentHashMap<>();
++            offlinePending[i] = new AtomicBoolean(true); // one offline=true after app start
++        }
++    }
+ 
+     private PlusGhost() {
+     }
+@@ -35,12 +68,18 @@ public final class PlusGhost {
+         return ApplicationLoader.applicationContext.getSharedPreferences("plus_ghost", Context.MODE_PRIVATE);
+     }
+ 
++    private static boolean validAccount(int account) {
++        return account >= 0 && account < UserConfig.MAX_ACCOUNT_COUNT;
++    }
++
++    // Defaults are intentionally unchanged (everything on for every account); see 0004/0005.
+     public static boolean isEnabled(int account) {
+         return prefs().getBoolean("on_" + account, true);
+     }
+ 
+     public static void setEnabled(int account, boolean value) {
+         prefs().edit().putBoolean("on_" + account, value).apply();
++        onSettingsChanged(account);
+     }
+ 
+     /** true = this kind of packet is hidden (not sent) while ghost mode is on. */
+@@ -50,22 +89,79 @@ public final class PlusGhost {
+ 
+     public static void setHidden(int account, int opt, boolean value) {
+         prefs().edit().putBoolean(OPT_KEYS[opt] + "_" + account, value).apply();
++        onSettingsChanged(account);
+     }
+ 
+     private static boolean active(int account, int opt) {
+         return isEnabled(account) && isHidden(account, opt);
+     }
+ 
+-    /** Let read receipts through for a short window (manual "mark as read"). */
+-    public static void allowReads(int account, long ms) {
+-        if (account >= 0 && account < allowReadsUntil.length) {
+-            allowReadsUntil[account] = SystemClock.elapsedRealtime() + ms;
++    /** After a toggle: if "Stay offline" is now in effect, go offline once right away. */
++    private static void onSettingsChanged(int account) {
++        if (validAccount(account) && active(account, OPT_ONLINE)) {
++            scheduleOffline(account, 0);
++        }
++    }
++
++    // ---- manual read exception (scoped to one dialog) ----
++
++    /** Let read receipts for this one dialog through for {@code ms} (manual "mark as read"). */
++    public static void allowReads(int account, long dialogId, long ms) {
++        if (validAccount(account) && dialogId != 0) {
++            allowedReads[account].put(dialogId, SystemClock.elapsedRealtime() + ms);
++        }
++    }
++
++    private static boolean readsAllowed(int account, long dialogId) {
++        if (!validAccount(account) || dialogId == 0) {
++            return false;
++        }
++        Long until = allowedReads[account].get(dialogId);
++        if (until == null) {
++            return false;
++        }
++        if (SystemClock.elapsedRealtime() >= until) {
++            allowedReads[account].remove(dialogId);
++            return false;
++        }
++        return true;
++    }
++
++    /** Called by SecretChatHelper before it sends decryptedMessageActionReadMessages. */
++    public static boolean blockSecretRead(int account, long encryptedDialogId) {
++        return active(account, OPT_READS) && !readsAllowed(account, encryptedDialogId);
++    }
++
++    private static long peerDialogId(TLRPC.InputPeer peer) {
++        if (peer == null) {
++            return 0;
++        }
++        if (peer.channel_id != 0) {
++            return -peer.channel_id;
+         }
++        if (peer.chat_id != 0) {
++            return -peer.chat_id;
++        }
++        return peer.user_id;
+     }
+ 
+-    private static boolean readsAllowedNow(int account) {
+-        return account >= 0 && account < allowReadsUntil.length
+-                && SystemClock.elapsedRealtime() < allowReadsUntil[account];
++    /** Dialog a read request belongs to, or 0 when the request carries no peer. */
++    private static long readDialogId(TLObject o) {
++        if (o instanceof TLRPC.TL_messages_readHistory) {
++            return peerDialogId(((TLRPC.TL_messages_readHistory) o).peer);
++        } else if (o instanceof TLRPC.TL_channels_readHistory) {
++            TLRPC.InputChannel ch = ((TLRPC.TL_channels_readHistory) o).channel;
++            return ch != null ? -ch.channel_id : 0;
++        } else if (o instanceof TLRPC.TL_messages_readDiscussion) {
++            return peerDialogId(((TLRPC.TL_messages_readDiscussion) o).peer);
++        } else if (o instanceof TLRPC.TL_channels_readMessageContents) {
++            TLRPC.InputChannel ch = ((TLRPC.TL_channels_readMessageContents) o).channel;
++            return ch != null ? -ch.channel_id : 0;
++        } else if (o instanceof TLRPC.TL_messages_readEncryptedHistory) {
++            TLRPC.TL_inputEncryptedChat p = ((TLRPC.TL_messages_readEncryptedHistory) o).peer;
++            return p != null ? DialogObject.makeEncryptedDialogId(p.chat_id) : 0;
++        }
++        return 0; // messages.readMessageContents has ids only
+     }
+ 
+     private static boolean isReadRequest(TLObject o) {
+@@ -77,44 +173,135 @@ public final class PlusGhost {
+                 || o instanceof TLRPC.TL_messages_readEncryptedHistory;
+     }
+ 
+-    private static boolean isSendRequest(TLObject o) {
++    /** Requests after which the server shows us online (Stay offline re-sends offline after them). */
++    private static boolean isActivityRequest(TLObject o) {
+         return o instanceof TLRPC.TL_messages_sendMessage
+                 || o instanceof TLRPC.TL_messages_sendMedia
+-                || o instanceof TLRPC.TL_messages_sendMultiMedia;
++                || o instanceof TLRPC.TL_messages_sendMultiMedia
++                || o instanceof TLRPC.TL_messages_forwardMessages
++                || o instanceof TLRPC.TL_messages_forwardMessage
++                || o instanceof TLRPC.TL_messages_sendInlineBotResult
++                || o instanceof TLRPC.TL_messages_sendReaction
++                || o instanceof TLRPC.TL_messages_sendPaidReaction
++                || o instanceof TLRPC.TL_messages_sendVote
++                || o instanceof TLRPC.TL_messages_editMessage
++                || o instanceof TLRPC.TL_messages_sendScreenshotNotification
++                || o instanceof TLRPC.TL_messages_sendBotRequestedPeer
++                || o instanceof TLRPC.TL_messages_sendWebViewData
++                || o instanceof TLRPC.TL_messages_sendQuickReplyMessages
++                || o instanceof TLRPC.TL_messages_startBot
++                || o instanceof TLRPC.TL_messages_importChatInvite
++                || o instanceof TLRPC.TL_channels_joinChannel
++                || o instanceof TLRPC.TL_messages_sendEncrypted
++                || o instanceof TLRPC.TL_messages_sendEncryptedFile
++                || o instanceof TLRPC.TL_messages_sendEncryptedMultiMedia
++                || o instanceof TLRPC.TL_messages_sendEncryptedService
++                || o instanceof TL_phone.requestCall
++                || o instanceof TL_phone.acceptCall
++                || o instanceof TL_phone.confirmCall
++                || o instanceof TL_stories.TL_stories_sendStory
++                || o instanceof TL_stories.TL_stories_sendReaction;
++    }
++
++    // ---- fake completion for dropped requests ----
++
++    private static TLObject fakeResult(TLObject o) {
++        if (o instanceof TLRPC.TL_messages_readHistory || o instanceof TLRPC.TL_messages_readMessageContents) {
++            // real return type is messages.affectedMessages; pts=-1 makes processNewDifferenceParams a no-op
++            TLRPC.TL_messages_affectedMessages res = new TLRPC.TL_messages_affectedMessages();
++            res.pts = -1;
++            res.pts_count = 0;
++            return res;
++        }
++        // channels.readHistory, channels.readMessageContents, messages.readDiscussion,
++        // messages.readEncryptedHistory, setTyping, setEncryptedTyping, incrementStoryViews,
++        // account.updateStatus all return Bool. (stories.readStories returns Vector<int>, but its
++        // only caller, StoriesController, passes a null callback, so nothing ever sees this.)
++        return new TLRPC.TL_boolTrue();
++    }
++
++    private static boolean drop(TLObject o, RequestDelegate onComplete) {
++        if (onComplete != null) {
++            final TLObject res = fakeResult(o);
++            Utilities.stageQueue.postRunnable(() -> {
++                try {
++                    onComplete.run(res, null);
++                } catch (Exception e) {
++                    FileLog.e(e);
++                }
++            });
++        }
++        return true;
+     }
+ 
+-    /** @return true when the request must be dropped. */
+-    public static boolean intercept(int account, TLObject o) {
+-        if (o == null || !isEnabled(account)) {
++    // ---- hooks ----
++
++    /** @return true when the request must be dropped (its callback is completed with a fake result). */
++    public static boolean intercept(int account, TLObject o, RequestDelegate onComplete) {
++        if (o == null || !validAccount(account) || !isEnabled(account)) {
+             return false;
+         }
+         if (o instanceof TL_account.updateStatus) {
+-            if (isHidden(account, OPT_ONLINE)) {
+-                ((TL_account.updateStatus) o).offline = true;
++            if (!isHidden(account, OPT_ONLINE)) {
++                return false;
+             }
+-            return false;
++            if (offlinePending[account].getAndSet(false)) {
++                ((TL_account.updateStatus) o).offline = true; // the single offline packet
++                return false;
++            }
++            return drop(o, onComplete); // no online packets, no periodic last-seen refresh
+         }
+         if (isHidden(account, OPT_TYPING)
+                 && (o instanceof TLRPC.TL_messages_setTyping || o instanceof TLRPC.TL_messages_setEncryptedTyping)) {
+-            return true;
++            return drop(o, onComplete);
+         }
+-        if (isHidden(account, OPT_READS) && isReadRequest(o) && !readsAllowedNow(account)) {
+-            return true;
++        if (isHidden(account, OPT_READS) && isReadRequest(o) && !readsAllowed(account, readDialogId(o))) {
++            return drop(o, onComplete);
+         }
+         if (isHidden(account, OPT_STORIES)
+                 && (o instanceof TL_stories.TL_stories_readStories || o instanceof TL_stories.TL_stories_incrementStoryViews)) {
+-            return true;
+-        }
+-        if (isHidden(account, OPT_ONLINE) && isSendRequest(o)) {
+-            // sending a message flips us online server-side; go back offline right after
+-            Utilities.globalQueue.postRunnable(() -> sendStatus(account, true), 1500);
++            return drop(o, onComplete);
+         }
+         return false;
+     }
+ 
+-    private static void sendStatus(int account, boolean offline) {
+-        TL_account.updateStatus req = new TL_account.updateStatus();
+-        req.offline = offline;
+-        ConnectionsManager.getInstance(account).sendRequest(req, null);
++    /**
++     * For requests that flip us online server-side while "Stay offline" is on: run the original
++     * callback, then (debounced) send one offline=true after the server has processed the request.
++     */
++    public static RequestDelegate wrapCompletion(int account, TLObject o, RequestDelegate onComplete) {
++        if (o == null || !validAccount(account) || !active(account, OPT_ONLINE) || !isActivityRequest(o)) {
++            return onComplete;
++        }
++        if (onComplete == null) {
++            // Never wrap a null callback: ConnectionsManager then routes Updates/timestamp
++            // callbacks itself. Just send offline once the request has had time to land.
++            scheduleOffline(account, OFFLINE_DELAY_MS * 2);
++            return null;
++        }
++        scheduleOffline(account, OFFLINE_DELAY_MS * 4); // fallback if the response never arrives
++        return (response, error) -> {
++            onComplete.run(response, error);
++            scheduleOffline(account, OFFLINE_DELAY_MS);
++        };
++    }
++
++    private static synchronized void scheduleOffline(int account, long delay) {
++        offlinePending[account].set(true);
++        if (offlineRunnables[account] != null) {
++            Utilities.globalQueue.cancelRunnable(offlineRunnables[account]);
++        }
++        final Runnable r = () -> {
++            synchronized (PlusGhost.class) {
++                offlineRunnables[account] = null;
++            }
++            if (offlinePending[account].get() && active(account, OPT_ONLINE)) {
++                TL_account.updateStatus req = new TL_account.updateStatus();
++                req.offline = true;
++                ConnectionsManager.getInstance(account).sendRequest(req, null);
++            }
++        };
++        offlineRunnables[account] = r;
++        Utilities.globalQueue.postRunnable(r, delay);
+     }
+ }
+diff --git a/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MercurygramSettingsActivity.java b/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MercurygramSettingsActivity.java
+index 6907d91..c774a30 100644
+--- a/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MercurygramSettingsActivity.java
++++ b/TMessagesProj/src/main/java/it/belloworld/mercurygram/ui/MercurygramSettingsActivity.java
+@@ -160,7 +160,7 @@ public class MercurygramSettingsActivity extends UniversalFragment {
+                         .setChecked(it.belloworld.mercurygram.PlusGhost.isHidden(acc, i)));
+             }
+         }
+-        items.add(UItem.asShadow("Applies to this account. Long-press a chat and pick Mark as read to send a read receipt anyway. Sending a message still marks that chat read for the other side."));
++        items.add(UItem.asShadow("Applies to this account. Mark as read (long-press a chat, or the notification button) sends a read receipt for that chat only. Sending a message still marks that chat read for the other side. Stay offline sends no online status; you go offline once after each send, reaction, vote, edit or call."));
+ 
+         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
+         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/AutoMessageHeardReceiver.java b/TMessagesProj/src/main/java/org/telegram/messenger/AutoMessageHeardReceiver.java
+index 29f60ff..d30e45b 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/AutoMessageHeardReceiver.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/AutoMessageHeardReceiver.java
+@@ -25,6 +25,7 @@ public class AutoMessageHeardReceiver extends BroadcastReceiver {
+         if (dialogId == 0 || maxId == 0 || !UserConfig.isValidAccount(currentAccount)) {
+             return;
+         }
++        it.belloworld.mercurygram.PlusGhost.allowReads(currentAccount, dialogId, it.belloworld.mercurygram.PlusGhost.MANUAL_READ_WINDOW_MS); // plus: notification Mark as read is an explicit read
+         AccountInstance accountInstance = AccountInstance.getInstance(currentAccount);
+         if (DialogObject.isUserDialog(dialogId)) {
+             TLRPC.User user = accountInstance.getMessagesController().getUser(dialogId);
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/SecretChatHelper.java b/TMessagesProj/src/main/java/org/telegram/messenger/SecretChatHelper.java
+index 4796846..078140b 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/SecretChatHelper.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/SecretChatHelper.java
+@@ -166,6 +166,9 @@ public class SecretChatHelper extends BaseController {
+         if (!(encryptedChat instanceof TLRPC.TL_encryptedChat)) {
+             return;
+         }
++        if (resendMessage == null && it.belloworld.mercurygram.PlusGhost.blockSecretRead(currentAccount, DialogObject.makeEncryptedDialogId(encryptedChat.id))) {
++            return; // plus: ghost mode, don't tell the peer we opened timed media / read ttl messages
++        }
+         TLRPC.TL_decryptedMessageService reqSend = new TLRPC.TL_decryptedMessageService();
+         TLRPC.Message message;
+ 
+diff --git a/TMessagesProj/src/main/java/org/telegram/messenger/WearReplyReceiver.java b/TMessagesProj/src/main/java/org/telegram/messenger/WearReplyReceiver.java
+index fcc2c87..b286ca2 100644
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/WearReplyReceiver.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/WearReplyReceiver.java
+@@ -100,6 +100,7 @@ public class WearReplyReceiver extends BroadcastReceiver {
+ 
+         //TODO handle topics
+         if (topicId == 0) {
++            it.belloworld.mercurygram.PlusGhost.allowReads(accountInstance.getCurrentAccount(), dialog_id, it.belloworld.mercurygram.PlusGhost.MANUAL_READ_WINDOW_MS); // plus: replying from the notification reads that chat anyway
+             accountInstance.getMessagesController().markDialogAsRead(dialog_id, max_id, max_id, 0, false, topicId, 0, true, 0);
+         }
+     }
+diff --git a/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java b/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+index 2fae442..6c7b8bd 100644
+--- a/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
++++ b/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+@@ -386,9 +386,10 @@ public class ConnectionsManager extends BaseController {
+         return requestToken;
+     }
+ 
+-    private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
+-        if (it.belloworld.mercurygram.folders.MgFolders.dropIfMercurygram(object, onComplete)) return; // Mercurygram: folders with a negative id never reach the server
+-        if (it.belloworld.mercurygram.PlusGhost.intercept(currentAccount, object)) return; // plus: ghost mode
++    private void sendRequestInternal(TLObject object, RequestDelegate onCompleteIn, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
++        if (it.belloworld.mercurygram.folders.MgFolders.dropIfMercurygram(object, onCompleteIn)) return; // Mercurygram: folders with a negative id never reach the server
++        if (it.belloworld.mercurygram.PlusGhost.intercept(currentAccount, object, onCompleteIn)) return; // plus: ghost mode (dropped requests get a fake empty result)
++        final RequestDelegate onComplete = it.belloworld.mercurygram.PlusGhost.wrapCompletion(currentAccount, object, onCompleteIn); // plus: go back offline after write requests
+         if (BuildVars.LOGS_ENABLED) {
+             FileLog.d("send request " + object + " with token = " + requestToken);
+         }
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
+index ecfb77e..3d1ad06 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
+@@ -9591,7 +9591,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
+     }
+ 
+     private void markAsRead(long did) {
+-        it.belloworld.mercurygram.PlusGhost.allowReads(currentAccount, 5000); // plus: manual mark-as-read passes ghost mode
++        it.belloworld.mercurygram.PlusGhost.allowReads(currentAccount, did, it.belloworld.mercurygram.PlusGhost.MANUAL_READ_WINDOW_MS); // plus: manual mark-as-read passes ghost mode for this chat only
+         TLRPC.Dialog dialog = getMessagesController().dialogs_dict.get(did);
+         if (dialog instanceof TLRPC.TL_dialogCommunity) {
+             final ArrayList<TLRPC.Dialog> dialogs = getMessagesController().getDialogsByCommunity(dialog.community_id);
+@@ -9652,7 +9652,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
+     }
+ 
+     private void markDialogsAsRead(ArrayList<TLRPC.Dialog> dialogs, boolean skipMuted) {
+-        it.belloworld.mercurygram.PlusGhost.allowReads(currentAccount, 5000); // plus: manual mark-as-read passes ghost mode
++        if (dialogs != null) { // plus: manual mark-as-read passes ghost mode for these chats only
++            for (int plusI = 0; plusI < dialogs.size(); plusI++) {
++                TLRPC.Dialog plusD = dialogs.get(plusI);
++                if (plusD != null) {
++                    it.belloworld.mercurygram.PlusGhost.allowReads(currentAccount, plusD.id, it.belloworld.mercurygram.PlusGhost.MANUAL_READ_WINDOW_MS);
++                }
++            }
++        }
+         debugLastUpdateAction = 2;
+         int selectedDialogIndex = -1;
+ 
