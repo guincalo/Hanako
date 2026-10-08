@@ -1,390 +1,181 @@
 <div align="center">
 
-<img src="./.github/assets/logo.png" alt="Mercurygram logo" title="Mercurygram logo" width="80"/>
+# Hanako
 
-# Mercurygram
+**An unofficial Telegram client for Android, forked from [Mercurygram](https://github.com/Mercurygram/Mercurygram).**
 
-[Telegram](https://telegram.org) is a messaging app with a focus on speed and security. It’s superfast, simple and free.
-
-This is an unofficial fork of [Telegram App for Android](https://github.com/DrKLO/Telegram), maintained by rebasing Mercurygram patches and forward-ported de-googling patches on top of upstream Telegram.
-
-[![Releases](https://img.shields.io/github/release/Mercurygram/Mercurygram.svg)](https://github.com/Mercurygram/Mercurygram/releases/latest)
-[![Discussions](https://img.shields.io/badge/Official-Group-blue.svg?logo=telegram)](https://t.me/Mercurygram)
-
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/en/packages/it.belloworld.mercurygram/)
-[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80">](https://play.google.com/store/apps/details?id=it.belloworld.mercurygram)
+[![Latest release](https://img.shields.io/github/v/release/guincalo/Mercurygram?label=release)](https://github.com/guincalo/Mercurygram/releases/latest)
+[![License: GPL v2](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](LICENSE)
 
 </div>
 
+> [!WARNING]
+> **This is a fully vibecoded fork.** Every change Hanako adds on top of Mercurygram was written by AI
+> coding agents, and most of it was never compiled or tested by a human before it was published.
+> Expect bugs. **Use it at your own risk**, and keep backups of anything you care about.
+>
+> Hanako is **not affiliated with, endorsed by, or supported by Telegram** or by the upstream
+> **Mercurygram** project. Please do not report Hanako bugs to either of them.
+
+Hanako is Mercurygram (a de-Googled fork of Telegram for Android) plus a set of privacy, anti-recall and
+quality-of-life features: ghost mode, per-chat locks, saved deleted messages and media, streamer mode,
+plugins, message filters, OpenPGP and more. Everything Mercurygram already does is kept.
+
 ## Install
 
-Mercurygram publishes two kinds of build. The tag shape tells you which:
+1. Open the [latest release](https://github.com/guincalo/Mercurygram/releases/latest).
+2. Download `Hanako-<version>-arm64-v8a.apk` and install it. Builds are **arm64-v8a only**.
 
-| Channel | Tag shape | Example | Packages | When it ships |
-|---|---|---|---|---|
-| **Stable** | 4-part `X.Y.Z.M` (M ≥ 1) | `12.7.3.1` | stable only (`it.belloworld.mercurygram`) | Tagged release. Also goes to F-Droid and Google Play. |
-| **Snapshot** | 5-part `X.Y.Z.M.K` (M ≥ 1) | `12.7.3.1.42` | **both** stable and beta (`it.belloworld.mercurygram.beta`) | Every push to the `Mercurygram` branch (`beta.yml`). Snapshot of the next stable. |
-| **Pre-stable** | 5-part `X.Y.Z.0.K` | `12.7.3.0.5` | **both** stable and beta (`it.belloworld.mercurygram.beta`) | After an upstream rebase, before the first `X.Y.Z.M` (M ≥ 1) stable for that upstream ships (`beta.yml`). |
+Notes:
 
-Snapshots and pre-stable builds both publish two APKs per release: a Release-flavor APK that updates the stable package side and a Debug-flavor APK (filename infixed with `-debug`) that updates the `.beta` package side. Filenames: `Mercurygram-<tag>-<abi>.apk` (Release) and `Mercurygram-debug-<tag>-<abi>.apk` (Debug). Stable installs pull the Release APK via the in-app updater opt-in toggle; `.beta` installs pull the Debug APK.
-
-Versions order naturally: `12.7.3.0.5 < 12.7.3.1 < 12.7.3.1.42 < 12.7.3.2`.
-
-The Google Play listing is the same source tree and the same signing key as the GitHub APKs, built as an app bundle (`Mercurygram-<tag>.aab`, also attached to every stable release). Its versionCode is lower than the per-ABI and fat APKs of the same tag, so a GitHub APK installs over a Play install (it then behaves like a GitHub install: updater on, push opt-in), while Play only takes over again at the next tag. Play installs hide the in-app updater, the Play build hides the Premium and Stars purchase entry points (Play's payments policy, keyed on the bundle itself so sideloading it changes nothing), and Play installs pick the built-in Google FCM push entry by default when no distributor app is installed.
-
-### One-click install via [Obtainium](https://obtainium.imranr.dev/)
-
-Open the link on your Android device and the app source pre-fills with the right release filter, package ID, and APK filename filter.
-
-#### Main app
-
-Same package ID across these entries; pick **one**. Stable + Pre-release mirrors the in-app **Accept pre-release updates** toggle and tracks both 4-dotted stable and 5-dotted pre-release tags.
-
-**Stable** — package `it.belloworld.mercurygram`. Tagged stable releases only.
-
-[![Add Mercurygram to Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22it.belloworld.mercurygram%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FMercurygram%2FMercurygram%22%2C%22author%22%3A%22Mercurygram%22%2C%22name%22%3A%22Mercurygram%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EMercurygram-%5C%5C%5C%5Cd%5C%22%7D%22%7D)
-
-**Stable + Pre-release** — package `it.belloworld.mercurygram`. Tagged stable releases plus 5-dotted pre-releases (Release-flavor APK).
-
-[![Add Mercurygram (Stable + Pre-release) to Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22it.belloworld.mercurygram%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FMercurygram%2FMercurygram%22%2C%22author%22%3A%22Mercurygram%22%2C%22name%22%3A%22Mercurygram%20%28Stable%20%2B%20Pre-release%29%22%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3A%20true%2C%20%5C%22filterReleaseTitlesByRegEx%5C%22%3A%20%5C%22%5E%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%28%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%29%3F%24%5C%22%2C%20%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EMercurygram-%5C%5C%5C%5Cd%5C%22%7D%22%7D)
-
-**Beta** — package `it.belloworld.mercurygram.beta`. Per-push snapshots (`X.Y.Z.M.K`, M ≥ 1) and pre-stable test builds (`X.Y.Z.0.K`). Debug-flavor APK.
-
-[![Add Mercurygram Beta to Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22it.belloworld.mercurygram.beta%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FMercurygram%2FMercurygram%22%2C%22author%22%3A%22Mercurygram%22%2C%22name%22%3A%22Mercurygram%20Beta%22%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3A%20true%2C%20%5C%22filterReleaseTitlesByRegEx%5C%22%3A%20%5C%22%5E%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%24%5C%22%2C%20%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EMercurygram-debug-%5C%22%7D%22%7D)
-
-#### Tor plugin (optional companion APK)
-
-Same package ID across these entries; pick **one**. The plugin only ships a Release-flavor APK (no separate `.beta` package).
-
-**Stable** — package `it.belloworld.mercurygram.plugin.tor`. Tagged stable releases only.
-
-[![Add Mercurygram Tor Plugin to Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22it.belloworld.mercurygram.plugin.tor%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FMercurygram%2FMercurygram%22%2C%22author%22%3A%22Mercurygram%22%2C%22name%22%3A%22Mercurygram%20Tor%20Plugin%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EMercurygram-tor-plugin-%5C%22%7D%22%7D)
-
-**Stable + Pre-release** — package `it.belloworld.mercurygram.plugin.tor`. Tagged stable releases plus 5-dotted pre-releases. Pair this with **Main Beta** or **Main Stable + Pre-release** so the plugin tracks the same release cadence.
-
-[![Add Mercurygram Tor Plugin (Stable + Pre-release) to Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22it.belloworld.mercurygram.plugin.tor%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FMercurygram%2FMercurygram%22%2C%22author%22%3A%22Mercurygram%22%2C%22name%22%3A%22Mercurygram%20Tor%20Plugin%20%28Stable%20%2B%20Pre-release%29%22%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3A%20true%2C%20%5C%22filterReleaseTitlesByRegEx%5C%22%3A%20%5C%22%5E%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%28%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%29%3F%24%5C%22%2C%20%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EMercurygram-tor-plugin-%5C%22%7D%22%7D)
-
-> **Stable users:** the in-app updater is hidden on F-Droid and Google Play installs, which update through their store. On GitHub installs it can be opted in to pre-release updates from **Settings → Mercurygram → Updates → Accept pre-release updates**. Enabling shows a warning dialog. Turning it back off while a pre-release is installed offers the matching 4-part stable as an update, rolling the install back. Installing a pre-release by other means (sideload, Obtainium) switches the toggle on by itself at the next update check, so it always reflects the channel you are actually on.
+- The package id is still `it.belloworld.mercurygram`, the same as upstream Mercurygram. Hanako
+  therefore **replaces** an installed Mercurygram instead of sitting next to it, and Android only
+  accepts it over an existing install when both are signed with the same key. Hanako release APKs are
+  signed with the key in this repository (`TMessagesProj/config/release.keystore`), not with
+  Mercurygram's, so moving from an official Mercurygram build means uninstalling it first (log in
+  again afterwards; local data is lost).
+- The in-app updater is switched off, so Hanako never offers you an upstream Mercurygram update.
+  Check the Releases page (or point [Obtainium](https://obtainium.imranr.dev/) at this repository)
+  for new versions.
+- The version shown in the app follows the Telegram base it is built on (for example
+  `12.10.6.90.N`); the Hanako release number is the Git tag (`v1.0.0`).
 
 ## Features
 
-- Add ID in Profile Info
-- Copy the name of a chat, group, channel or user by long-pressing the title in its profile (tapping the ID row still copies the ID)
-- Add a UnifiedPush screen (*Settings → Mercurygram → Notifications → UnifiedPush*) listing the installed distributors, with the registration state shown under the list until the chosen distributor answers with an endpoint. A distributor may be long-pressed to inspect recent UnifiedPush notification/decryption stats
-- Set the [UnifiedPush WebPush gateway](#unifiedpush-webpush-gateway) on the same screen
-- Offer a built-in "Google FCM" entry in the distributor list, for devices that have Play Services and no distributor app installed. It carries no Google library and needs no Firebase project (see [Google FCM without Google libraries](#google-fcm-without-google-libraries)). It is never selected automatically, except on Google Play installs with no distributor app, and picking it warns about what Google gets to see
-- Set the VAPID public key the built-in "Google FCM" entry signs with, on the same screen (shown only while that entry is selected), so its pushes can be routed through a self-hosted gateway instead of Mercurygram's
-- Add toggle setting in Chat Settings to start video messages with rear-facing camera
-- Add toggle setting in Chat Settings to hide keyboard on chat scroll
-- Add toggle setting in Chat Setting to hide "All Chats" tab (feature from NekoX)
-- Add a per-account "default launch folder" setting in Settings → Mercurygram, so the chat list opens on a chosen folder instead of "All Chats" on the first build of the tabs after launch (local only, no server involvement)
-- Offer "Add to folder" while a folder tab is open, not only on "All Chats", so several selected chats can be moved from one folder to another without going back to "All Chats" first: select the chats, add them to the destination folder, then remove them from the current one. Removing a chat from a folder through that picker now also drops its pin in that folder
-- Mercurygram folders: a "Mercurygram folder" switch when creating a folder (Settings → Folders → Create new folder) keeps the folder off Telegram's folder API, so it counts against neither the folder limit nor the chats-per-folder limit; once the server limit is hit, "Create new folder" goes straight to one. The switch can also be flipped later on any folder that is not shared: the folder then moves to Mercurygram (deleted from Telegram) or back to Telegram (created there, within its limits), keeping its chats and pins. Mercurygram folders show a "Mercurygram" tag in the folder list. They are synced between your Mercurygram apps through one JSON document in Saved Messages (`mercurygram-folders.json`, edited in place, last writer wins), so Telegram learns nothing it did not already know and no third-party service is involved; the format is documented in [MercurygramFolders.md](MercurygramFolders.md) for the Desktop client and bots
-- Pin as many chats as a folder takes (100) in "All Chats", instead of the 5 Telegram allows without Premium. The order is kept on the device and written back over every server refresh, so the pins the server refuses stay put; Telegram still gets the first few as ordinary pins, which is what other clients show. Pins made elsewhere are picked up and moved to the top, and an unpin made on another device while this one was offline for long leaves the chat pinned here until it is unpinned again
-- Mark the scope of every option in Settings → Mercurygram when more than one account is logged in: options stored globally show "Applies to all accounts" (or an all-accounts section note), everything else applies only to the current account
-- Find chats, channels and contacts whose name is written with a decorated Unicode "font" (`ℂᑌℂℐℕᗅ ℐᝨᗅℒℐᗅℕᗅ`) by typing it in plain letters (`Cucina italiana`). Applies to the chat list search, contact and member pickers, forward and share lists. Names written in a real script (Cyrillic, Greek, CJK, ...) are left alone
-- Add administrators item in group/channel info
-- Add toggle setting in Debug Menu to enable Message Details menu
-- Add toggle setting in Debug Menu to disable Unified Push support
-- Add toggle setting in Debug Menu to disable Secure Flags. This option must **only** be used for debugging
-- Add toggle setting in Debug Menu to remove sponsored messages and proxy sponsor banners. This option must **only** be used for debugging
-- Re-add Monet themes ([#31](https://github.com/Mercurygram/Mercurygram/pull/31))
-- Disabled DOH resolving since this leaks your used proxy to Google and it's not needed since Android DNS over TLS should be used instead
-- Unlock premium app icons for anybody
-- Unlock 8 accounts (was 3) and remove premium check for number of accounts
-- Let non-premium users use the per-language "Do Not Translate" list (*Settings → Language → Do Not Translate*), which upstream only enforced for Premium accounts, and keep the *Translate Entire Chats* switch on the same screen listed for everyone so the in-chat "Translate to X" bar can always be switched off. The list stays local to the device and feeds the suggested target languages; it does not by itself hide the in-chat bar, because this build has no on-device language detection (ML Kit is stripped), so no source language is ever attributed to a chat. Manual translation is always available
-- Let non-premium users reorder dialog folders freely, including moving the "All chats" tab off the first position (the new order is synced to the server like any other reorder)
-- Keep the full resolution of an edited photo. The crop is cut out of the original file instead of out of an already-downscaled copy, so a photo cropped to a quarter of the frame is no longer sent at a quarter of the chosen send size (a photo that also went through a filter is cut out of the filtered working copy, which the editor caps at 2560px); the editor's intermediate file is written near-losslessly so the send does not spend a JPEG generation on it; and a high-quality send that is not grouped into an album now actually uses the high-quality size instead of silently falling back to the normal one
-- Add per-account toggle setting in Settings → Mercurygram to hide the stories bar in the chat list
-- Add per-account toggle setting in Settings → Mercurygram to hide the Telegram Premium promo UI: the Premium, Business and gifting rows in Settings and the Premium banners in the chat list. It only hides upsell affordances on top of the existing premium check, does not affect sponsored messages, and unlocks nothing
-- Add a per-account toggle setting in Settings → Mercurygram to show a live character counter above the message field while you type. It counts the same unit bots see (Unicode code points, what the Bot API reports as the message length), which makes it usable in groups where a bot deletes messages longer than a limit. It steps aside while Telegram shows its own remaining-characters counter near a length limit
-- Add per-account toggle setting in Settings → Mercurygram to pre-tick "delete for everyone" (and "also delete for…" in private chats) by default in the delete-message dialog
-- Add a device-wide toggle setting in Settings → Mercurygram → Media to disable the proximity sensor: the screen stays on when the phone is near your face during calls and voice message playback (raise-to-listen and the switch to the ear speaker stop working)
-- Add a "Go to first message" item to the chat menu that jumps to the oldest message of the chat, group or channel (idea from [Forkgram](https://github.com/Forkgram/TelegramAndroid), [#80](https://github.com/Mercurygram/Mercurygram/issues/80))
-- Support typed search operators in the in-chat search field: `from:username`, `before:`/`after:`/`date:` (`YYYY-MM-DD`, `today`, `yesterday`) and `type:` (`photo`, `video`, `voice`, `round`, `music`, `gif`, `file`, `link`, `contact`, `geo`, `poll`, `mention`, `pinned`), combinable with free text (e.g. `from:alice type:photo after:2026-01-01 cake`). Filtering runs on Telegram's servers via the same search API fields the official apps use for their filter UIs; a token that does not parse is searched for literally
-- Log in by scanning a QR code with a device where the account is already logged in, like Telegram Desktop: tap "Log in by QR code" under the phone number field, then scan the code from the other phone (*Settings → Devices*). No SMS or login code is needed; two-step verification still asks for the password
-- Add a "Remove all proxies" bulk action to the proxy list (upstream only deletes one proxy at a time)
-- Add a custom emoji pack importer in Settings → Mercurygram → Custom emoji pack: load a `.zip` of emoji images or extract the emoji directly from an official Telegram APK (since the proprietary Apple set can't be bundled in a FOSS build). The pack is your own file, stored on-device and never shared; any emoji it's missing falls back per-glyph to the bundled Noto set
-- Add a "Translate" item to the text-selection toolbar in the message input field (and other caption/input editors): select text you're composing and translate it in place, with a "Use This Translation" button that replaces the selection. Uses the same [privacy-respecting translation engine](#privacy--anti-tracking-mercurygram-only) as message translation; in secret chats it's forced on-device only (offline, fail-closed)
-- Add a "Mention" item to the text-selection toolbar (next to "Create Link"): turn the selected text into a user mention by typing a user ID or picking from your contacts. Only works for users the app already knows (contacts, chat members) — a hard MTProto limitation, same as typing `@`; an unknown ID is rejected with a hint to use the picker
-- Split the combined "Stickers & GIFs" group-permission control into four independent toggles (Stickers, GIFs, Games, Inline Bots) in both the supergroup default permissions and the per-member restriction editor, so each `chatBannedRights` flag can be set on its own (upstream bundles all four). The client-side checks follow the same split: banning stickers no longer hides the GIF tab, blocks inline bot results or refuses to forward GIFs and games ([#140](https://github.com/Mercurygram/Mercurygram/issues/140))
-- Restore the animated 🍑 emoji Telegram removed server-side in 2022-2023: sending it alone plays the large animation again, and tapping it replays it. The animation is not bundled in the APK, it is fetched once from a Telegram sticker pack and then cached on-device
-- Telegram application icons are replaced with [hermes wing (Created by Anthony Ledoux from Noun Project)](https://thenounproject.com/icon/hermes-wing-3559879/)
+Everything below is on top of upstream Mercurygram. Unless noted, new options are **off by default**
+and live under **Settings → Hanako**.
 
-### Upstream bug fixes
+### Ghost mode & privacy
 
-Fixes for bugs that exist in stock Telegram for Android. Several are backported from [Inugram](https://github.com/teidesu/inugram) (MIT).
+- **Ghost mode, per account** (on by default): don't send read receipts, typing status, online status ("stay
+  offline") or story views. Optional: read a chat when you reply in it, and push yourself back
+  offline when the server shows you online while you use this device.
+- **Ghost exceptions**: keep ghost mode on everywhere except chosen chats, where read receipts,
+  typing status and (optionally) online-while-the-chat-is-open are sent normally.
+- **Quick controls**: a ghost-mode toggle in the chat list menu, a ghost indicator in the chat list
+  header while it is on, and *Send read receipt* in a chat's menu to mark just that chat as read.
+- **Send as scheduled in ghost mode**: messages go out as server-side scheduled messages a few seconds
+  later, so sending never puts you online.
+- **Send without sound in ghost mode**: every message you send while ghost mode is on is silent.
+- **Story ghost guard**: warns before opening a story when your view would be seen, offers *open
+  without being seen*, and asks before reacting to or replying to a story (which marks it seen).
+- **Peek a chat**: the long-press preview never sends read receipts, reaction/poll "seen" marks or
+  channel view counts. Optionally, long-press anywhere on a chat row to peek.
+- **No emoji interactions / "choosing a sticker"**: stop sending animated-emoji taps, "watching
+  your animation" and the "choosing a sticker" status.
+- **Ask before sending**: optional confirmations before voice messages, round videos, stickers and
+  GIFs go out, and before voice or video calls start.
+- **Screenshots allowed** everywhere, with no screenshot notifications in secret chats, and
+  **content protection ignored**, so messages in protected chats can be saved, copied and forwarded.
 
-- Fix the heads-up notification on Android 16 listing every unread chat instead of the chat the new message came from ([#123](https://github.com/Mercurygram/Mercurygram/issues/123)). The notification that alerts is now the one for the newest chat, carrying that chat's own sound and importance, and the group summary stays silent
-- Fix a custom notification sound on a contact or a chat being reset to Default by opening its *Sound* screen. When the stored tone could not be matched at that moment (a media rescan reassigns the id of a system tone, so the stored one no longer exists) the screen treated its own fallback as a user choice, saved Default over the stored tone and pushed that to the server, which is why a sound often only stuck after several attempts
-- Fix the notification permission prompt coming back on every launch when it was accepted but the permission was then not granted in the system prompt or in Android settings ([#44](https://github.com/Mercurygram/Mercurygram/issues/44)). Accepting now starts the same 1, 3, 7, then 30 day back-off that dismissing the prompt already did
-- Fix a set of upstream crashes: opening a profile of a deleted user with a story privacy badge, transferring channel ownership, picking a community in the forward list, a video cover frame that fails to decode, sticker segmentation on a recycled bitmap, and three list-adapter crashes
-- Fix a set of upstream memory leaks that kept whole chat screens alive after closing them: chat avatar and wallpaper, attach and caption mention adapters, photo viewer, video ads, reaction overlays, and a dozen notification observers that were never unregistered
-- Fix a set of upstream bugs around picking, editing and captioning photos: a crop that silently failed to bake and sent the uncropped original while the editor kept showing the crop, a caption typed in the viewer and lost when send was pressed, a 90-degree rotation in the crop editor that threw away the selected crop, a caption that followed the first position instead of its own photo when the attach preview was reordered, zoom and video position resetting when a message was edited, parts of a cropped image being unreachable while panning in the painter and the filter, images pasted from Gboard skipping the editor, an album-caption spoiler that re-hid itself after scrolling, and a missing ripple when tapping a link in an album caption
-- Fix background live location sharing on devices without Play Services: GPS was switched off before a new fix arrived, so the same stale position was re-sent forever, and a share did not come back after a process kill or a reboot. When location is only allowed while the app is in use, a share restored at boot waits for the app to be opened instead of running blind
-- Fix a live location shared "until stopped" being treated as already expired in the chat banner and on the live location map, and a failed live location load that blocked every later load for that chat
-- Fix an album that was still laid out from stale group state after part of it was deleted: the remaining photos took each other's tile geometry and overlapped, and one cell reserved a screen and a half of empty space because the group kept the answer from back when it still held a file
+### Chat lock & hidden chats
 
-### TF-originated de-googling patches
+- **Lock individual chats** with the system biometric prompt; optionally lock all secret chats and the
+  archive. Unlocks are forgotten after 60 s in the background.
+- **Hide locked chats** from the chat list, folders, pickers and search; long-press the app title to
+  reveal them.
+- **Hide message text in notifications** from locked chats (on by default).
 
-These patches were originally derived from the Telegram-FOSS effort, but Mercurygram now forward-ports and rebases them directly onto upstream Telegram.
+### Deleted & edited messages
 
-*Replacement of non-FOSS, untrustworthy or suspicious binaries or source code:*
-- Do location sharing with OpenStreetMap via MapLibre instead of Google Maps
-- Use Noto emoji set instead of Apple's emoji
-- Google/Firebase push services replaced with [UnifiedPush](https://unifiedpush.org)
-- **SECURITY:** BoringSSL, FFmpeg, libvpx, dav1d, and tde2e are built from source at compile time instead of shipping upstream prebuilts
+- **Saved message history** (on by default): deleted messages stay in the chat, greyed out; edited
+  messages keep their earlier versions. Photos, videos, voice messages and files are copied to private
+  storage, including self-destructing and view-once media. Secret chats are never saved.
+- **Reactions on deleted messages** are kept as they were at deletion (on by default).
+- **Vanished chats log** (on by default): records chats the server removed from your list (you were kicked or banned,
+  a channel was deleted, the other side wiped the chat) with title, username and last message.
+- **Deleted media browser**: a grid of all saved media from deleted messages and expired view-once
+  media, per account or per chat, with filters, save, share and delete.
 
-*Removal or stubbing of non-FOSS, untrustworthy or suspicious binaries or source code and their functionality:*
-- Google Play Services / Firebase dependencies from the default Mercurygram build and manifests
-- Google Maps / Fused Location providers are stubbed out and replaced by MapLibre / Android location providers
-- Google Wallet, SafetyNet, Play Integrity, and related proprietary verification pieces are stubbed out through local compatibility classes. Google Play Billing is gone as well, so Telegram Premium, gifts and Stars are paid for through Telegram's own invoice and card form (the same one bots use), not through the Play Store. The Google Pay button of that form is the only part that is missing
-- Google Cast integration
-- Google ML Kit / Google Vision integrations, including barcode and face detection paths
-- Android passkey support is disabled as Telegram servers verify the APK signature, which fails for unofficial forks
+### Activity log
 
-*Other:*
-- Added the ability to parse locations from intents containing a `geo:<lat>,<lon>,<zoom>` string
-- Force static map previews from Telegram
-- No content restrictions
+- **Local last-seen / read log**: records contacts' online/offline transitions and when they read your
+  messages, from updates the app already receives (no extra requests). Per-contact view in the
+  profile menu; retention from 7 days to 1 year.
 
-### Privacy & anti-tracking (Mercurygram-only)
+### Streamer mode
 
-Mercurygram adds MTProto-layer mitigations that upstream Telegram and Telegram-FOSS do not ship:
+- One switch that makes the app safe to show on a stream: other people's names become pseudonyms,
+  chat titles and avatars are masked, phone numbers and IDs are dotted out, notifications are
+  anonymised. Optional FLAG_SECURE blocks screenshots and screen recording of the app entirely.
 
-- **Reduce network tracking** — opt-in toggle at *Settings → Mercurygram → Privacy*. Defends against the passive `auth_key_id` fingerprint described in the OCCRP / Symbolic Software review of May 2026 ([review-confirms-telegram-tracking-vulnerability](https://www.occrp.org/en/news/review-confirms-telegram-tracking-vulnerability)). MTProto's outer obfuscation2 stream cipher is recoverable from on-wire bytes (the AES-CTR keys are derived from the visible 64-byte TCP-handshake bytes via a public algorithm), so a passive observer with a full pcap from connection start can decode the obfuscation and read the 8-byte `auth_key_id` at the front of every MTProto frame. That id is stable enough to correlate a device across IP/network changes even though message contents stay encrypted. When the toggle is on:
-  - Every default-network change (Wi-Fi ↔ cellular, VPN flip, IP rebind) forces a fresh PFS temp-key handshake so `auth_key_id` rotates across network boundaries (`MgNetworkChangeWatcher` + native `ConnectionsManager::rotateTempAuthKeys()`).
-  - The CDN-redirect (`upload.fileCdnRedirect`) path is refused once per file download and the request is reissued against the main DC, keeping the long-lived permanent `auth_key_id` (which CDN nodes use because PFS is off there) off the wire.
-  - `TEMP_AUTH_KEY_EXPIRE_TIME` is shortened from 24 h to 1 h via a runtime variable, with a `1h → 6h → 24h` ladder that bumps the TTL on a `bindTempAuthKey` `ENCRYPTED_MESSAGE_INVALID` rejection — protects against a future server-side policy tightening without logging the user out (when the ladder exhausts the toggle auto-disables). Probed lower bound on DC2 in 2026-05 is 60 s; 1 h leaves a 60× safety margin. See [`scripts/probe-temp-key-ttl.py`](scripts/probe-temp-key-ttl.py) to re-measure the floor after a rebase.
-- **Tor with idle auto-stop (optional companion APK)** — *Settings → Mercurygram → Privacy → Tor*, or *Settings → Data and Storage → Proxy Settings → Tor* (that screen is also reachable from the login screen, so an account can be created and logged in over Tor). Tor support now lives in a separate, optional companion APK on F-Droid (**Mercurygram Tor Plugin**, package `it.belloworld.mercurygram.plugin.tor`); toggling Use Tor prompts to install the plugin if it isn't present. The plugin runs the same daemon (vendored from [tor-android](https://github.com/guardianproject/tor-android), built reproducibly from source) in its own process — only the packaging changes. MTProto is pinned to a loopback SOCKS5 the moment the toggle flips so direct connections cannot leak even before bootstrap finishes. Tor shuts down after a debounced idle window (default 5 min, configurable) once the app is backgrounded and no VoIP / downloads are active, and restarts on resume or on a UnifiedPush fallback wake — keeping battery cost in the same range as upstream Telegram while the user is not actively using the app. Telegram still sees the Tor exit; latency-sensitive features (calls) may suffer. While Tor is on it owns the connection: adding, selecting or removing a regular proxy is refused with a hint rather than silently rerouting MTProto, and the proxy that was configured before is restored when Tor is turned off.
-  - *Anti-censorship transport* (*Tor → Anti-censorship*): where a network blocks Tor directly with deep-packet inspection (Russia, Iran), a plain Tor connection stalls at the first handshake. Two obfuscated transports are offered: **Snowflake** routes the handshake through a domain-fronted WebRTC relay so it still bootstraps with no setup (broker config is built in, nothing to paste); **obfs4 bridges** routes it through obfs4 bridges you paste yourself (one line per bridge, obtained out-of-band from Telegram's `@GetBridgesBot`). Default is **Direct connection** (fastest where Tor is not blocked), so existing users are unaffected. Both transports ship in the Tor plugin, built reproducibly from [pluggable-transports/snowflake](https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/snowflake) and [pluggable-transports/lyrebird](https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/lyrebird).
-- **Privacy-respecting translation engine** — *Settings → Mercurygram → Privacy → Translation → Engine* picks how received messages (manual translate, per-chat auto-translate, and the in-chat translate bar) are translated, instead of always hitting Telegram's cloud:
-  - *Telegram cloud* (default) — upstream behaviour; the text is sent to Telegram's servers, which forward it to Google.
-  - *Alternative HTTP* — routes the text through a public [Mozhi](https://codeberg.org/aryak/mozhi) privacy proxy that aggregates several engines (DuckDuckGo, Google, Yandex); pick the engine and instance. Keeps the query off Telegram's servers.
-  - *Offline (external app)* — delegates every translation to [Offline Translator](https://f-droid.org/packages/dev.davidv.translator/) (GPL-3.0, Bergamot offline models) over an AIDL bound service. Background dispatch — the translator UI never opens — so the message text never leaves your device. Bold / italic / code formatting can be lost because Bergamot returns plain text.
-  - *Auto-fallback* (default on) routes offline-engine failures (no model for the language pair, language not detected, service unreachable) to the Alternative HTTP path; Telegram cloud is never chosen as the fallback.
-- **On-device voice transcription** — *Settings → Mercurygram → Privacy → Voice transcription*. Transcribes voice and video messages locally with [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (Tiny / Base / Small models, downloaded or imported on demand). The audio never leaves your device and it works without Telegram Premium, unlike the built-in cloud transcription. The spoken-language hint is per-account (e.g. English on a work account, Italian on a personal one). Changing the model or the language re-transcribes the message the next time you open it, instead of showing the earlier result, a message that is not on the device yet is downloaded first, and a model download started by mistake can be stopped by tapping its progress row.
-- **Disable global search** — opt-in per-account toggle at *Settings → Mercurygram → Privacy*. Suppresses Telegram's global search (public username/channel lookup and the `messages.searchGlobal` RPC) so a search query only ever filters your own chats and contacts locally, never broadcasting it to the server.
-- **Disable link previews** — opt-in per-account toggle at *Settings → Mercurygram → Privacy*. Telegram fires an `account.getWebPagePreview` RPC the moment a URL appears in a compose field, so the server fetches that link *before you send* — leaking it even if you never send the message. With this on, the preview RPC never fires across every compose surface (chat message field, share dialog, poll editor, bot share, story links) and outgoing messages carry `no_webpage`, so previews stay off. Opening a link or rendering previews on messages you *receive* is unaffected. (Per-link / per-chat override is not yet implemented.)
-- **Disable AI text editor** (opt-in per-account toggle at *Settings → Mercurygram → Privacy*). Recent Telegram adds a sparkle "AI" button to the message and caption editors that sends your draft to Telegram's AI service (`messages.composeMessageWithAI`) to rewrite, proofread, translate or restyle it. With this on, the button never appears, so a draft is never routed through the AI backend.
-- **Disable AI summaries** (opt-in per-account toggle at *Settings → Mercurygram → Privacy*). Telegram shows an "AI Summary" button on long incoming messages that sends the message text to its AI service (`messages.summarizeText`). With this on, the button is hidden everywhere it would otherwise be offered.
-- **Open links in browser** (opt-in per-account toggle at *Settings → Mercurygram → Privacy*). Tapping a link in a chat normally opens Telegram's native Instant View, which is rendered server-side by Telegram: your device never contacts the origin site, but Telegram sees the link and now prepends a server-generated "Cocoon AI Summary" to the article. With this on, tapping the plain link opens the page in your configured browser (in-app or external) instead; the explicit "Instant View" button on the preview still opens Instant View when you want it. The default is unchanged.
-- **Strip tracking parameters**: opt-in per-account toggle at *Settings → Mercurygram → Privacy*. Removes click-tracking query parameters from links you open, from links you paste into a message field, from links you copy out of the app, and from links shared into Mercurygram from another app, so opening a link doesn't report back to the campaign that produced it and forwarding one doesn't carry the sender's identifier to everyone else. Two rule sets: ad-network and campaign parameters that mean nothing anywhere (`utm_*`, `pk_*`, `mtm_*`, `fbclid`, `gclid`, `gbraid`, `msclkid`, `yclid`, `ttclid`, `igsh`, `igshid`, `igsi`, `mc_cid`, `mkt_tok`, `irclickid`, `erid` and about seventy more), plus site-specific ones that are only tracking on their own site and are left alone everywhere else (`si` on YouTube and Spotify, `s`/`t` on X, the `share_*` family on TikTok, `stkn` on Instagram, `pd_rd_*`/`ref` on Amazon, `aff_*` on AliExpress, `ved`/`ei` on Google Search, and a dozen other sites). Parameters that carry real meaning are deliberately kept — Instagram's `img_index`, Amazon's `th` and `psc`. The rest of the address is left byte-identical, and links with nothing to strip are passed through untouched. A copy that had something stripped lands on the clipboard as plain text, since the styled flavour of a clip carries every link a second time inside its HTML and would paste a still-tracked hyperlink. Clipboard content produced by other apps is out of reach: Android offers no hook on another app's copy.
-- **Keep drafts on this device**: opt-in per-account toggle at *Settings → Mercurygram → Privacy*. Telegram uploads unsent drafts to its servers (`messages.saveDraft`) so they sync across devices, which means text you never sent is stored server-side. With this on, drafts stay local: nothing is uploaded and drafts stop appearing on your other devices. Secret chats already never synced drafts and are unaffected.
-- **Confirm Telegram links**: opt-in per-account toggle at *Settings → Mercurygram → Privacy*. `t.me` and `tg://` links normally open with no prompt, so a tap can join a channel, open a bot, or apply a proxy before you have read the address. With this on, internal links go through the same confirmation dialog external links already use, showing the target first. External links are unaffected.
-- **Privacy-respecting map previews** — *Settings → Privacy and Security → Map preview provider*. Upstream only offers whatever static-map provider Telegram's server advertises (currently Google, fetched directly from `maps.googleapis.com` by your device) plus "No previews". Mercurygram always offers two privacy-respecting choices regardless of the server config: *OpenStreetMap*, which renders the location bubble on-device with MapLibre from the same OpenFreeMap tiles used for interactive maps (only `tiles.openfreemap.org` is contacted, never Google), and *Telegram*, which has Telegram render the preview server-side so no third-party map service sees your device. The Google / Yandex options still appear only if the server advertises them, and the default stays "No previews".
-- **Start new chats as secret** — opt-in per-account toggle at *Settings → Mercurygram → Privacy*. When on, the New Message compose button starts an end-to-end encrypted secret chat instead of a regular one, so the most accessible "new conversation" action is the private one. The default is unchanged (secret chats are device-local and don't sync across devices); existing chats and other ways to open a chat are unaffected.
-- **No voice replay from the lock screen** — always on. Voice and round-video messages can't be (re)started from the device lock screen or its media controls (including Bluetooth/headset keys) while the device is locked, so nobody can replay a private voice message without unlocking first. Sender name and avatar are also redacted from the lock-screen player for these messages. Music is unaffected — it stays fully controllable from the lock screen.
-- **Hidden accounts** — additional accounts can be marked hidden behind the existing passcode (*Settings → Mercurygram → General → Hidden accounts*); they don't appear in the account switcher when the passcode is locked.
-- **Anti-delete & anti-edit message history** — opt-in per-account (*Settings → Mercurygram → General → Save deleted & edited messages*). Server-deleted messages, including your own messages the other side deleted, stay in the chat as a grayed-out ghost (a ghost can be removed with the usual Delete, and messages you delete yourself are not kept); edited messages keep all previous versions accessible from the message menu. Self-destructing / TTL / secret-chat messages are never recorded (api/terms §1.4).
-- **De-googled UnifiedPush + WebPush** — no Google Play Services / Firebase Cloud Messaging anywhere in the binary; push notifications use [UnifiedPush](https://unifiedpush.org) with end-to-end WebPush encryption (`aesgcm` Draft 4 — decrypted locally; the gateway only sees ciphertext). See [UnifiedPush WebPush gateway](#unifiedpush-webpush-gateway).
-- **DoH resolving disabled** — upstream Telegram falls back to Google DoH when normal DNS fails, which leaks the user's proxy/IP to Google. Mercurygram drops that path; Android's system DNS-over-TLS handles the same encryption-in-transit need without the leak.
-- **Native crypto built from source** — BoringSSL, FFmpeg, libvpx, dav1d, and tde2e are compiled from source at build time instead of shipping upstream prebuilts (no opaque third-party binaries in the APK).
+### Messages & chats
 
-## Notes
+- **Message filters**: hide or collapse incoming messages by regular expression (globally or per
+  chat), shadow-ban senders, and optionally hide blocked users' messages in groups.
+- **Message shot**: turn selected messages into an image with the chat's own theme and wallpaper, then
+  save or share it.
+- **OpenPGP**: sign and/or encrypt messages per chat and decrypt/verify PGP blocks in received
+  messages, through an installed OpenPGP app such as OpenKeychain.
+- **Profile ID / DC / registration date**: the profile ID row also shows the data centre and an
+  estimated registration date; long-press for a copy menu.
 
-In order to have reliable notifications, it may be necessary to set battery
-optimization to **Not optimized** for Mercurygram (no, it won't use more battery).
+### Plugins
 
-Background Connections setting is not necessary and uses lot of battery, so
-please disable it when you use UnifiedPush.
+- **Plugin engine**: import plugins from a file. Rule plugins (JSON) can rewrite or cancel outgoing
+  messages, change how messages are displayed, or cancel requests by name. Code plugins (dex/jar/apk)
+  run Java inside the app with full access and are disabled unless you explicitly allow them.
 
-The converse also holds: if you turn UnifiedPush off (*Settings → Mercurygram →
-Notifications → UnifiedPush → Disable UnifiedPush*), nothing pushes to the app any more, so
-enable Background Connection or Keep-Alive Service in *Settings → Notifications
-and Sounds* if you still want messages while the app is closed.
+### Network
 
-If you set Battery optimization to Not optimized, Keep-Alive Service will be not
-necessary.
+- **Custom DNS-over-HTTPS** resolver (any RFC 8484 server).
+- **Proxy auto-switch**: when the current proxy can't connect, check the other saved proxies and
+  switch to one that answers.
+- **Disable proxy while a VPN is on**.
+- **Transfer boost**: Normal / Fast / Extreme presets for download and upload speed.
 
-Keep-Alive Service shows an ongoing notification while it runs: Android kills a
-background service that does not show one, so it cannot be removed by the app.
-Tapping it opens its notification channel settings, where it can be silenced or
-hidden. See [Notifications.md](Notifications.md) for the details.
+### No upsells
 
-See [dontkillmyapp](https://dontkillmyapp.com/) for more information.
-
-If you can't/want set Battery optimization to Not optimized and you don't
-receive notifications after a while (more than 30 minutes) please enable
-both Keep-Alive Service and Background Connection instead (Keep-Alive only
-keeps the app running; Background Connection is what receives the messages).
-
-## UnifiedPush WebPush gateway
-
-Mercurygram uses Telegram's WebPush notifications through UnifiedPush.
-
-When the app registers with a UnifiedPush distributor, it generates its own WebPush keypair and auth secret, then sends Telegram a WebPush token in JSON form:
-
-```json
-{"endpoint":"https://<gateway>/aesgcm?e=<distributor-endpoint>","keys":{"p256dh":"...","auth":"..."}}
-```
-
-Telegram encrypts notifications with WebPush `aesgcm` (Draft 4) and sends them to the configured gateway. The gateway forwards them to the chosen UnifiedPush distributor while embedding the `Encryption` and `Crypto-Key` headers into the request body, because UnifiedPush distributors do not preserve arbitrary HTTP headers.
-
-Mercurygram then decrypts the payload locally and passes the MTProto notification payload to Telegram's normal notification pipeline. If decryption fails, it falls back to a wake-up notification path.
-
-The gateway is configurable from Notifications and Sounds. Mercurygram currently defaults to https://p2p.belloworld.it/.
-
-## Google FCM without Google libraries
-
-Users who do not want to install a distributor app can pick the built-in
-**Google FCM** entry in the distributor menu, on devices that have Play
-Services. No Google library, dependency or Firebase project is involved: the
-[embedded FCM distributor](https://codeberg.org/UnifiedPush/android-embedded_fcm_distributor)
-only sends an intent to Play Services, which answers with a plain WebPush
-endpoint. This is the same mechanism the Mastodon and SchildiChat Android apps
-ship through F-Droid.
-
-FCM accepts a push to such an endpoint only if it carries a
-[VAPID](https://www.rfc-editor.org/rfc/rfc8292) signature, which Telegram does
-not send, so the endpoint registered with Telegram is the gateway's `/fcm/`
-route. The gateway folds the `aesgcm` headers into the body exactly as above,
-signs the request, and forwards it to FCM. Payloads stay end-to-end encrypted:
-neither the gateway nor Google can read them.
-
-What changes with this entry selected is metadata: Google learns that a
-notification was delivered to the device, and Play Services must remain
-installed. Every other distributor keeps Google out of the path entirely, which
-is why this entry is never picked automatically and shows a warning when
-selected. The one exception is a Google Play install with no distributor app:
-there the entry is the default, since a Play user expects notifications to work
-out of the box and Play Services is already on the device. The same warning is
-still shown in the distributor settings, and installing any distributor app
-turns the default off again: the subscription moves to that app at the next cold
-start. The `/fcm/` route follows the Gateway URL setting, and the gateway's
-VAPID public key sits next to it on the same screen, so self-hosters can point
-the entry at their own `aesgcm-proxy`. The two only work as a pair: a gateway
-that does not hold the matching private half signs with a key FCM does not know,
-and every push is rejected, so change both together or leave both alone.
-
-> **Note:** `ntfy.sh` (the public hosted instance) does not work through
-> the default Mercurygram gateway at `https://p2p.belloworld.it/`.
-> That gateway is hosted on OCI infrastructure, and its IP is repeatedly
-> blocked by `ntfy.sh` due to connection volume. The production nginx
-> in front of the gateway short-circuits `ntfy.sh` endpoints with an
-> immediate 201 response instead of proxying them.
-> If you want to use `ntfy`, prefer a self-hosted instance.
-
-Three self-hostable gateway implementations exist:
-
-- [Rust](https://github.com/Mercurygram/aesgcm-proxy) (own repository), the production gateway, also published as the container image `ghcr.io/mercurygram/aesgcm-proxy`
-- [Cloudflare Worker](https://github.com/Mercurygram/Mercurygram/tree/Mercurygram/Gateways/CloudflareWorker), same routes on the Workers free tier, no server to run
-- [Python](https://github.com/Mercurygram/Mercurygram/tree/Mercurygram/Gateways/Python), a reference implementation of the UnifiedPush routes; it has no `/fcm` route, so the Google FCM entry above needs one of the other two
-
-The public Rust instance only accepts Telegram server IP ranges (https://core.telegram.org/resources/cidr.txt) to reduce abuse, and the Worker does the same.
-
-## Why the name Mercurygram?
-
-For a couple of reasons:
-
-- Mercury is the Roman, and I'm Italian, God and the "**messenger** of the gods"
-- The logo is a stylized 'F' representing his winged shoes, but it also resembles an 'F' in honor of **Freddy Mercury**.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution guide. **Translations
-of the Mercurygram-only strings are especially welcome** — translators do not
-need to know the codebase, just edit the relevant
-`TMessagesProj/src/main/res/values-<locale>/strings.xml` and open a PR. Run
-`./scripts/check-mg-translations.sh` to see which keys are still missing per
-locale.
-
-## Current Maintainers
-
-- [drizzt](https://github.com/drizzt)
-- you? :)
-
-## Contributors
-- [quqkuk](https://github.com/quqkuk)
-
-## Current Telegram-FOSS Maintainers
-
-- [thermatk](https://github.com/thermatk)
-- you? :)
-
-## Telegram-FOSS Contributors
-
-- [slp](https://github.com/slp)
-- [Bubu](https://github.com/Bubu)
-- [Sudokamikaze](https://github.com/Sudokamikaze)
-- [l2dy](https://github.com/l2dy)
-- [maximgrafin](https://github.com/maximgrafin)
-- [vn971](https://github.com/vn971)
-- [theel0ja](https://github.com/theel0ja)
-- [AnXh3L0](https://github.com/AnXh3L0)
-- [noplanman](https://github.com/noplanman)
-- [vk496](https://github.com/vk496)
-- [verdulo](https://github.com/verdulo)
-- [anupritaisno1](https://github.com/anupritaisno1)
-- [nekohasekai](https://github.com/nekohasekai)
-- [kdrag0n](https://github.com/kdrag0n)
-- [terachad](https://github.com/terachad)
-- [ppnplus](https://github.com/ppnplus)
-- [luvletter2333](https://github.com/luvletter2333)
-- [23rd](https://github.com/23rd)
-- [proletarius101](https://github.com/proletarius101)
-- [CWJamieson](https://github.com/CWJamieson)
-- [verdulo](https://github.com/verdulo)
-- [tehcneko](https://github.com/tehcneko)
-
-## Versioning
-
-Tag shape encodes the release channel (see the [Install](#install) section for the table):
-
-- **Stable** — `X.Y.Z.M` (4-part, `M ≥ 1`). `X.Y.Z` is the upstream Telegram version; `M` is the Mercurygram minor revision on top of it. Goes to the `it.belloworld.mercurygram` package, F-Droid, Google Play.
-- **Snapshot** — `X.Y.Z.M.K` (5-part, `M ≥ 1`). Per-push automated build between stable `X.Y.Z.M` and `X.Y.Z.(M+1)`. `K` is per-stable-bump monotonic. Goes to the `it.belloworld.mercurygram.beta` package and (for opted-in stable installs) the `it.belloworld.mercurygram` package.
-- **Pre-stable** — `X.Y.Z.0.K` (5-part, `M = 0`). Per-push automated build issued between an upstream rebase and the first `X.Y.Z.M` (M ≥ 1) stable for that upstream. Lets testers exercise the upcoming stable before it gets the official 4-part tag. Stops being published once any `X.Y.Z.M` ≥ 1 stable exists for the current upstream. `M = 0` is the namespace marker — no `X.Y.Z.0` 4-part tag is ever created.
-
-Pure lex compare on the dotted integer vector (shorter padded with zero) gives the right chronology: `12.7.3.0.5 < 12.7.3.1 < 12.7.3.1.42 < 12.7.3.2`.
-
-`MgUpdateChecker` reads the GitHub tag from `PackageInfo.versionName` — the manifest carries the tag verbatim (see `gradle/mg-version.gradle`), so the canonical tag is available for every install path (in-app updater, sideload, F-Droid).
-
-## API, Protocol documentation
-
-Telegram API manuals: https://core.telegram.org/api
-
-MTproto protocol manuals: https://core.telegram.org/mtproto
+- Telegram Premium upsells are hidden for accounts without Premium, and the Premium promo rows and
+  banners are hidden by default.
 
 ## Building
 
-**NOTE: Building on Windows is, unfortunately, not supported.
-Consider using a Linux VM or dual booting.**
-![WindowsSupport](/tgfoss-build-under-win.gif?raw=true)
+Building on Windows is not supported; use Linux (or a Linux VM).
 
-**Prerequisites:** Android SDK with the NDK version pinned by `ndkVersion` in `TMessagesProj/build.gradle`, JDK 17, `git`, and the native toolchain the media libraries need: [Ninja](https://ninja-build.org/), [Meson](https://mesonbuild.com/) (dav1d), `nasm` (x86 assembly in libvpx, ffmpeg and openh264), `make`, `cmake`, `pkg-config`, `gperf` and `python3` (dav1d and TDLib). `curl` is needed too: the build installs the pinned Rust toolchain that `jni/prebuild/build_tlottie.sh` uses (see `TMessagesProj/jni/setup_rust.sh`), because upstream ships the tlottie and openh264 archives prebuilt and Mercurygram builds them from source instead. The same goes for the call core wasm module: the build downloads the pinned [wasi-sdk](https://github.com/WebAssembly/wasi-sdk) (see `TMessagesProj/jni/setup_wasi_sdk.sh`) and compiles it with `TMessagesProj/jni/build_wasm_core.sh`.
-
-Clone the repository (submodules are initialized automatically at build time):
-
-```
-git clone https://github.com/Mercurygram/Mercurygram.git
-```
-
-Build with Android Studio or from the command line:
+**Prerequisites:** Android SDK with the NDK version pinned by `ndkVersion` in
+`TMessagesProj/build.gradle`, JDK 17, `git`, and the native toolchain: Ninja, Meson, `nasm`, `make`,
+`cmake`, `pkg-config`, `gperf`, `python3` and `curl`. See upstream Mercurygram's
+[build notes](https://github.com/Mercurygram/Mercurygram#building) for details.
 
 ```bash
-# Fat APK (all ABIs)
-./gradlew assembleAfatRelease
-
-# Single-ABI APKs (F-Droid)
-./gradlew assembleAfatFdArm32Release   # armeabi-v7a
-./gradlew assembleAfatFdArm64Release   # arm64-v8a
-./gradlew assembleAfatFdX86Release     # x86
-./gradlew assembleAfatFdX86_64Release  # x86_64
+git clone https://github.com/guincalo/Mercurygram.git
+cd Mercurygram
+# your own Telegram API credentials: https://core.telegram.org/api/obtaining_api_id
+printf 'APP_ID = 12345\nAPP_HASH = aaaaaaaabbbbbbccccccfffffff001122\n' > API_KEYS
+# arm64-v8a release APK; MG_BUILD_TAG must be numeric X.Y.Z.M[.K]
+./gradlew assembleAfatFdArm64Release -PMG_BUILD_TAG=12.10.6.90.1
 ```
 
-Native libraries (BoringSSL, openh264, opus, libvpx, dav1d, FFmpeg, tlottie, TDLib) are built from source automatically on the first build and cached for subsequent runs.
+Native libraries (BoringSSL, openh264, opus, libvpx, dav1d, FFmpeg, tlottie, TDLib) are built from
+source on the first build and cached afterwards.
 
-If you want to publish a modified version of Telegram:
-- You should get **your own API key** here: https://core.telegram.org/api/obtaining_api_id and create a file called `API_KEYS` in the source root directory.
-  The contents should look like this:
-  ```
-  APP_ID = 12345
-  APP_HASH = aaaaaaaabbbbbbccccccfffffff001122
-  ```
-- Do not use the name Telegram and the standard logo (white paper plane in a blue circle) for your app — or make sure your users understand that it is unofficial
-- Take good care of your users' data and privacy
-- **Please remember to publish your code too in order to comply with the licenses**
+**CI:** `.github/workflows/hanako.yml` builds a signed arm64 APK on every push to the `plus` or
+`hanako` branch (downloadable as a workflow artifact). Pushing a tag `v*` builds the APK and publishes
+a GitHub Release with the APK and that version's section of [CHANGELOG.md](CHANGELOG.md).
 
-# DIGITAL RESISTANCE
+## Contributing
 
-![DIGITALRESISTANCE](/DigitalResistance.jpg?raw=true "DIGITALRESISTANCE")
+Bug reports are welcome via [Issues](https://github.com/guincalo/Mercurygram/issues/new/choose). Please
+include the Hanako version, your Android version and steps to reproduce. Bugs that also happen in
+upstream Mercurygram or Telegram belong to those projects; bugs in Hanako's own features do not.
+
+## Credits
+
+Hanako stands on the work of others:
+
+- **[Mercurygram](https://github.com/Mercurygram/Mercurygram)** by [drizzt](https://github.com/drizzt)
+  and contributors, which Hanako is forked from.
+- **[Telegram-FOSS](https://github.com/Telegram-FOSS-Team/Telegram-FOSS)** and its contributors, whose
+  de-Googling work Mercurygram builds on.
+- **[Telegram for Android](https://github.com/DrKLO/Telegram)** by Telegram FZ-LLC.
+- Ideas for several features came from other Telegram forks, notably AyuGram, Nagram, NekoX, Octogram
+  and FAgram; Hanako's code for them was written fresh.
+
+Telegram is a trademark of Telegram FZ-LLC. Hanako is an independent, unofficial project.
+
+## License
+
+Hanako is free software under the **GNU General Public License v2.0**, the same license as
+Telegram for Android and Mercurygram. See [LICENSE](LICENSE). If you distribute a modified build,
+you must publish its source code too.

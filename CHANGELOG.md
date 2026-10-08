@@ -1,0 +1,63 @@
+# Changelog
+
+All notable changes to Hanako are listed here. Hanako is versioned by its Git tags (`vX.Y.Z`); the
+version shown inside the app follows the Telegram/Mercurygram base it is built on.
+
+## [1.0.0] - 2026-10-08
+
+First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
+
+> Fully vibecoded: all Hanako changes were written by AI coding agents. Use at your own risk. Not
+> affiliated with Telegram or upstream Mercurygram.
+
+### Branding
+- App renamed to **Hanako** (launcher label, settings entry, version footer and in-app text, in all
+  bundled languages). The package id stays `it.belloworld.mercurygram`.
+
+### Ghost mode & privacy
+- Per-account ghost mode: no read receipts, typing status, online status or story views; optional
+  read-on-reply and forced offline.
+- Ghost exceptions: send read receipts, typing and online-while-open in chosen chats only.
+- Ghost quick toggle in the chat list menu, ghost indicator, and *Send read receipt* in chats.
+- Ghost mode can send messages as short server-side scheduled messages so sending never shows you
+  online, and can send every message silently.
+- Story ghost guard: warning before a story view would be seen, open-without-being-seen, confirm
+  before reacting/replying to stories.
+- Peeking a chat (long-press preview) never sends read receipts, reaction/poll seen marks or view
+  counts; optional long-press-anywhere-to-peek.
+- Options to stop sending emoji interactions and the "choosing a sticker" status.
+- Optional confirmations before sending voice messages, round videos, stickers and GIFs, and before
+  calls.
+- Screenshots allowed (no screenshot notifications) and content protection ignored.
+
+### Chat lock
+- Biometric lock for individual chats, all secret chats and the archive; hidden locked chats;
+  message text hidden in notifications from locked chats.
+
+### Deleted & edited messages
+- Saved history of deleted and edited messages, including media and view-once media (on by default).
+- Reactions kept on deleted messages.
+- Log of chats the server removed from your list.
+- Browser for all saved deleted media.
+
+### Activity log
+- Local log of contacts' online/offline transitions and read events, built only from received
+  updates.
+
+### Streamer mode
+- Masks names, chat titles, avatars, phone numbers and IDs, anonymises notifications; optional
+  screenshot/recording block.
+
+### Messages, plugins & network
+- Regex message filters, sender shadow-ban, hide blocked users in groups.
+- Message shot: export selected messages as a themed image.
+- OpenPGP sign/encrypt/decrypt via an OpenPGP provider app (e.g. OpenKeychain).
+- Profile ID row with data centre and estimated registration date.
+- Plugin engine with rule (JSON) and opt-in code plugins.
+- Custom DNS-over-HTTPS, proxy auto-switch, disable proxy while a VPN is on.
+- Upload/download transfer boost.
+
+### Other
+- Telegram Premium upsells and promo rows hidden; upstream Mercurygram update checks disabled.
+
+[1.0.0]: https://github.com/guincalo/Mercurygram/releases/tag/v1.0.0
