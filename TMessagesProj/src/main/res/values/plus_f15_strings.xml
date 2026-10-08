@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- plus f15: emoji interactions / choosing-sticker status -->
+    <string name="PlusF15Header">Emoji interactions</string>
+    <string name="PlusF15DisableInteractions">Disable emoji interactions</string>
+    <string name="PlusF15HideChoosingSticker">Don\'t send \"choosing a sticker\"</string>
+    <string name="PlusF15About">Applies to this account, also with ghost mode off. Emoji interactions: tapping an animated emoji only plays it for you, taps from others are not played, and you never tell anyone you watched theirs. \"Choosing a sticker\": opening the sticker panel no longer shows this status to the other side.</string>
+</resources>

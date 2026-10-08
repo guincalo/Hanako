@@ -195,7 +195,7 @@ public class EmojiAnimationsOverlay implements NotificationCenter.NotificationCe
                 checkStickerPack();
             }
         } else if (id == NotificationCenter.onEmojiInteractionsReceived) {
-            if (chatActivity == null) {
+            if (chatActivity == null || it.belloworld.mercurygram.PlusEmojiInteractions.blockRemoteTaps(currentAccount)) { // plus f15
                 return;
             }
             long dialogId = (long) args[0];
@@ -881,6 +881,10 @@ public class EmojiAnimationsOverlay implements NotificationCenter.NotificationCe
 
     private void sendCurrentTaps() {
         if (lastTappedMsgId == 0) {
+            return;
+        }
+        if (it.belloworld.mercurygram.PlusEmojiInteractions.blockSendTaps(currentAccount)) { // plus f15
+            clearSendingInfo();
             return;
         }
         TLRPC.TL_sendMessageEmojiInteraction interaction = new TLRPC.TL_sendMessageEmojiInteraction();

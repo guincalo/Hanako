@@ -264,6 +264,10 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF14About)));
         // plus f14 end
 
+        // plus f15 begin
+        it.belloworld.mercurygram.PlusEmojiInteractions.addSettingsItems(items, acc);
+        // plus f15 end
+
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
                         LocaleController.getString(R.string.MercurygramReduceTrackingFingerprint))
@@ -441,6 +445,11 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             refreshList();
             return;
         }
+        // plus f15 begin
+        if (it.belloworld.mercurygram.PlusEmojiInteractions.onSettingsClick(getCurrentAccount(), item.id, this::refreshList)) {
+            return;
+        }
+        // plus f15 end
         // plus: ghost mode toggles
         if (item.id == ID_GHOST_ON) {
             it.belloworld.mercurygram.PlusGhost.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusGhost.isEnabled(getCurrentAccount()));

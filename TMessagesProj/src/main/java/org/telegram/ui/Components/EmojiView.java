@@ -10167,6 +10167,9 @@ public class EmojiView extends FrameLayout implements
         long lastActionTime = -1;
 
         public void doSomeAction() {
+            if (it.belloworld.mercurygram.PlusEmojiInteractions.isChoosingStickerHidden(currentAccount)) { // plus f15
+                return;
+            }
             if (visible) {
                 if (lastActionTime == -1) {
                     lastActionTime = System.currentTimeMillis();

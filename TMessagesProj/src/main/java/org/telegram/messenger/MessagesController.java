@@ -11464,6 +11464,9 @@ public class MessagesController extends BaseController implements NotificationCe
         if (action < 0 || action >= sendingTypings.length || dialogId == 0) {
             return false;
         }
+        if (it.belloworld.mercurygram.PlusEmojiInteractions.blockTyping(currentAccount, action)) { // plus f15
+            return false;
+        }
         final long selfId = UserConfig.getInstance(UserConfig.selectedAccount).getClientUserId();
         if (dialogId == selfId) {
             return false;
