@@ -9001,7 +9001,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     phone = messageObject.vCardData;
                 } else {
                     if (user != null && !TextUtils.isEmpty(user.phone)) {
-                        phone = PhoneFormat.getInstance().format("+" + user.phone);
+                        phone = it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + user.phone)); // plus f10
                     } else {
                         phone = MessageObject.getMedia(messageObject.messageOwner).phone_number;
                         if (!TextUtils.isEmpty(phone)) {

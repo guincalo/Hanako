@@ -23,6 +23,7 @@ public final class PlusUtil {
 
     /**
      * Display name of a dialog: the user's name (also for a secret chat), or the chat title.
+     * Names and titles follow streamer mode (f10).
      * Returns {@code fallback} when the peer is not cached.
      */
     public static String dialogTitle(int account, long dialogId, String fallback) {
@@ -38,7 +39,7 @@ public final class PlusUtil {
             user = mc.getUser(dialogId);
         } else {
             TLRPC.Chat chat = mc.getChat(-dialogId);
-            return chat != null && !TextUtils.isEmpty(chat.title) ? chat.title : fallback;
+            return chat != null && !TextUtils.isEmpty(chat.title) ? PlusStreamer.chatTitle(chat) : fallback; // plus f10: masked in streamer mode
         }
         return user != null ? UserObject.getUserName(user) : fallback;
     }

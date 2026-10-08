@@ -13778,6 +13778,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             return;
         }
 
+        io.addChecked(it.belloworld.mercurygram.PlusStreamer.isEnabled(), R.drawable.msg_screencast, LocaleController.getString(R.string.PlusF10StreamerMode), () -> it.belloworld.mercurygram.PlusStreamer.toggle(this)); // plus f10
         final boolean isCurrentThemeDark;
         if (resourceProvider != null) {
             isCurrentThemeDark = resourceProvider.isDark();

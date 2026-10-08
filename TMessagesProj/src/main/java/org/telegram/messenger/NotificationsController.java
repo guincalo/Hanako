@@ -502,7 +502,7 @@ public class NotificationsController extends BaseController implements Notificat
                 }
                 popupArray.add(0, messageObject);
             }
-            if (!popupArray.isEmpty() && !AndroidUtilities.needShowPasscode() && !SharedConfig.isWaitingForPasscodeEnter) {
+            if (!popupArray.isEmpty() && !AndroidUtilities.needShowPasscode() && !SharedConfig.isWaitingForPasscodeEnter && !it.belloworld.mercurygram.PlusStreamer.hideNotifications()) { // plus f10
                 AndroidUtilities.runOnUIThread(() -> {
                     popupReplyMessages = popupArray;
                     Intent popupIntent = new Intent(ApplicationLoader.applicationContext, PopupNotificationActivity.class);
@@ -1269,7 +1269,7 @@ public class NotificationsController extends BaseController implements Notificat
                 notifyCheck = isLast;
             }
 
-            if (!popupArrayAdd.isEmpty() && !AndroidUtilities.needShowPasscode() && !SharedConfig.isWaitingForPasscodeEnter) {
+            if (!popupArrayAdd.isEmpty() && !AndroidUtilities.needShowPasscode() && !SharedConfig.isWaitingForPasscodeEnter && !it.belloworld.mercurygram.PlusStreamer.hideNotifications()) { // plus f10
                 int popupFinal = popup;
                 AndroidUtilities.runOnUIThread(() -> {
                     popupMessages.addAll(0, popupArrayAdd);
@@ -1805,7 +1805,8 @@ public class NotificationsController extends BaseController implements Notificat
 
     public String getShortStringForMessage(MessageObject messageObject, String[] userName, boolean[] preview) {
         if (AndroidUtilities.needShowPasscode() || SharedConfig.isWaitingForPasscodeEnter
-                || it.belloworld.mercurygram.PlusChatLock.hideNotificationContent(currentAccount, messageObject)) { // plus f08
+                || it.belloworld.mercurygram.PlusChatLock.hideNotificationContent(currentAccount, messageObject) // plus f08
+                || it.belloworld.mercurygram.PlusStreamer.hideNotifications()) { // plus f10
             return LocaleController.getString(R.string.NotificationHiddenMessage);
         }
         long dialogId = messageObject.messageOwner.dialog_id;
@@ -2492,7 +2493,8 @@ public class NotificationsController extends BaseController implements Notificat
 
     private String getStringForMessage(MessageObject messageObject, boolean shortMessage, boolean[] text, boolean[] preview) {
         if (AndroidUtilities.needShowPasscode() || SharedConfig.isWaitingForPasscodeEnter
-                || it.belloworld.mercurygram.PlusChatLock.hideNotificationContent(currentAccount, messageObject)) { // plus f08
+                || it.belloworld.mercurygram.PlusChatLock.hideNotificationContent(currentAccount, messageObject) // plus f08
+                || it.belloworld.mercurygram.PlusStreamer.hideNotifications()) { // plus f10
             return LocaleController.getString(R.string.YouHaveNewMessage);
         }
         if (messageObject.isStoryPush || messageObject.isStoryMentionPush) {
@@ -4250,7 +4252,7 @@ public class NotificationsController extends BaseController implements Notificat
             } else {
                 chatName = UserObject.getUserName(user);
             }
-            boolean passcode = AndroidUtilities.needShowPasscode() || SharedConfig.isWaitingForPasscodeEnter;
+            boolean passcode = AndroidUtilities.needShowPasscode() || SharedConfig.isWaitingForPasscodeEnter || it.belloworld.mercurygram.PlusStreamer.hideNotifications(); // plus f10
             final boolean allowSummary = !"samsung".equalsIgnoreCase(Build.MANUFACTURER);
             if (DialogObject.isEncryptedDialog(dialog_id) || allowSummary && pushDialogs.size() > 1 || passcode) {
                 if (passcode) {
@@ -4564,7 +4566,7 @@ public class NotificationsController extends BaseController implements Notificat
                         intent.putExtra("userId", userId);
                     }
                 }
-                if (AndroidUtilities.needShowPasscode() || SharedConfig.isWaitingForPasscodeEnter) {
+                if (AndroidUtilities.needShowPasscode() || SharedConfig.isWaitingForPasscodeEnter || it.belloworld.mercurygram.PlusStreamer.hideNotifications()) { // plus f10
                     photoPath = null;
                 } else {
                     if (pushDialogs.size() == 1 && Build.VERSION.SDK_INT < 28) {
@@ -4728,7 +4730,7 @@ public class NotificationsController extends BaseController implements Notificat
             }
 
             boolean hasCallback = false;
-            if (!AndroidUtilities.needShowPasscode() && !SharedConfig.isWaitingForPasscodeEnter && lastMessageObject.getDialogId() == 777000) {
+            if (!AndroidUtilities.needShowPasscode() && !SharedConfig.isWaitingForPasscodeEnter && !it.belloworld.mercurygram.PlusStreamer.hideNotifications() && lastMessageObject.getDialogId() == 777000) { // plus f10
                 if (lastMessageObject.messageOwner.reply_markup instanceof TLRPC.TL_replyInlineMarkup) {
                     final TLRPC.TL_replyInlineMarkup replyInlineMarkup = (TLRPC.TL_replyInlineMarkup) lastMessageObject.messageOwner.reply_markup;
                     ArrayList<TL_keyboard.KeyboardInlineButtonRow> rows = replyInlineMarkup.rows;
@@ -4917,7 +4919,7 @@ public class NotificationsController extends BaseController implements Notificat
         }
 
         long selfUserId = getUserConfig().getClientUserId();
-        boolean waitingForPasscode = AndroidUtilities.needShowPasscode() || SharedConfig.isWaitingForPasscodeEnter;
+        boolean waitingForPasscode = AndroidUtilities.needShowPasscode() || SharedConfig.isWaitingForPasscodeEnter || it.belloworld.mercurygram.PlusStreamer.hideNotifications(); // plus f10
         boolean passcode = SharedConfig.passcodeHash.length() > 0;
         FileLog.d("showExtraNotifications: passcode="+passcode+" waitingForPasscode=" + waitingForPasscode + " selfUserId=" + selfUserId + " useSummaryNotification=" + useSummaryNotification);
 
@@ -5671,7 +5673,7 @@ public class NotificationsController extends BaseController implements Notificat
                 builder.setLargeIcon(avatarBitmap);
             }
 
-            if (!AndroidUtilities.needShowPasscode(false) && !SharedConfig.isWaitingForPasscodeEnter) {
+            if (!AndroidUtilities.needShowPasscode(false) && !SharedConfig.isWaitingForPasscodeEnter && !it.belloworld.mercurygram.PlusStreamer.hideNotifications()) { // plus f10
                 if (rows != null) {
                     for (int r = 0, rc = rows.size(); r < rc; r++) {
                         TL_keyboard.KeyboardInlineButtonRow row = rows.get(r);

@@ -445,6 +445,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
 
         flagSecureReason = new FlagSecureReason(getWindow(), () -> SharedConfig.passcodeHash.length() > 0 && !SharedConfig.allowScreenCapture);
         flagSecureReason.attach();
+        it.belloworld.mercurygram.PlusStreamer.attachWindow(getWindow()); // plus f10
 
         super.onCreate(savedInstanceState);
         if (Build.VERSION.SDK_INT >= 24) {
@@ -6956,6 +6957,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         clearFragments();
         super.onDestroy();
         onFinish();
+        it.belloworld.mercurygram.PlusStreamer.detachWindow(getWindow()); // plus f10
         if (flagSecureReason != null) {
             flagSecureReason.detach();
         }

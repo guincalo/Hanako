@@ -2218,10 +2218,10 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                             sb.setSpan(new FilterCreateActivity.TextSpan(getString(R.string.MonoforumSpan), 9.33f, Theme.key_windowBackgroundWhiteGrayText, resourcesProvider), index, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                             nameString = sb;
                         } else {
-                            nameString = AndroidUtilities.escape(chat.title);
+                            nameString = AndroidUtilities.escape(it.belloworld.mercurygram.PlusStreamer.chatTitle(chat)); // plus f10
                         }
                     } else {
-                        nameString = AndroidUtilities.escape(chat.title);
+                        nameString = AndroidUtilities.escape(it.belloworld.mercurygram.PlusStreamer.chatTitle(chat)); // plus f10
                     }
                 } else if (user != null) {
                     if (UserObject.isReplyUser(user)) {
@@ -5851,7 +5851,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                 if (UserObject.isDeleted(fromUser)) {
                     return getString(R.string.HiddenName);
                 } else {
-                    return AndroidUtilities.escape(ContactsController.formatName(fromUser.first_name, fromUser.last_name).replace("\n", ""));
+                    return AndroidUtilities.escape(it.belloworld.mercurygram.PlusStreamer.userName(fromUser, ContactsController.formatName(fromUser.first_name, fromUser.last_name)).replace("\n", "")); // plus f10
                 }
             } else {
                 return AndroidUtilities.escape(UserObject.getFirstName(fromUser).replace("\n", ""));

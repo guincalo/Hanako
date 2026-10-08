@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- plus f10: streamer mode -->
+<resources>
+    <string name="PlusF10StreamerMode">Streamer mode</string>
+    <string name="PlusF10MaskedUser">User %1$s</string>
+    <string name="PlusF10MaskedChat">Chat %1$s</string>
+    <string name="PlusF10HideNames">Hide people\'s names</string>
+    <string name="PlusF10HideChatTitles">Hide group and channel titles</string>
+    <string name="PlusF10HideAvatars">Hide profile photos</string>
+    <string name="PlusF10HidePhones">Hide phone numbers</string>
+    <string name="PlusF10HideNotifications">Hide notification content</string>
+    <string name="PlusF10FlagSecure">Block screen capture (FLAG_SECURE)</string>
+    <string name="PlusF10About">Hides other people\'s names, photos and phone numbers on this screen so you can stream or share it. Your own name and photo stay visible. Names become a stable code (User 3F2A) so you can still tell chats apart. Notifications show \"New message\" with no sender, like a passcode-locked app. Nothing is sent or changed on the server. Messages themselves are not hidden. Quick toggle: the ⋮ menu on the chat list. Block screen capture makes the whole app black in screenshots, recordings and screen shares.</string>
+</resources>

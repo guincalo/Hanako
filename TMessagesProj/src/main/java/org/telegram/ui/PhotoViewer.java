@@ -17461,7 +17461,8 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
             if (chatActivity != null && chatActivity.getCurrentEncryptedChat() != null ||
                 avatarsDialogId != 0 && MessagesController.getInstance(currentAccount).isPeerNoForwards(avatarsDialogId) ||
                 messageObject != null && (MessagesController.getInstance(currentAccount).isPeerNoForwards(messageObject.getDialogId()) ||
-                (messageObject.messageOwner != null && messageObject.messageOwner.noforwards)) || messageObject != null && messageObject.hasRevealedExtendedMedia()
+                (messageObject.messageOwner != null && messageObject.messageOwner.noforwards)) || messageObject != null && messageObject.hasRevealedExtendedMedia() ||
+                it.belloworld.mercurygram.PlusStreamer.wantsFlagSecure() // plus f10: streamer mode blocks capture of the viewer window too
             ) {
                 if (!SharedConfig.disableSecureFlags) {
                     windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;

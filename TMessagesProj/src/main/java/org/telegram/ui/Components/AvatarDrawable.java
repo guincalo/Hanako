@@ -456,6 +456,10 @@ public class AvatarDrawable extends Drawable {
             firstName = lastName;
             lastName = null;
         }
+        if (it.belloworld.mercurygram.PlusStreamer.hideAvatars()) { // plus f10
+            firstName = null;
+            lastName = null;
+        }
 
         getAvatarSymbols(firstName, lastName, custom, stringBuilder);
     }

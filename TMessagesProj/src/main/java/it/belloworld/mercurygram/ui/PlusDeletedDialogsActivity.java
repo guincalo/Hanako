@@ -91,13 +91,15 @@ public class PlusDeletedDialogsActivity extends UniversalFragment {
     }
 
     private static String title(PlusDeletedDialogs.Entry e) {
+        String title;
         if (!TextUtils.isEmpty(e.title)) {
-            return e.title;
+            title = e.title;
+        } else if (!TextUtils.isEmpty(e.username)) {
+            title = "@" + e.username;
+        } else {
+            return Long.toString(e.dialogId);
         }
-        if (!TextUtils.isEmpty(e.username)) {
-            return "@" + e.username;
-        }
-        return Long.toString(e.dialogId);
+        return it.belloworld.mercurygram.PlusStreamer.dialogTitle(e.dialogId, title); // plus f10
     }
 
     private static String typeLabel(int type) {
@@ -149,7 +151,7 @@ public class PlusDeletedDialogsActivity extends UniversalFragment {
         sb.append(typeLabel(e.type)).append('\n');
         sb.append("ID: ").append(e.dialogId).append('\n');
         if (!TextUtils.isEmpty(e.username)) {
-            sb.append('@').append(e.username).append('\n');
+            sb.append('@').append(it.belloworld.mercurygram.PlusStreamer.username(e.dialogId, e.username)).append('\n'); // plus f10
         }
         sb.append(LocaleController.getString(R.string.PlusF07Reason)).append(": ").append(causeLabel(e.cause)).append('\n');
         sb.append(LocaleController.getString(R.string.PlusF07When)).append(": ")

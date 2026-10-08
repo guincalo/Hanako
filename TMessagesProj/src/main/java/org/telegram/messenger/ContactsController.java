@@ -3031,7 +3031,7 @@ public class ContactsController extends BaseController {
             return formatName((TLRPC.User) object);
         } else if (object instanceof TLRPC.Chat) {
             TLRPC.Chat chat = (TLRPC.Chat) object;
-            return chat.title;
+            return it.belloworld.mercurygram.PlusStreamer.chatTitle(chat); // plus f10
         } else {
             return LocaleController.getString(R.string.HiddenName);
         }
@@ -3042,7 +3042,7 @@ public class ContactsController extends BaseController {
         if (user == null) {
             return "";
         }
-        return formatName(user.first_name, user.last_name, 0);
+        return it.belloworld.mercurygram.PlusStreamer.userName(user, formatName(user.first_name, user.last_name, 0)); // plus f10
     }
 
     @NonNull

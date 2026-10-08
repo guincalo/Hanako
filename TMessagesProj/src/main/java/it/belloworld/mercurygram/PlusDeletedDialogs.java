@@ -158,7 +158,7 @@ public final class PlusDeletedDialogs {
                 TLRPC.User user = mc.getUser(dialogId);
                 e.type = user != null && user.bot ? TYPE_BOT : TYPE_USER;
                 if (user != null) {
-                    e.title = UserObject.getUserName(user);
+                    e.title = PlusStreamer.realUserName(user); // plus f10: store the real name even while streamer mode masks it
                     e.username = UserObject.getPublicUsername(user);
                 }
                 e.cause = user != null && UserObject.isDeleted(user) ? CAUSE_ACCOUNT_GONE : CAUSE_HISTORY;

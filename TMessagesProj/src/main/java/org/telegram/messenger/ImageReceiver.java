@@ -425,6 +425,10 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
     }
 
     public void setForUserOrChat(TLObject object, Drawable avatarDrawable, Object parentObject, boolean animationEnabled, int vectorType, boolean big) {
+        if (it.belloworld.mercurygram.PlusStreamer.hideAvatar(object)) { // plus f10
+            setImageBitmap(avatarDrawable);
+            return;
+        }
         if (parentObject == null) {
             parentObject = object;
         }

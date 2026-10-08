@@ -165,6 +165,7 @@ public class ImageLocation {
     }
 
     public static ImageLocation getForUser(int currentAccount, TLRPC.User user, int type) {
+        if (it.belloworld.mercurygram.PlusStreamer.hideAvatar(user)) return null; // plus f10
         if (user == null || user.photo == null) {
             return null;
         }
@@ -247,6 +248,7 @@ public class ImageLocation {
         return getForChat(UserConfig.selectedAccount, chat, type);
     }
     public static ImageLocation getForChat(int currentAccount, TLRPC.Chat chat, int type) {
+        if (it.belloworld.mercurygram.PlusStreamer.hideAvatar(chat)) return null; // plus f10
         if (chat == null || chat.photo == null) {
             return null;
         }

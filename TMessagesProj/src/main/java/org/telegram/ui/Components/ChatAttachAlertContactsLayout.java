@@ -204,7 +204,7 @@ public class ChatAttachAlertContactsLayout extends ChatAttachAlert.AttachAlertLa
                         statusTextView.setText("");
                         Utilities.globalQueue.postRunnable(() -> {
                             if (currentUser != null) {
-                                formattedPhoneNumber = PhoneFormat.getInstance().format("+" + currentUser.phone);
+                                formattedPhoneNumber = it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + currentUser.phone)); // plus f10
                                 formattedPhoneNumberUser = currentUser;
                                 AndroidUtilities.runOnUIThread(() -> statusTextView.setText(formattedPhoneNumber));
                             }

@@ -7386,7 +7386,7 @@ public class ChatActivity extends BaseFragment implements
                     if (UserObject.getPublicUsername(user) != null) {
                         chatActivityEnterView.replaceWithText(start, len, "@" + UserObject.getPublicUsername(user) + " ", false);
                     } else {
-                        String name = UserObject.getFirstName(user, false);
+                        String name = it.belloworld.mercurygram.PlusStreamer.realFirstName(user); // plus f10: mention text is sent, never mask it
                         Spannable spannable = new SpannableString(name + " ");
                         spannable.setSpan(new URLSpanUserMention("" + user.id, 3), 0, spannable.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                         chatActivityEnterView.replaceWithText(start, len, spannable, false);
@@ -19512,9 +19512,9 @@ public class ChatActivity extends BaseFragment implements
                     if (currentChat.linked_monoforum_id != 0) {
                         TLRPC.Chat chat = getMessagesController().getChat(currentChat.linked_monoforum_id);
                         if (chat == null) chat = currentChat;
-                        avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(chat.title)), chat.scam, chat.fake, chat.verified, false, chat.emoji_status, animated);
+                        avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(it.belloworld.mercurygram.PlusStreamer.chatTitle(chat))), chat.scam, chat.fake, chat.verified, false, chat.emoji_status, animated); // plus f10
                     } else {
-                        avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(currentChat.title)), currentChat.scam, currentChat.fake, currentChat.verified, false, currentChat.emoji_status, animated);
+                        avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(it.belloworld.mercurygram.PlusStreamer.chatTitle(currentChat))), currentChat.scam, currentChat.fake, currentChat.verified, false, currentChat.emoji_status, animated); // plus f10
                     }
                 } else if (threadMessageId > 0) {
                     final TLRPC.User user = getMessagesController().getUser(threadMessageId);
@@ -19522,10 +19522,10 @@ public class ChatActivity extends BaseFragment implements
                 } else {
                     TLRPC.Chat chat = getMessagesController().getChat(-threadMessageId);
                     if (chat == null) chat = currentChat;
-                    avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(chat.title)), chat.scam, chat.fake, chat.verified, false, chat.emoji_status, animated);
+                    avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(it.belloworld.mercurygram.PlusStreamer.chatTitle(chat))), chat.scam, chat.fake, chat.verified, false, chat.emoji_status, animated); // plus f10
                 }
             } else {
-                avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(currentChat.title)), currentChat.scam, currentChat.fake, currentChat.verified, false, currentChat.emoji_status, animated);
+                avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(it.belloworld.mercurygram.PlusStreamer.chatTitle(currentChat))), currentChat.scam, currentChat.fake, currentChat.verified, false, currentChat.emoji_status, animated); // plus f10
             }
         } else if (chatMode == MODE_WELCOME_MESSAGES) {
             avatarContainer.setTitle(getString(R.string.WelcomeMessage));
@@ -19561,7 +19561,7 @@ public class ChatActivity extends BaseFragment implements
             } else if (user != null) {
                 avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(user))));
             } else if (chat != null) {
-                avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(chat.title)));
+                avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(it.belloworld.mercurygram.PlusStreamer.chatTitle(chat)))); // plus f10
             } else {
                 avatarContainer.setTitle("");
             }
@@ -19596,7 +19596,7 @@ public class ChatActivity extends BaseFragment implements
                 avatarContainer.setTitle(LocaleController.getString(R.string.SavedMessages));
             } else if (!MessagesController.isSupportUser(currentUser) && getContactsController().contactsDict.get(currentUser.id) == null && (getContactsController().contactsDict.size() != 0 || !getContactsController().isLoadingContacts())) {
                 if (!TextUtils.isEmpty(currentUser.phone)) {
-                    avatarContainer.setTitle(PhoneFormat.getInstance().format("+" + currentUser.phone), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated);
+                    avatarContainer.setTitle(it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + currentUser.phone)), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated); // plus f10
                 } else {
                     avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(currentUser))), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated);
                 }
@@ -39966,7 +39966,7 @@ public class ChatActivity extends BaseFragment implements
                 if (username != null) {
                     sb.append("@").append(username).append(" ");
                 } else {
-                    String name = UserObject.getFirstName(user, false);
+                    String name = it.belloworld.mercurygram.PlusStreamer.realFirstName(user); // plus f10: mention text is sent, never mask it
                     Spannable spannable = new SpannableString(name + " ");
                     spannable.setSpan(new URLSpanUserMention("" + user.id, 3), 0, spannable.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     sb.append(spannable);

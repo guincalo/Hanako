@@ -462,7 +462,7 @@ public class PrivacyUsersActivity extends BaseFragment implements NotificationCe
                             if (user.bot) {
                                 number = LocaleController.getString(R.string.Bot).substring(0, 1).toUpperCase() + LocaleController.getString(R.string.Bot).substring(1);
                             } else if (user.phone != null && user.phone.length() != 0) {
-                                number = PhoneFormat.getInstance().format("+" + user.phone);
+                                number = it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + user.phone)); // plus f10
                             } else {
                                 number = LocaleController.getString(R.string.NumberUnknown);
                             }

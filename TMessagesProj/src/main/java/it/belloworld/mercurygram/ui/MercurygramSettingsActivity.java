@@ -43,6 +43,9 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     private static final int ID_PLUS_GHOST_EXCEPTIONS = 9101; // plus f01
     private static final int ID_F04_MESSAGE_FILTERS = 400; // plus f04
     private static final int ID_GHOST_SEND_SILENT = 950; // plus f09
+    // plus f10: streamer mode
+    private static final int ID_STREAMER_ON = 1000;
+    private static final int ID_STREAMER_OPT = 1010; // + PlusStreamer.OPT_*
     private static final int ID_MESSAGE_DETAILS_MENU = 1;
     private static final int ID_HIDE_CHAT_KEYBOARD = 2;
     private static final int ID_HIDE_ALL_TAB = 3;
@@ -221,6 +224,19 @@ public class MercurygramSettingsActivity extends UniversalFragment {
                 it.belloworld.mercurygram.PlusChatLock.settingsSummary(getCurrentAccount())));
         items.add(UItem.asShadow(null));
         // plus f08 end
+
+        // plus f10: streamer mode (all accounts)
+        final boolean streamerOn = it.belloworld.mercurygram.PlusStreamer.isEnabled();
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF10StreamerMode)));
+        items.add(MgSettingsScope.globalCheck(ID_STREAMER_ON, LocaleController.getString(R.string.PlusF10StreamerMode)).setChecked(streamerOn));
+        final int[] streamerLabels = {R.string.PlusF10HideNames, R.string.PlusF10HideChatTitles, R.string.PlusF10HideAvatars,
+                R.string.PlusF10HidePhones, R.string.PlusF10HideNotifications, R.string.PlusF10FlagSecure};
+        for (int i = 0; i < streamerLabels.length; i++) {
+            items.add(MgSettingsScope.globalCheck(ID_STREAMER_OPT + i, LocaleController.getString(streamerLabels[i]))
+                    .setChecked(it.belloworld.mercurygram.PlusStreamer.getOption(i)));
+        }
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF10About)));
+        // plus f10 end
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
@@ -418,6 +434,18 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             return;
         }
         // plus f07 end
+        // plus f10: streamer mode toggles
+        if (item.id == ID_STREAMER_ON) {
+            it.belloworld.mercurygram.PlusStreamer.toggle(this);
+            refreshList();
+            return;
+        }
+        if (item.id >= ID_STREAMER_OPT && item.id < ID_STREAMER_OPT + it.belloworld.mercurygram.PlusStreamer.OPT_COUNT) {
+            int opt = item.id - ID_STREAMER_OPT;
+            it.belloworld.mercurygram.PlusStreamer.setOption(opt, !it.belloworld.mercurygram.PlusStreamer.getOption(opt));
+            refreshList();
+            return;
+        }
         switch (item.id) {
             case ID_HIDDEN_ACCOUNTS:
                 presentFragment(new HiddenAccountsActivity());
