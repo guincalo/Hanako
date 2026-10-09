@@ -138,6 +138,29 @@ and live under **Settings → Hanako**.
 - Telegram Premium upsells are hidden for accounts without Premium, and the Premium promo rows and
   banners are hidden by default.
 
+### Limits worth knowing
+
+The in-app descriptions are kept short; these details didn't fit there:
+
+- **Ghost mode** never sends "online" and sends nothing on app start. *Stay offline* only sends one
+  "offline" right after your own sends, reactions, votes, edits or calls (or on the next start if the
+  app was closed within 5 minutes of one). Channel views are not counted. Not covered: reacting or
+  replying to a story marks it seen, and Premium voice-to-text marks a voice message as listened.
+  Listening to a voice or round message in a ghost-exception chat still doesn't mark it as listened.
+- **Send as scheduled** is not used for secret chats, Saved Messages, comment threads, paid messages
+  or dice. Recipients may see a "scheduled" marker in some apps, and on a slow connection messages
+  can go out late or out of order.
+- **Peek** can't be used on secret chats or forums.
+- **Profile info**: the data centre comes from the profile or chat photo (unknown without one).
+- **Streamer mode** shows notifications as "New message" with no sender. *Block screen capture*
+  makes the whole app black in screenshots, recordings and screen shares.
+- **OpenPGP** covers typed text only: captions, media, stickers and forwards are sent as usual, and
+  formatting is not kept.
+- **Transfer boost** is not applied to streaming playback, and uploads ignore it on a slow network.
+- **Custom DoH** is not used while Tor is on; servers that only speak HTTP/2 are not supported.
+- **Tor** carries Telegram's messaging traffic (MTProto) only; media downloads and other HTTP
+  traffic stay direct, calls may suffer, and Telegram still sees the Tor exit.
+
 ## Building
 
 Building on Windows is not supported; use Linux (or a Linux VM).

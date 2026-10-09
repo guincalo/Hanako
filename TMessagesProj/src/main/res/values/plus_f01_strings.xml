@@ -7,15 +7,15 @@
     <string name="PlusGhostExcNone">None</string>
     <string name="PlusGhostExcDialogTitle">Ghost mode exception</string>
     <string name="PlusGhostExcDialogInfo">Ghost mode stays on everywhere else. In this chat, send:</string>
-    <string name="PlusGhostExcDialogInfoGhostOff">Ghost mode is off for this account, so this only takes effect once you turn it on. In this chat, send:</string>
+    <string name="PlusGhostExcDialogInfoGhostOff">Ghost mode is off for this account, so this applies once you turn it on. In this chat, send:</string>
     <string name="PlusGhostExcSendReads">Read receipts</string>
     <string name="PlusGhostExcSendTyping">Typing status</string>
-    <string name="PlusGhostExcOnlineWhileOpen">Online status while this chat is open (shows you online to everyone)</string>
+    <string name="PlusGhostExcOnlineWhileOpen">Online while this chat is open</string>
     <string name="PlusGhostExcRemove">Remove</string>
     <string name="PlusGhostExcSummaryReads">read receipts</string>
     <string name="PlusGhostExcSummaryTyping">typing</string>
     <string name="PlusGhostExcSummaryOnline">online while open</string>
-    <string name="PlusGhostExcEmpty">No exceptions yet. Open a chat, tap ⋮ and choose Ghost exceptions to send read receipts or typing status in that chat only.</string>
-    <string name="PlusGhostExcListInfo">Tap a chat to change or remove its exception. Add more from a chat\'s ⋮ menu. Not covered: listening to a voice or round message in an excepted chat still does not mark it as listened.</string>
-    <string name="PlusGhostExcSettingsInfo">Chats where read receipts or typing status are sent normally while ghost mode stays on everywhere else. Add one from a chat\'s ⋮ menu.</string>
+    <string name="PlusGhostExcEmpty">No exceptions yet. Add one from a chat\'s ⋮ menu.</string>
+    <string name="PlusGhostExcListInfo">Tap a chat to change or remove it. Add more from a chat\'s ⋮ menu.</string>
+    <string name="PlusGhostExcSettingsInfo">Chats that still get read receipts or typing status. Add one from a chat\'s ⋮ menu.</string>
 </resources>

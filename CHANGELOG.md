@@ -7,6 +7,12 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+### Changed
+- Hanako settings texts are much shorter: descriptions are one or two short sentences and toggle
+  titles fit on one line, in English and Smug. The ghost mode options can now be translated.
+  Longer explanations moved to the README ("Limits worth knowing"). Other languages show the new
+  English text until their translations catch up.
+
 ## [1.0.1] - 2026-10-09
 
 ### Fixed

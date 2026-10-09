@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- plus f07: deleted-dialog log + reactions on deleted messages -->
 <resources>
-    <string name="PlusF07Header">Vanished chats and deleted messages</string>
+    <string name="PlusF07Header">Vanished chats and reactions</string>
     <string name="PlusF07LogDialogs">Log chats that vanish</string>
     <string name="PlusF07DeletedDialogsTitle">Vanished chats</string>
-    <string name="PlusF07KeepReactions">Keep reactions on deleted messages</string>
-    <string name="PlusF07SettingsAbout">Logs chats removed from your list without you deleting them here: you were kicked or banned, left on another device, the group or channel was deleted, or the other person wiped the whole chat. Name, ID and time are stored on this device only. Reactions on messages kept by saved message history stay as they were when the message was deleted and can no longer be changed.</string>
+    <string name="PlusF07KeepReactions">Keep deleted messages\' reactions</string>
+    <string name="PlusF07SettingsAbout">Logs chats that leave your list without you deleting them, e.g. kicks, bans or wiped chats. Kept on this device only.</string>
     <string name="PlusF07DeletedDialogsEmpty">No vanished chats logged yet.</string>
     <string name="PlusF07DeletedDialogsAbout">Stored on this device only. Tap a chat for details.</string>
     <string name="PlusF07DeletedDialogsClear">Clear log</string>

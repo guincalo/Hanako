@@ -7,5 +7,5 @@
     <string name="PlusF19ModeNormal">Normal</string>
     <string name="PlusF19ModeFast">Fast</string>
     <string name="PlusF19ModeExtreme">Extreme</string>
-    <string name="PlusF19About">Uses larger file parts and more requests at once. Fast is usually safe; Extreme can help on fast connections but uses more memory and data bursts, and may get throttled by Telegram (FLOOD_WAIT). Not applied to streaming playback, and uploads ignore it on a slow network. Applies to new transfers.</string>
+    <string name="PlusF19About">Uses bigger file parts and more parallel requests. Extreme uses more memory and may get throttled by Telegram.</string>
 </resources>

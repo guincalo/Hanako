@@ -3,16 +3,16 @@
 <resources>
     <string name="PlusF20Title">Deleted media</string>
     <string name="PlusF20AllChats">All chats</string>
-    <string name="PlusF20Empty">No saved media yet. Photos, videos and files from messages that get deleted (and view-once media you opened) show up here while Saved message history is on.</string>
+    <string name="PlusF20Empty">No saved media yet. Media from deleted messages shows up here while Saved message history is on.</string>
     <string name="PlusF20FilterAll">All media</string>
     <string name="PlusF20FilterPhotos">Photos</string>
     <string name="PlusF20FilterVideos">Videos and GIFs</string>
     <string name="PlusF20FilterFiles">Files</string>
     <string name="PlusF20FilterChat">Choose chat</string>
     <string name="PlusF20DeleteShown">Delete all shown</string>
-    <string name="PlusF20DeleteShownConfirm">Delete %1$d saved items? The saved copies and their saved messages are removed from this device. This cannot be undone.</string>
+    <string name="PlusF20DeleteShownConfirm">Delete %1$d saved items from this device? This can\'t be undone.</string>
     <string name="PlusF20DeleteTitle">Delete saved copy</string>
-    <string name="PlusF20DeleteConfirm">Remove this saved item from this device? Its saved message is removed too, so it no longer shows as a deleted message in the chat. Nothing is sent to Telegram.</string>
+    <string name="PlusF20DeleteConfirm">Remove this saved copy from this device? Its deleted message disappears from the chat too.</string>
     <string name="PlusF20Open">Open</string>
     <string name="PlusF20SaveGallery">Save to gallery</string>
     <string name="PlusF20SaveDownloads">Save to Downloads</string>
@@ -32,5 +32,5 @@
     <string name="PlusF20OriginEdited">an edit replaced the media</string>
     <string name="PlusF20ChatMenu">Show Deleted media in chat menu</string>
     <string name="PlusF20IncludeEdits">Include media replaced by edits</string>
-    <string name="PlusF20SettingsAbout">Browse the photos, videos and files kept from deleted messages and expired view-once media, for one chat (chat menu) or all chats. Save them to the gallery, share them or delete saved copies. Everything stays on this device; nothing is sent to Telegram.</string>
+    <string name="PlusF20SettingsAbout">Browse media kept from deleted messages and expired view-once media. Kept on this device only.</string>
 </resources>

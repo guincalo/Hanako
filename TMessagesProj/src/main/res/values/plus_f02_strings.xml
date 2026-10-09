@@ -11,4 +11,11 @@
     <string name="PlusGhostModeIsOn">Ghost mode is on for this account</string>
     <string name="PlusGhostTurnOff">Turn off ghost mode</string>
     <string name="PlusGhostSettings">Ghost mode settings</string>
+    <string name="PlusGhostOptNoReads">Don\'t send read receipts</string>
+    <string name="PlusGhostOptNoTyping">Don\'t send typing status</string>
+    <string name="PlusGhostOptStayOffline">Stay offline</string>
+    <string name="PlusGhostOptNoStories">Don\'t mark stories as seen</string>
+    <string name="PlusGhostOptReadOnReply">Read the chat when I reply</string>
+    <string name="PlusGhostOptForceOffline">Force offline if shown online</string>
+    <string name="PlusGhostSettingsInfo">Applies to this account. Mark as read still sends a receipt for that chat, and story reactions or replies still count as views.</string>
 </resources>

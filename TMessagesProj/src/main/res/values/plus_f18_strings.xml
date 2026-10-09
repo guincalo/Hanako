@@ -6,7 +6,7 @@
     <string name="PlusF18Provider">OpenPGP app</string>
     <string name="PlusF18DefaultSignKey">Default signing key</string>
     <string name="PlusF18SignKey">Signing key</string>
-    <string name="PlusF18About">Signs or encrypts text you send in chats where you turn it on (chat menu, OpenPGP), and adds Decrypt / verify to messages that contain a PGP block. Keys stay in the OpenPGP app (for example OpenKeychain); Hanako only passes text to it. Only typed text is covered: captions, media, stickers and forwards are sent as usual. Formatting is not kept.</string>
+    <string name="PlusF18About">Signs or encrypts typed text in chats where you turn it on (chat menu). Keys stay in your OpenPGP app.</string>
     <string name="PlusF18NotInstalled">Not installed</string>
     <string name="PlusF18NoProvider">No OpenPGP app found. Install OpenKeychain, then try again.</string>
     <string name="PlusF18None">None</string>

@@ -8,11 +8,11 @@
     <string name="PlusDohCustomHint">https://example.com/dns-query</string>
     <string name="PlusDohInvalid">Enter an https:// DoH address</string>
     <string name="PlusDohTestOk">Resolver works (telegram.org → %1$s)</string>
-    <string name="PlusDohTestFail">Resolver did not answer (servers that only speak HTTP/2 are not supported). The default lookup is used instead.</string>
-    <string name="PlusDohAbout">Resolves proxy host names and the backup data-centre list through this DNS-over-HTTPS server instead of the system DNS and the built-in Cloudflare lookup. If it does not answer, the default lookup is used. Not used while Tor is on.</string>
+    <string name="PlusDohTestFail">Resolver did not answer (HTTP/2-only servers aren\'t supported). Using the default lookup.</string>
+    <string name="PlusDohAbout">Looks up proxy and backup server addresses through this server. Falls back to the default if it fails.</string>
     <string name="PlusProxyAutoSwitch">Auto-switch proxy</string>
-    <string name="PlusProxyAutoSwitchAbout">If the current proxy cannot connect for 10 seconds, test the other saved proxies and switch to the fastest one that works. Replaces the switching step of the built-in proxy rotation while on.</string>
-    <string name="PlusVpnDisableProxy">Disable proxy while a VPN is active</string>
-    <string name="PlusVpnDisableProxyAbout">Connect directly through the VPN instead of the saved proxy while one is up. Your proxy stays selected and comes back when the VPN goes down. Tor is never bypassed.</string>
+    <string name="PlusProxyAutoSwitchAbout">If the proxy can\'t connect for 10 s, switch to the fastest saved proxy that works.</string>
+    <string name="PlusVpnDisableProxy">No proxy while a VPN is on</string>
+    <string name="PlusVpnDisableProxyAbout">Connects directly while a VPN is up; the proxy comes back when it goes down. Tor is never bypassed.</string>
     <string name="PlusVpnDisableProxyActive">Applies to all accounts. A VPN is active now, so the proxy is bypassed.</string>
 </resources>

@@ -11,7 +11,7 @@
     <string name="PlusF05RetentionDays">%1$d days</string>
     <string name="PlusF05ClearAll">Clear all activity logs</string>
     <string name="PlusF05ClearAllConfirm">Delete the activity log of every user on this device?</string>
-    <string name="PlusF05SettingsAbout">Saves on this device when people go online or offline and when they read your messages, from updates Telegram already sends. Nothing is requested or sent, so it works with ghost mode. Turn logging on or off for a single person from \"Activity log\" in their profile menu. Applies to this account; the keep period applies to all accounts.</string>
+    <string name="PlusF05SettingsAbout">Logs when people go online or offline and read your messages, from updates Telegram already sends. Kept on this device only.</string>
     <string name="PlusF05LogThisUser">Log this user</string>
     <string name="PlusF05LogThisUserAbout">Overrides the \"%1$s\" setting for this person.</string>
     <string name="PlusF05DisabledAbout">The activity log is off for this account. Turn it on in Hanako settings.</string>

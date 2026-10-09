@@ -8,7 +8,7 @@
     <string name="PlusPromptGifRow">GIFs</string>
     <string name="PlusPromptVoiceCallRow">Voice calls</string>
     <string name="PlusPromptVideoCallRow">Video calls</string>
-    <string name="PlusPromptAbout">Shows a confirmation first, to stop sends and calls from a mis-tap. A recording stops into its preview, so after Cancel you can still play, trim, send or delete it. Scheduled and paid messages are not asked again.</string>
+    <string name="PlusPromptAbout">Asks first, so a mis-tap can\'t send or call. After Cancel, a recording stays in its preview.</string>
     <string name="PlusPromptVoiceTitle">Send voice message?</string>
     <string name="PlusPromptRoundTitle">Send video message?</string>
     <string name="PlusPromptStickerTitle">Send sticker?</string>

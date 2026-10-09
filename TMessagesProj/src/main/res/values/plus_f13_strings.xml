@@ -7,5 +7,5 @@
     <string name="PlusMessageShotBackground">Chat background</string>
     <string name="PlusMessageShotFailed">Couldn\'t create the image</string>
     <string name="PlusMessageShotSetting">Message shot button</string>
-    <string name="PlusMessageShotSettingAbout">Adds a button to the bar shown when you select messages. It turns the selected messages into one image, with bubbles, names, avatars and the current chat theme, to save or share. Made on this device; nothing is sent.</string>
+    <string name="PlusMessageShotSettingAbout">Adds a button to message selection that turns the selected messages into one image. Made on this device.</string>
 </resources>
