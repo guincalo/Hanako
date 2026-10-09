@@ -607,14 +607,6 @@ public final class MgTorClient {
     }
 
     /**
-     * F-Droid build running on Android <12: the plugin's BIND permission
-     * uses knownSigner (API 31+) to allowlist both signing keys; on older
-     * devices the OS treats the protectionLevel as plain "signature" and
-     * refuses cross-key binds. The Settings UI hides the Tor toggle in
-     * this configuration, and preInit force-disables mg_useTor so a stale
-     * pre-upgrade flag doesn't leave MTProto wedged on the blocking stub.
-     */
-    /**
      * hanako: Mercurygram's Tor plugin only binds to a main app signed with one of Mercurygram's
      * keys (runtime pin above + the plugin's signature|knownSigner BIND permission). Builds signed
      * with any other key, Hanako's included, can never use it, so the Tor rows are hidden there
@@ -641,6 +633,14 @@ public final class MgTorClient {
         return !isFdroidPreS() && (isAvailableInThisBuild() || SharedConfig.mg_useTor);
     }
 
+    /**
+     * F-Droid build running on Android <12: the plugin's BIND permission
+     * uses knownSigner (API 31+) to allowlist both signing keys; on older
+     * devices the OS treats the protectionLevel as plain "signature" and
+     * refuses cross-key binds. The Settings UI hides the Tor toggle in
+     * this configuration, and preInit force-disables mg_useTor so a stale
+     * pre-upgrade flag doesn't leave MTProto wedged on the blocking stub.
+     */
     public static boolean isFdroidPreS() {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.S
                 && MgUpdateChecker.isFdroidBuild();

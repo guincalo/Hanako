@@ -14869,7 +14869,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     new SearchResult(405, getString(R.string.ShowTranslateButton), getString(R.string.Language), R.drawable.msg2_language, () -> f.presentFragment(new LanguageSelectActivity())).withLink("tg://settings/language/show-button"),
                     MessagesController.getInstance(currentAccount).getTranslateController().isContextTranslateEnabled() ? new SearchResult(406, getString(R.string.DoNotTranslate), getString(R.string.Language), R.drawable.msg2_language, () -> f.presentFragment(new LanguageSelectActivity())).withLink("tg://settings/language/do-not-translate") : null,
 
-                    // hanako: Hanako settings are findable from Settings search (P1-5)
+                    // hanako: Hanako settings are findable from Settings search (P1-5). Page level only:
+                    // a result opens the page, it doesn't point at a row (the hub footer says so).
+                    // Fully qualified names on purpose: no new imports, so upstream merges stay small.
                     new SearchResult(9500, getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> f.presentFragment(new it.belloworld.mercurygram.ui.MercurygramSettingsActivity())),
                     new SearchResult(9501, getString(R.string.PlusGhostMode), getString(R.string.MercurygramSettings), R.drawable.plus_ghost, () -> f.presentFragment(new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_GHOST))),
                     new SearchResult(9502, getString(R.string.PlusGhostExcTitle), getString(R.string.MercurygramSettings), R.drawable.plus_ghost, () -> f.presentFragment(new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_GHOST))),

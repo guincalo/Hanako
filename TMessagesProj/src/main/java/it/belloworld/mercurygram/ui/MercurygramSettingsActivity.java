@@ -148,7 +148,7 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             case PAGE_CHATS:
                 return LocaleController.getString(R.string.HanakoPageChats);
             case PAGE_PRIVACY:
-                return LocaleController.getString(R.string.MercurygramSettingsPrivacy);
+                return LocaleController.getString(R.string.HanakoPageTracking);
             case PAGE_NETWORK:
                 return LocaleController.getString(R.string.PlusNetworkHeader);
             case PAGE_SECURITY:
@@ -388,7 +388,7 @@ public class MercurygramSettingsActivity extends UniversalFragment {
                     hiddenCount++;
                 }
             }
-            String value = hiddenCount > 0 ? Integer.toString(hiddenCount) : LocaleController.getString(R.string.PasswordOff);
+            String value = hiddenCount > 0 ? Integer.toString(hiddenCount) : LocaleController.getString(R.string.HanakoNone);
             items.add(UItem.asButton(ID_HIDDEN_ACCOUNTS, R.drawable.msg2_secret, LocaleController.getString(R.string.HiddenAccounts), value));
             items.add(UItem.asShadow(null));
         }
@@ -399,7 +399,7 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         items.add(UItem.asButton(ID_HUB_CHAT_LOCK, R.drawable.msg_permissions, LocaleController.getString(R.string.PlusF08Title),
                 it.belloworld.mercurygram.PlusChatLock.settingsSummary(acc)));
         addPage(items, PAGE_STREAMER, R.drawable.msg_screencast, onOff(it.belloworld.mercurygram.PlusStreamer.isEnabled()));
-        addPage(items, PAGE_PRIVACY, R.drawable.msg2_secret, "");
+        addPage(items, PAGE_PRIVACY, R.drawable.msg_policy, "");
         items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoHubMessages)));
@@ -411,7 +411,8 @@ public class MercurygramSettingsActivity extends UniversalFragment {
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoHubDevice)));
         addPage(items, PAGE_NETWORK, R.drawable.msg2_data, networkSummary());
-        addPage(items, PAGE_SECURITY, R.drawable.msg2_devices, onOff(it.belloworld.mercurygram.PlusOpenPgp.isEnabled()));
+        // no single on/off fits a page of several features (OpenPGP, plugins, ...)
+        addPage(items, PAGE_SECURITY, R.drawable.msg2_devices, "");
         items.add(UItem.asButton(ID_HUB_PUSH, R.drawable.msg_notifications, LocaleController.getString(R.string.MercurygramUnifiedPush), pushValue()));
         if (MgUpdateChecker.canSelfInstall()) {
             addPage(items, PAGE_UPDATES, R.drawable.msg_retry, "");

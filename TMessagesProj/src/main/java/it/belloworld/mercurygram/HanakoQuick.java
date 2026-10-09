@@ -132,7 +132,7 @@ public final class HanakoQuick {
                 PlusStreamer.setEnabled(false, f);
                 refreshIndicators();
             });
-            io.add(R.drawable.msg_settings_old, LocaleController.getString(R.string.PlusGhostSettings), () -> openStreamerSettings(f));
+            io.add(R.drawable.msg_settings_old, LocaleController.getString(R.string.HanakoStreamerSettings), () -> openStreamerSettings(f));
             io.show();
         } catch (Exception e) {
             FileLog.e(e);
