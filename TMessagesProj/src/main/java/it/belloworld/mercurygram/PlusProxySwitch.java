@@ -199,5 +199,16 @@ public final class PlusProxySwitch implements NotificationCenter.NotificationCen
         ConnectionsManager.setProxySettings(true, best.settings);
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxySettingsChanged);
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.proxyChangedByRotation);
+        // hanako: say what happened instead of switching silently (P2-7)
+        final String address = best.settings.getAddress();
+        final long ping = best.ping;
+        AndroidUtilities.runOnUIThread(() -> {
+            try {
+                org.telegram.ui.Components.BulletinFactory.global().createSimpleBulletin(org.telegram.messenger.R.raw.contact_check,
+                        org.telegram.messenger.LocaleController.formatString(org.telegram.messenger.R.string.PlusProxySwitched, address, ping)).show();
+            } catch (Throwable t) {
+                org.telegram.messenger.FileLog.e(t);
+            }
+        });
     }
 }

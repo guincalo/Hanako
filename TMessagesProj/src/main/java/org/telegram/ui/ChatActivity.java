@@ -4453,7 +4453,7 @@ public class ChatActivity extends BaseFragment implements
                 headerItem.lazilyAddSubItem(mg_go_to_first_message, R.drawable.msg_go_up, LocaleController.getString(R.string.MercurygramGoToFirstMessage));
             }
             if (chatMode == 0 && dialog_id != getUserConfig().getClientUserId() && it.belloworld.mercurygram.PlusGhost.isEnabled(currentAccount)) { // plus f01
-                headerItem.lazilyAddSubItem(plus_ghost_exceptions, R.drawable.msg_secret, LocaleController.getString(R.string.PlusGhostExcMenu));
+                headerItem.lazilyAddSubItem(plus_ghost_exceptions, R.drawable.plus_ghost, LocaleController.getString(R.string.PlusGhostExcMenu));
             }
             if (it.belloworld.mercurygram.PlusGhostQuick.canSendReadReceipt(ChatActivity.this)) { // plus f02
                 headerItem.lazilyAddSubItem(it.belloworld.mercurygram.PlusGhostQuick.MENU_SEND_READ, R.drawable.msg_markread, it.belloworld.mercurygram.PlusGhostQuick.sendReadReceiptLabel());

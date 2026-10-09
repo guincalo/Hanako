@@ -614,6 +614,33 @@ public final class MgTorClient {
      * this configuration, and preInit force-disables mg_useTor so a stale
      * pre-upgrade flag doesn't leave MTProto wedged on the blocking stub.
      */
+    /**
+     * hanako: Mercurygram's Tor plugin only binds to a main app signed with one of Mercurygram's
+     * keys (runtime pin above + the plugin's signature|knownSigner BIND permission). Builds signed
+     * with any other key, Hanako's included, can never use it, so the Tor rows are hidden there
+     * unless Tor is already switched on (so it can still be turned off).
+     */
+    private static Boolean ownCertAllowedCache;
+
+    public static boolean isAvailableInThisBuild() {
+        Boolean cached = ownCertAllowedCache;
+        if (cached != null) return cached;
+        boolean ok;
+        try {
+            Context ctx = ApplicationLoader.applicationContext;
+            ok = containsCert(allowedCertSha256(), singleSignerSha256(ctx.getPackageManager(), ctx.getPackageName()));
+        } catch (Throwable t) {
+            ok = false;
+        }
+        ownCertAllowedCache = ok;
+        return ok;
+    }
+
+    /** Whether to show the Tor settings entries at all. */
+    public static boolean showTorSettings() {
+        return !isFdroidPreS() && (isAvailableInThisBuild() || SharedConfig.mg_useTor);
+    }
+
     public static boolean isFdroidPreS() {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.S
                 && MgUpdateChecker.isFdroidBuild();

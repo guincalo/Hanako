@@ -3279,6 +3279,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             downloadsItem.setContentDescription(getString(R.string.DownloadsTabs));
             downloadsItem.setVisibility(View.GONE);
             it.belloworld.mercurygram.PlusGhostQuick.addIndicator(DialogsActivity.this, menu); // plus f02: ghost mode indicator
+            it.belloworld.mercurygram.HanakoQuick.addStreamerIndicator(DialogsActivity.this, menu); // hanako: streamer mode indicator
 
             updateProxyButton(false, false);
         }
@@ -7087,6 +7088,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onResume() {
         super.onResume();
+        if (!onlySelect && folderId == 0 && initialDialogsType == DIALOGS_TYPE_DEFAULT) {
+            it.belloworld.mercurygram.HanakoQuick.onDialogsResume(this); // hanako: restore result, privacy notice
+        }
         if (dialogStoriesCell != null) {
             dialogStoriesCell.onResume();
         }
@@ -14225,6 +14229,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         final float factor = factor0 * factor1 * factor2 * factor3;
         FragmentFloatingButton.setAnimatedVisibility(passcodeItem, factor);
         it.belloworld.mercurygram.PlusGhostQuick.updateIndicator(this, factor1 * factor2 * factor3); // plus f02
+        it.belloworld.mercurygram.HanakoQuick.updateStreamerIndicator(this, factor1 * factor2 * factor3); // hanako
     }
 
     private void checkUi_itemDownloadsVisibility() {

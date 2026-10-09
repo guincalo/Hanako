@@ -683,7 +683,7 @@ public final class PlusOpenPgp {
     /** plus f18 hook: ChatActivity header menu item. */
     public static void addChatMenuItem(ActionBarMenuItem headerItem) {
         if (headerItem != null && isEnabled()) {
-            headerItem.lazilyAddSubItem(CHAT_MENU_ID, R.drawable.msg_secret, LocaleController.getString(R.string.PlusF18ChatMenu));
+            headerItem.lazilyAddSubItem(CHAT_MENU_ID, R.drawable.msg_pin_code, LocaleController.getString(R.string.PlusF18ChatMenu));
         }
     }
 

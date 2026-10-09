@@ -683,7 +683,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         }
         // MG: pre-S F-Droid can't bind the Tor plugin at all, so the row is
         // hidden there exactly like the one in Mercurygram settings.
-        torRow = it.belloworld.mercurygram.tor.MgTorClient.isFdroidPreS() ? -1 : rowCount++;
+        torRow = !it.belloworld.mercurygram.tor.MgTorClient.showTorSettings() ? -1 : rowCount++; // hanako: hidden where the plugin can never bind
         // MG: torRow sits after the rotation block, so when the rotation-timeout
         // info row closed the section the Tor row would otherwise be stranded
         // between that shadow and the "Connections" header with nothing under it.
@@ -959,7 +959,12 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     if (position == useProxyRow) {
                         checkCell.setTextAndCheck(getString(R.string.UseProxySettings), useProxySettings, rotationRow != -1 || torRow != -1);
                     } else if (position == rotationRow) {
-                        checkCell.setTextAndCheck(getString(R.string.UseProxyRotation), SharedConfig.proxyRotationEnabled, true);
+                        if (it.belloworld.mercurygram.PlusProxySwitch.isEnabled()) {
+                            // hanako: say that Hanako's fastest-proxy switch is in charge (P2-7)
+                            checkCell.setTextAndValueAndCheck(getString(R.string.UseProxyRotation), getString(R.string.PlusProxySwitchStockHint), SharedConfig.proxyRotationEnabled, true, true);
+                        } else {
+                            checkCell.setTextAndCheck(getString(R.string.UseProxyRotation), SharedConfig.proxyRotationEnabled, true);
+                        }
                     }
                     break;
                 }

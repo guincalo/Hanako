@@ -104,221 +104,172 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     private static final int ID_F20_CHAT_MENU = 2001;
     private static final int ID_F20_INCLUDE_EDITS = 2002;
 
+    // hanako: the Hanako screen is a short hub of sub-screens (P1-5); a page id opens one directly
+    public static final int PAGE_HUB = 0;
+    public static final int PAGE_GHOST = 1;
+    public static final int PAGE_DELETED = 2;
+    public static final int PAGE_ACTIVITY_LOG = 3;
+    public static final int PAGE_STREAMER = 4;
+    public static final int PAGE_CHATS = 5;
+    public static final int PAGE_PRIVACY = 6;
+    public static final int PAGE_NETWORK = 7;
+    public static final int PAGE_SECURITY = 8;
+    public static final int PAGE_UPDATES = 9;
+    private static final int ID_PAGE = 8800; // + PAGE_*
+    private static final int ID_HUB_CHAT_LOCK = 8820;
+    private static final int ID_HUB_FILTERS = 8821;
+    private static final int ID_HUB_BACKUP = 8822;
+    private static final int ID_HUB_PUSH = 8823;
+
+    private final int page;
+    /** "412 MB" for the deleted-media row, computed off the UI thread. */
+    private String deletedMediaSize = "";
+    private boolean sizeRequested;
+
+    public MercurygramSettingsActivity() {
+        this(PAGE_HUB);
+    }
+
+    public MercurygramSettingsActivity(int page) {
+        super();
+        this.page = page;
+    }
+
+    public static String pageTitle(int page) {
+        switch (page) {
+            case PAGE_GHOST:
+                return LocaleController.getString(R.string.PlusGhostMode);
+            case PAGE_DELETED:
+                return LocaleController.getString(R.string.HanakoPageDeleted);
+            case PAGE_ACTIVITY_LOG:
+                return LocaleController.getString(R.string.HanakoPageActivityLog);
+            case PAGE_STREAMER:
+                return LocaleController.getString(R.string.PlusF10StreamerMode);
+            case PAGE_CHATS:
+                return LocaleController.getString(R.string.HanakoPageChats);
+            case PAGE_PRIVACY:
+                return LocaleController.getString(R.string.MercurygramSettingsPrivacy);
+            case PAGE_NETWORK:
+                return LocaleController.getString(R.string.PlusNetworkHeader);
+            case PAGE_SECURITY:
+                return LocaleController.getString(R.string.HanakoPageSecurity);
+            case PAGE_UPDATES:
+                return LocaleController.getString(R.string.MercurygramSettingsUpdates);
+            default:
+                return LocaleController.getString(R.string.MercurygramSettings);
+        }
+    }
+
     @Override
     protected CharSequence getTitle() {
-        return LocaleController.getString(R.string.MercurygramSettings);
+        return pageTitle(page);
+    }
+
+    private static String onOff(boolean on) {
+        return LocaleController.getString(on ? R.string.NotificationsOn : R.string.NotificationsOff);
+    }
+
+    private void addPage(ArrayList<UItem> items, int p, int icon, String value) {
+        items.add(UItem.asButton(ID_PAGE + p, icon, pageTitle(p), value));
+    }
+
+    private String filtersSummary() {
+        if (!it.belloworld.mercurygram.PlusMessageFilters.isEnabled()) {
+            return LocaleController.getString(R.string.PlusF04Off);
+        }
+        int filters = it.belloworld.mercurygram.PlusMessageFilters.getFilters().size();
+        int users = it.belloworld.mercurygram.PlusMessageFilters.getBanned().size();
+        if (filters == 0 && users == 0) {
+            return LocaleController.getString(R.string.HanakoNone);
+        }
+        if (users == 0) {
+            return LocaleController.formatPluralString("HanakoFilters", filters);
+        }
+        return LocaleController.formatPluralString("HanakoFilters", filters) + " · " + LocaleController.formatPluralString("HanakoHiddenUsers", users);
+    }
+
+    private String networkSummary() {
+        ArrayList<String> on = new ArrayList<>();
+        if (SharedConfig.mg_useTor && it.belloworld.mercurygram.tor.MgTorClient.isAvailableInThisBuild()) on.add(LocaleController.getString(R.string.MercurygramTor));
+        if (it.belloworld.mercurygram.PlusDoh.isEnabled()) on.add("DoH");
+        if (it.belloworld.mercurygram.PlusProxySwitch.isEnabled()) on.add(LocaleController.getString(R.string.HanakoNetworkFastestProxy));
+        if (on.isEmpty()) return "";
+        return android.text.TextUtils.join(", ", on);
+    }
+
+    private static CharSequence pushValue() {
+        if (SharedConfig.disableUnifiedPush) {
+            return LocaleController.getString(R.string.NotificationsOff);
+        }
+        String distributor = UnifiedPush.getAckDistributor(ApplicationLoader.applicationContext);
+        if (distributor == null) {
+            distributor = UnifiedPush.getSavedDistributor(ApplicationLoader.applicationContext);
+        }
+        return distributor != null
+                ? MgEmbeddedFcmDistributor.label(distributor)
+                : LocaleController.getString(R.string.NotSet);
+    }
+
+    private void requestDeletedMediaSize() {
+        if (sizeRequested) return;
+        sizeRequested = true;
+        org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+            long size = 0;
+            try {
+                size = dirSize(it.belloworld.mercurygram.MgHistoryMedia.getDir(), 0);
+            } catch (Throwable ignore) {
+            }
+            final long total = size;
+            AndroidUtilities.runOnUIThread(() -> {
+                deletedMediaSize = total > 0 ? AndroidUtilities.formatFileSize(total) : "";
+                refreshList();
+            });
+        });
+    }
+
+    private static long dirSize(java.io.File f, int depth) {
+        if (f == null || !f.exists() || depth > 4) return 0;
+        if (f.isFile()) return f.length();
+        long n = 0;
+        java.io.File[] children = f.listFiles();
+        if (children != null) for (java.io.File c : children) n += dirSize(c, depth + 1);
+        return n;
     }
 
     @Override
     protected void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
-        if (HiddenAccountHelper.shouldShowSettingsEntry(currentAccount)) {
-            int hiddenCount = 0;
-            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
-                if (HiddenAccountHelper.isAccountHidden(a)) {
-                    hiddenCount++;
-                }
-            }
-            String value = hiddenCount > 0 ? Integer.toString(hiddenCount) : LocaleController.getString(R.string.PasswordOff);
-            items.add(UItem.asButton(ID_HIDDEN_ACCOUNTS, R.drawable.msg2_secret, LocaleController.getString(R.string.HiddenAccounts), value));
-            items.add(UItem.asShadow(null));
-        }
-
-        // With several accounts logged in, state the default scope once; rows
-        // backed by global SharedConfig carry their own "all accounts" label.
-        if (MgSettingsScope.multiAccount()) {
-            items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramScopeDefaultFooter)));
-        }
-
-        items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsGeneral)));
-        items.add(UItem.asCheck(ID_MESSAGE_DETAILS_MENU, LocaleController.getString(R.string.MercurygramMessageDetailsMenu))
-                .setChecked(getUserConfig().mg.messageDetailsMenu));
-        items.add(UItem.asCheck(ID_HIDE_CHAT_KEYBOARD, LocaleController.getString(R.string.HideChatKeyboard))
-                .setChecked(getUserConfig().mg.hideChatKeyboard));
-        items.add(UItem.asCheck(ID_HIDE_ALL_TAB, LocaleController.getString(R.string.HideAllTab))
-                .setChecked(getUserConfig().mg.hideAllTab));
-        items.add(UItem.asButton(ID_DEFAULT_FOLDER, LocaleController.getString(R.string.MercurygramDefaultFolder), defaultFolderLabel()));
-        items.add(UItem.asCheck(ID_HIDE_STORIES, LocaleController.getString(R.string.MercurygramHideStories))
-                .setChecked(getUserConfig().mg.hideStories));
-        // Mercurygram: hide premium upsell promo (opt-in, UI-only, no gate removed)
-        items.add(UItem.asCheck(ID_HIDE_PREMIUM_PROMO, LocaleController.getString(R.string.MercurygramHidePremiumPromo))
-                .setChecked(getUserConfig().mg.hidePremiumPromo));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramHidePremiumPromoAbout)));
-        items.add(MgSettingsScope.globalCheck(ID_USE_SYSTEM_FONT, LocaleController.getString(R.string.MercurygramUseSystemFont))
-                .setChecked(SharedConfig.useSystemFont));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramUseSystemFontAbout)));
-
-        items.add(UItem.asCheck(ID_SHOW_CHAR_COUNTER, LocaleController.getString(R.string.MercurygramShowCharCounter))
-                .setChecked(getUserConfig().mg.showCharCounter));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramShowCharCounterAbout)));
-
-        // plus f04 begin
-        items.add(UItem.asButton(ID_F04_MESSAGE_FILTERS, R.drawable.msg_archive_hide, LocaleController.getString(R.string.PlusF04Title),
-                LocaleController.getString(it.belloworld.mercurygram.PlusMessageFilters.isEnabled() ? R.string.PlusF04FilterEnabled : R.string.PlusF04Off)));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF04EnableInfo)));
-        // plus f04 end
-
-        items.add(UItem.asButton(ID_EMOJI_PACK,
-                LocaleController.getString(R.string.MercurygramEmojiTitle),
-                emojiPackShortLabel()));
-        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(
-                LocaleController.getString(R.string.MercurygramEmojiRowAbout))));
-
-        items.add(UItem.asCheck(ID_DELETE_FOR_ALL_DEFAULT,
-                        LocaleController.getString(R.string.MercurygramDeleteForAllByDefault))
-                .setChecked(getUserConfig().mg.deleteForAllByDefault));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDeleteForAllByDefaultAbout)));
-
-        items.add(UItem.asCheck(ID_SAVED_MESSAGES_HISTORY, LocaleController.getString(R.string.MercurygramSavedMessagesHistory))
-                .setChecked(getUserConfig().mg.savedMessagesHistory));
-        if (getUserConfig().mg.savedMessagesHistory) {
-            items.add(UItem.asButton(ID_CLEAR_SAVED_HISTORY, LocaleController.getString(R.string.MercurygramClearSavedHistory), ""));
-        }
-        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramSavedMessagesHistoryAbout)));
-
-        // plus f07 begin: vanished-chat log + deleted-message reactions
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF07Header)));
-        items.add(UItem.asCheck(ID_F07_LOG_DIALOGS, LocaleController.getString(R.string.PlusF07LogDialogs))
-                .setChecked(it.belloworld.mercurygram.PlusDeletedDialogs.isEnabled(getCurrentAccount())));
-        items.add(UItem.asButton(ID_F07_OPEN_LOG, LocaleController.getString(R.string.PlusF07DeletedDialogsTitle),
-                Integer.toString(it.belloworld.mercurygram.PlusDeletedDialogs.count(getCurrentAccount()))));
-        items.add(UItem.asCheck(ID_F07_KEEP_REACTIONS, LocaleController.getString(R.string.PlusF07KeepReactions))
-                .setChecked(it.belloworld.mercurygram.PlusDeletedReactions.isKeepEnabled()));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF07SettingsAbout)));
-        // plus f07 end
-
-        // plus f20 begin: saved deleted-media browser
-        items.add(UItem.asButton(ID_F20_OPEN, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title), ""));
-        items.add(UItem.asCheck(ID_F20_CHAT_MENU, LocaleController.getString(R.string.PlusF20ChatMenu))
-                .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isChatMenuEnabled()));
-        items.add(UItem.asCheck(ID_F20_INCLUDE_EDITS, LocaleController.getString(R.string.PlusF20IncludeEdits))
-                .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isIncludeEdits()));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF20SettingsAbout)));
-        // plus f20 end
-
-        items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsMedia)));
-        items.add(UItem.asCheck(ID_REAR_ROUND_VIDEOS, LocaleController.getString(R.string.RearRoundVideos))
-                .setChecked(getUserConfig().mg.rearRoundCamera));
-        items.add(UItem.asCheck(ID_DISABLE_LIVE_PHOTOS, LocaleController.getString(R.string.MercurygramDisableLivePhotos))
-                .setChecked(getUserConfig().mg.disableLivePhotosByDefault));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDisableLivePhotosAbout)));
-        items.add(MgSettingsScope.globalCheck(ID_DISABLE_PROXIMITY_SENSOR, LocaleController.getString(R.string.MercurygramDisableProximitySensor))
-                .setChecked(SharedConfig.mg_disableProximitySensor));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDisableProximitySensorAbout)));
-
-        // plus f13: message shot (all accounts)
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusMessageShot)));
-        items.add(MgSettingsScope.globalCheck(ID_MESSAGE_SHOT, LocaleController.getString(R.string.PlusMessageShotSetting))
-                .setChecked(it.belloworld.mercurygram.PlusMessageShot.isEnabled()));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusMessageShotSettingAbout)));
-        // plus f13 end
-
-        // plus f16: ask before sending voice / round / sticker / GIF and before calls (all accounts)
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusPromptHeader)));
-        for (int k = 0; k < it.belloworld.mercurygram.PlusSendPrompts.KIND_COUNT; k++) {
-            items.add(UItem.asCheck(ID_SEND_PROMPT + k, it.belloworld.mercurygram.PlusSendPrompts.label(k))
-                    .setChecked(it.belloworld.mercurygram.PlusSendPrompts.isEnabled(k)));
-        }
-        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusPromptAbout))));
-        // plus f16 end
-
-        // plus f19: transfer boost (all accounts)
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF19Header)));
-        items.add(UItem.asButton(ID_PLUS_F19_DOWNLOAD, LocaleController.getString(R.string.PlusF19DownloadBoost),
-                it.belloworld.mercurygram.PlusTransferBoost.modeLabel(it.belloworld.mercurygram.PlusTransferBoost.getDownloadMode())));
-        items.add(UItem.asButton(ID_PLUS_F19_UPLOAD, LocaleController.getString(R.string.PlusF19UploadBoost),
-                it.belloworld.mercurygram.PlusTransferBoost.modeLabel(it.belloworld.mercurygram.PlusTransferBoost.getUploadMode())));
-        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusF19About))));
-        // plus f19 end
-
-        // plus: ghost mode (this account)
-        final int acc = getCurrentAccount();
-        final boolean ghostOn = it.belloworld.mercurygram.PlusGhost.isEnabled(acc);
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusGhostMode)));
-        items.add(UItem.asCheck(ID_GHOST_ON, LocaleController.getString(R.string.PlusGhostMode)).setChecked(ghostOn));
-        if (ghostOn) {
-            // order matches PlusGhost option indices
-            final int[] ghostLabelRes = {R.string.PlusGhostOptNoReads, R.string.PlusGhostOptNoTyping, R.string.PlusGhostOptStayOffline,
-                    R.string.PlusGhostOptNoStories, R.string.PlusGhostOptReadOnReply, R.string.PlusGhostOptForceOffline};
-            final String[] ghostLabels = new String[ghostLabelRes.length];
-            for (int i = 0; i < ghostLabelRes.length; i++) {
-                ghostLabels[i] = LocaleController.getString(ghostLabelRes[i]);
-            }
-            for (int i = 0; i < ghostLabels.length; i++) {
-                items.add(UItem.asCheck(ID_GHOST_OPT + i, ghostLabels[i])
-                        .setChecked(it.belloworld.mercurygram.PlusGhost.isHidden(acc, i)));
-            }
-            // plus f09: send without sound while ghost mode is on
-            items.add(UItem.asCheck(ID_GHOST_SEND_SILENT, LocaleController.getString(R.string.PlusGhostSendSilent))
-                    .setChecked(it.belloworld.mercurygram.PlusGhostSilent.isEnabled(acc)));
-            // plus f09 end
-        }
-        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusGhostSettingsInfo)));
-        // plus f01 begin: per-chat ghost exceptions
-        if (ghostOn) {
-            int plusExcCount = it.belloworld.mercurygram.PlusGhostExceptions.count(acc);
-            items.add(UItem.asButton(ID_PLUS_GHOST_EXCEPTIONS, R.drawable.msg_secret,
-                    LocaleController.getString(R.string.PlusGhostExcTitle),
-                    plusExcCount > 0 ? Integer.toString(plusExcCount) : LocaleController.getString(R.string.PlusGhostExcNone)));
-            items.add(UItem.asShadow(LocaleController.getString(R.string.PlusGhostExcSettingsInfo)));
-        }
-        // plus f01 end
-        // plus f03 begin: ghost "send as scheduled"
-        if (ghostOn) {
-            items.add(UItem.asCheck(it.belloworld.mercurygram.PlusScheduledSend.SETTINGS_ROW_ID, LocaleController.getString(R.string.PlusF03ScheduledSend))
-                    .setChecked(it.belloworld.mercurygram.PlusScheduledSend.isEnabled(acc)));
-            items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF03ScheduledSendInfo)));
-        }
-        // plus f03 end
-
+        switch (page) {
+            case PAGE_GHOST:
+                fillGhost(items);
+                break;
+            case PAGE_DELETED:
+                fillDeleted(items);
+                break;
+            case PAGE_ACTIVITY_LOG:
         // plus f05 begin
         PlusActivityLogActivity.fillSettings(items, getCurrentAccount());
         // plus f05 end
 
-        // plus f06 begin
-        it.belloworld.mercurygram.PlusStoryGuard.addSettingsItems(items, acc);
-        // plus f06 end
-
-        // plus f08 begin: chat lock + hidden chats
-        items.add(UItem.asButton(it.belloworld.mercurygram.PlusChatLock.SETTINGS_ROW_ID, R.drawable.msg_secret,
-                LocaleController.getString(R.string.PlusF08Title),
-                it.belloworld.mercurygram.PlusChatLock.settingsSummary(getCurrentAccount())));
-        items.add(UItem.asShadow(null));
-        // plus f08 end
-
+                break;
+            case PAGE_STREAMER:
         // plus f10: streamer mode (all accounts)
         final boolean streamerOn = it.belloworld.mercurygram.PlusStreamer.isEnabled();
         items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF10StreamerMode)));
-        items.add(MgSettingsScope.globalCheck(ID_STREAMER_ON, LocaleController.getString(R.string.PlusF10StreamerMode)).setChecked(streamerOn));
+        items.add(UItem.asCheck(ID_STREAMER_ON, LocaleController.getString(R.string.PlusF10StreamerMode)).setChecked(streamerOn));
         final int[] streamerLabels = {R.string.PlusF10HideNames, R.string.PlusF10HideChatTitles, R.string.PlusF10HideAvatars,
                 R.string.PlusF10HidePhones, R.string.PlusF10HideNotifications, R.string.PlusF10FlagSecure};
         for (int i = 0; i < streamerLabels.length; i++) {
-            items.add(MgSettingsScope.globalCheck(ID_STREAMER_OPT + i, LocaleController.getString(streamerLabels[i]))
+            items.add(UItem.asCheck(ID_STREAMER_OPT + i, LocaleController.getString(streamerLabels[i]))
                     .setChecked(it.belloworld.mercurygram.PlusStreamer.getOption(i)));
         }
-        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF10About)));
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusF10About))));
         // plus f10 end
 
-        // plus f12 begin
-        it.belloworld.mercurygram.PlusPeek.addSettingsItems(items);
-        // plus f12 end
-
-        // plus f14: profile ID / DC / registration date
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF14Header)));
-        items.add(UItem.asCheck(ID_F14_SHOW_DC, LocaleController.getString(R.string.PlusF14ShowDc))
-                .setChecked(it.belloworld.mercurygram.PlusProfileInfo.isShowDc()));
-        items.add(UItem.asCheck(ID_F14_SHOW_REG_DATE, LocaleController.getString(R.string.PlusF14ShowRegDate))
-                .setChecked(it.belloworld.mercurygram.PlusProfileInfo.isShowRegDate()));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF14About)));
-        // plus f14 end
-
-        // plus f15 begin
-        it.belloworld.mercurygram.PlusEmojiInteractions.addSettingsItems(items, acc);
-        // plus f15 end
-
-        // plus f18 begin: OpenPGP messages
-        it.belloworld.mercurygram.PlusOpenPgp.addSettingsRows(items);
-        // plus f18 end
-
+                break;
+            case PAGE_CHATS:
+                fillChats(items);
+                break;
+            case PAGE_PRIVACY:
         items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
                         LocaleController.getString(R.string.MercurygramReduceTrackingFingerprint))
@@ -336,17 +287,6 @@ public class MercurygramSettingsActivity extends UniversalFragment {
                     exhaustedNames);
         }
         items.add(UItem.asShadow(reduceAbout));
-
-        // Tor lives on its own screen so the proxy list can reach it too
-        // (that screen is available before login, where Settings is not).
-        if (!it.belloworld.mercurygram.tor.MgTorClient.isFdroidPreS()) {
-            items.add(UItem.asButton(ID_TOR_SETTINGS,
-                    LocaleController.getString(R.string.MercurygramTor),
-                    LocaleController.getString(SharedConfig.mg_useTor
-                            ? R.string.NotificationsOn : R.string.NotificationsOff)));
-            items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(
-                    LocaleController.getString(R.string.MercurygramTorAbout))));
-        }
 
         items.add(UItem.asCheck(ID_DISABLE_GLOBAL_SEARCH,
                         LocaleController.getString(R.string.MercurygramDisableGlobalSearch))
@@ -393,36 +333,21 @@ public class MercurygramSettingsActivity extends UniversalFragment {
                 .setChecked(getUserConfig().mg.preferSecretChats));
         items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramPreferSecretChatsAbout)));
 
-        items.add(UItem.asButton(ID_TRANSLATION,
-                LocaleController.getString(R.string.MercurygramTranslationSettings),
-                translationModeShortLabel()));
-        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(
-                LocaleController.getString(R.string.MercurygramTranslationRowAbout))));
+                break;
+            case PAGE_NETWORK:
+                fillNetwork(items);
+                break;
+            case PAGE_SECURITY:
+        // plus f18 begin: OpenPGP messages
+        it.belloworld.mercurygram.PlusOpenPgp.addSettingsRows(items);
+        // plus f18 end
 
-        items.add(UItem.asButton(ID_TRANSCRIPTION,
-                LocaleController.getString(R.string.MercurygramTranscriptionTitle),
-                transcriptionShortLabel()));
-        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(
-                LocaleController.getString(R.string.MercurygramTranscriptionEnableInfo))));
-
-        // plus f17: custom DoH, proxy auto-switch, disable proxy on VPN (app-wide)
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusNetworkHeader)));
-        items.add(UItem.asCheck(ID_PLUS_DOH, LocaleController.getString(R.string.PlusDohEnable))
-                .setChecked(it.belloworld.mercurygram.PlusDoh.isEnabled()));
-        if (it.belloworld.mercurygram.PlusDoh.isEnabled()) {
-            items.add(UItem.asButton(ID_PLUS_DOH_URL, LocaleController.getString(R.string.PlusDohResolver),
-                    it.belloworld.mercurygram.PlusDoh.getLabel()));
-        }
-        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusDohAbout)));
-        items.add(UItem.asCheck(ID_PLUS_PROXY_SWITCH, LocaleController.getString(R.string.PlusProxyAutoSwitch))
-                .setChecked(it.belloworld.mercurygram.PlusProxySwitch.isEnabled()));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusProxyAutoSwitchAbout)));
-        items.add(UItem.asCheck(ID_PLUS_VPN_NO_PROXY, LocaleController.getString(R.string.PlusVpnDisableProxy))
-                .setChecked(it.belloworld.mercurygram.PlusVpnProxy.isEnabled()));
-        items.add(UItem.asShadow(LocaleController.getString(
-                it.belloworld.mercurygram.PlusVpnProxy.shouldBypass() ? R.string.PlusVpnDisableProxyActive : R.string.PlusVpnDisableProxyAbout)));
-        // plus f17 end
-
+                // plus f11: plugins
+                items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF11Plugins)));
+                items.add(UItem.asButton(ID_PLUS_PLUGINS, LocaleController.getString(R.string.PlusF11Plugins), it.belloworld.mercurygram.PlusPlugins.summary()));
+                items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(null)));
+                break;
+            case PAGE_UPDATES:
         if (MgUpdateChecker.canSelfInstall()) {
             items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsUpdates)));
             items.add(MgSettingsScope.globalCheck(ID_DISABLE_AUTO_UPDATE, LocaleController.getString(R.string.MercurygramDisableAutoUpdate))
@@ -448,42 +373,304 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             items.add(UItem.asShadow(null));
         }
 
-        items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsNotifications)));
-        CharSequence pushValue;
-        if (SharedConfig.disableUnifiedPush) {
-            pushValue = LocaleController.getString(R.string.NotificationsOff);
-        } else {
-            String distributor = UnifiedPush.getAckDistributor(ApplicationLoader.applicationContext);
-            if (distributor == null) {
-                distributor = UnifiedPush.getSavedDistributor(ApplicationLoader.applicationContext);
-            }
-            pushValue = distributor != null
-                    ? MgEmbeddedFcmDistributor.label(distributor)
-                    : LocaleController.getString(R.string.NotSet);
+                break;
+            default:
+                fillHub(items);
+                break;
         }
-        items.add(UItem.asButton(ID_UNIFIED_PUSH, LocaleController.getString(R.string.MercurygramUnifiedPush), pushValue));
+    }
+
+    private void fillHub(ArrayList<UItem> items) {
+        if (HiddenAccountHelper.shouldShowSettingsEntry(currentAccount)) {
+            int hiddenCount = 0;
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                if (HiddenAccountHelper.isAccountHidden(a)) {
+                    hiddenCount++;
+                }
+            }
+            String value = hiddenCount > 0 ? Integer.toString(hiddenCount) : LocaleController.getString(R.string.PasswordOff);
+            items.add(UItem.asButton(ID_HIDDEN_ACCOUNTS, R.drawable.msg2_secret, LocaleController.getString(R.string.HiddenAccounts), value));
+            items.add(UItem.asShadow(null));
+        }
+
+        final int acc = getCurrentAccount();
+        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoHubPrivacy)));
+        addPage(items, PAGE_GHOST, R.drawable.plus_ghost, onOff(it.belloworld.mercurygram.PlusGhost.isEnabled(acc)));
+        items.add(UItem.asButton(ID_HUB_CHAT_LOCK, R.drawable.msg_permissions, LocaleController.getString(R.string.PlusF08Title),
+                it.belloworld.mercurygram.PlusChatLock.settingsSummary(acc)));
+        addPage(items, PAGE_STREAMER, R.drawable.msg_screencast, onOff(it.belloworld.mercurygram.PlusStreamer.isEnabled()));
+        addPage(items, PAGE_PRIVACY, R.drawable.msg2_secret, "");
         items.add(UItem.asShadow(null));
 
-        // plus f11: plugins
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF11Plugins)));
-        items.add(UItem.asButton(ID_PLUS_PLUGINS, LocaleController.getString(R.string.PlusF11Plugins), it.belloworld.mercurygram.PlusPlugins.summary()));
+        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoHubMessages)));
+        addPage(items, PAGE_DELETED, R.drawable.msg_delete, onOff(getUserConfig().mg.savedMessagesHistory));
+        addPage(items, PAGE_ACTIVITY_LOG, R.drawable.msg_log, onOff(it.belloworld.mercurygram.PlusActivityLog.isEnabled(acc)));
+        items.add(UItem.asButton(ID_HUB_FILTERS, R.drawable.msg_archive_hide, LocaleController.getString(R.string.PlusF04Title), filtersSummary()));
+        addPage(items, PAGE_CHATS, R.drawable.msg_message, "");
         items.add(UItem.asShadow(null));
-        // plus f11 end
 
-        // hanako: backup & export
-        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoBackupTitle)));
-        items.add(UItem.asButton(ID_HANAKO_BACKUP, R.drawable.msg_download, LocaleController.getString(R.string.HanakoBackupTitle)));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoBackupEntryInfo)));
+        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoHubDevice)));
+        addPage(items, PAGE_NETWORK, R.drawable.msg2_data, networkSummary());
+        addPage(items, PAGE_SECURITY, R.drawable.msg2_devices, onOff(it.belloworld.mercurygram.PlusOpenPgp.isEnabled()));
+        items.add(UItem.asButton(ID_HUB_PUSH, R.drawable.msg_notifications, LocaleController.getString(R.string.MercurygramUnifiedPush), pushValue()));
+        if (MgUpdateChecker.canSelfInstall()) {
+            addPage(items, PAGE_UPDATES, R.drawable.msg_retry, "");
+        }
+        items.add(UItem.asButton(ID_HUB_BACKUP, R.drawable.msg_download, LocaleController.getString(R.string.HanakoBackupTitle)));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoHubFooter)));
+    }
+
+    private void fillGhost(ArrayList<UItem> items) {
+        // plus: ghost mode (this account)
+        final int acc = getCurrentAccount();
+        final boolean ghostOn = it.belloworld.mercurygram.PlusGhost.isEnabled(acc);
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusGhostMode)));
+        items.add(UItem.asCheck(ID_GHOST_ON, LocaleController.getString(R.string.PlusGhostMode)).setChecked(ghostOn));
+        if (ghostOn) {
+            // order matches PlusGhost option indices
+            final int[] ghostLabelRes = {R.string.PlusGhostOptNoReads, R.string.PlusGhostOptNoTyping, R.string.PlusGhostOptStayOffline,
+                    R.string.PlusGhostOptNoStories, R.string.PlusGhostOptReadOnReply, R.string.PlusGhostOptForceOffline};
+            final String[] ghostLabels = new String[ghostLabelRes.length];
+            for (int i = 0; i < ghostLabelRes.length; i++) {
+                ghostLabels[i] = LocaleController.getString(ghostLabelRes[i]);
+            }
+            for (int i = 0; i < ghostLabels.length; i++) {
+                items.add(UItem.asCheck(ID_GHOST_OPT + i, ghostLabels[i])
+                        .setChecked(it.belloworld.mercurygram.PlusGhost.isHidden(acc, i)));
+            }
+            // plus f09: send without sound while ghost mode is on
+            items.add(UItem.asCheck(ID_GHOST_SEND_SILENT, LocaleController.getString(R.string.PlusGhostSendSilent))
+                    .setChecked(it.belloworld.mercurygram.PlusGhostSilent.isEnabled(acc)));
+            // plus f09 end
+        }
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusGhostSettingsInfo)));
+        // plus f01 begin: per-chat ghost exceptions
+        if (ghostOn) {
+            int plusExcCount = it.belloworld.mercurygram.PlusGhostExceptions.count(acc);
+            items.add(UItem.asButton(ID_PLUS_GHOST_EXCEPTIONS, R.drawable.plus_ghost,
+                    LocaleController.getString(R.string.PlusGhostExcTitle),
+                    plusExcCount > 0 ? Integer.toString(plusExcCount) : LocaleController.getString(R.string.PlusGhostExcNone)));
+            items.add(UItem.asShadow(LocaleController.getString(R.string.PlusGhostExcSettingsInfo)));
+        }
+        // plus f01 end
+        // plus f03 begin: ghost "send as scheduled"
+        if (ghostOn) {
+            final boolean stayOffline = it.belloworld.mercurygram.PlusGhost.isHidden(acc, it.belloworld.mercurygram.PlusGhost.OPT_ONLINE);
+            items.add(UItem.asCheck(it.belloworld.mercurygram.PlusScheduledSend.SETTINGS_ROW_ID, LocaleController.getString(R.string.PlusF03ScheduledSend))
+                    .setChecked(it.belloworld.mercurygram.PlusScheduledSend.isEnabled(acc)).setEnabled(stayOffline));
+            String schedInfo = LocaleController.getString(R.string.PlusF03ScheduledSendInfo);
+            if (!stayOffline) schedInfo += "\n\n" + LocaleController.getString(R.string.HanakoScheduledNeedsOffline);
+            items.add(UItem.asShadow(schedInfo));
+        }
+        // plus f03 end
+
+        // plus f06 begin
+        it.belloworld.mercurygram.PlusStoryGuard.addSettingsItems(items, acc);
+        // plus f06 end
+
+        // plus f12 begin
+        it.belloworld.mercurygram.PlusPeek.addSettingsItems(items);
+        // plus f12 end
+
+        // plus f15 begin
+        it.belloworld.mercurygram.PlusEmojiInteractions.addSettingsItems(items, acc);
+        // plus f15 end
+
+        // plus f16: ask before sending voice / round / sticker / GIF and before calls (all accounts)
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusPromptHeader)));
+        for (int k = 0; k < it.belloworld.mercurygram.PlusSendPrompts.KIND_COUNT; k++) {
+            items.add(UItem.asCheck(ID_SEND_PROMPT + k, it.belloworld.mercurygram.PlusSendPrompts.label(k))
+                    .setChecked(it.belloworld.mercurygram.PlusSendPrompts.isEnabled(k)));
+        }
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusPromptAbout))));
+        // plus f16 end
+
+    }
+
+    private void fillDeleted(ArrayList<UItem> items) {
+        requestDeletedMediaSize();
+        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoPageDeleted)));
+        items.add(UItem.asCheck(ID_SAVED_MESSAGES_HISTORY, LocaleController.getString(R.string.MercurygramSavedMessagesHistory))
+                .setChecked(getUserConfig().mg.savedMessagesHistory));
+        if (getUserConfig().mg.savedMessagesHistory) {
+            items.add(UItem.asButton(ID_CLEAR_SAVED_HISTORY, LocaleController.getString(R.string.MercurygramClearSavedHistory), ""));
+        }
+        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramSavedMessagesHistoryAbout)));
+
+        // plus f07 begin: vanished-chat log + deleted-message reactions
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF07Header)));
+        items.add(UItem.asCheck(ID_F07_LOG_DIALOGS, LocaleController.getString(R.string.PlusF07LogDialogs))
+                .setChecked(it.belloworld.mercurygram.PlusDeletedDialogs.isEnabled(getCurrentAccount())));
+        items.add(UItem.asButton(ID_F07_OPEN_LOG, LocaleController.getString(R.string.PlusF07DeletedDialogsTitle),
+                Integer.toString(it.belloworld.mercurygram.PlusDeletedDialogs.count(getCurrentAccount()))));
+        items.add(MgSettingsScope.globalCheck(ID_F07_KEEP_REACTIONS, LocaleController.getString(R.string.PlusF07KeepReactions))
+                .setChecked(it.belloworld.mercurygram.PlusDeletedReactions.isKeepEnabled()));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF07SettingsAbout)));
+        // plus f07 end
+
+        // plus f20 begin: saved deleted-media browser
+        items.add(UItem.asButton(ID_F20_OPEN, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title), deletedMediaSize));
+        items.add(UItem.asCheck(ID_F20_CHAT_MENU, LocaleController.getString(R.string.PlusF20ChatMenu))
+                .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isChatMenuEnabled()));
+        items.add(UItem.asCheck(ID_F20_INCLUDE_EDITS, LocaleController.getString(R.string.PlusF20IncludeEdits))
+                .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isIncludeEdits()));
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusF20SettingsAbout))));
+        // plus f20 end
+
+    }
+
+    private void fillChats(ArrayList<UItem> items) {
+        // With several accounts logged in, state the default scope once; rows
+        // backed by global SharedConfig carry their own "all accounts" label.
+        if (MgSettingsScope.multiAccount()) {
+            items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramScopeDefaultFooter)));
+        }
+        items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsGeneral)));
+        items.add(UItem.asCheck(ID_MESSAGE_DETAILS_MENU, LocaleController.getString(R.string.MercurygramMessageDetailsMenu))
+                .setChecked(getUserConfig().mg.messageDetailsMenu));
+        items.add(UItem.asCheck(ID_HIDE_CHAT_KEYBOARD, LocaleController.getString(R.string.HideChatKeyboard))
+                .setChecked(getUserConfig().mg.hideChatKeyboard));
+        items.add(UItem.asCheck(ID_HIDE_ALL_TAB, LocaleController.getString(R.string.HideAllTab))
+                .setChecked(getUserConfig().mg.hideAllTab));
+        items.add(UItem.asButton(ID_DEFAULT_FOLDER, LocaleController.getString(R.string.MercurygramDefaultFolder), defaultFolderLabel()));
+        items.add(UItem.asCheck(ID_HIDE_STORIES, LocaleController.getString(R.string.MercurygramHideStories))
+                .setChecked(getUserConfig().mg.hideStories));
+        // Mercurygram: hide premium upsell promo (opt-in, UI-only, no gate removed)
+        items.add(UItem.asCheck(ID_HIDE_PREMIUM_PROMO, LocaleController.getString(R.string.MercurygramHidePremiumPromo))
+                .setChecked(getUserConfig().mg.hidePremiumPromo));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramHidePremiumPromoAbout)));
+        items.add(MgSettingsScope.globalCheck(ID_USE_SYSTEM_FONT, LocaleController.getString(R.string.MercurygramUseSystemFont))
+                .setChecked(SharedConfig.useSystemFont));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramUseSystemFontAbout)));
+
+        items.add(UItem.asCheck(ID_SHOW_CHAR_COUNTER, LocaleController.getString(R.string.MercurygramShowCharCounter))
+                .setChecked(getUserConfig().mg.showCharCounter));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramShowCharCounterAbout)));
+
+        items.add(UItem.asButton(ID_EMOJI_PACK,
+                LocaleController.getString(R.string.MercurygramEmojiTitle),
+                emojiPackShortLabel()));
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(
+                LocaleController.getString(R.string.MercurygramEmojiRowAbout))));
+
+        items.add(UItem.asCheck(ID_DELETE_FOR_ALL_DEFAULT,
+                        LocaleController.getString(R.string.MercurygramDeleteForAllByDefault))
+                .setChecked(getUserConfig().mg.deleteForAllByDefault));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDeleteForAllByDefaultAbout)));
+
+        items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsMedia)));
+        items.add(UItem.asCheck(ID_REAR_ROUND_VIDEOS, LocaleController.getString(R.string.RearRoundVideos))
+                .setChecked(getUserConfig().mg.rearRoundCamera));
+        items.add(UItem.asCheck(ID_DISABLE_LIVE_PHOTOS, LocaleController.getString(R.string.MercurygramDisableLivePhotos))
+                .setChecked(getUserConfig().mg.disableLivePhotosByDefault));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDisableLivePhotosAbout)));
+        items.add(MgSettingsScope.globalCheck(ID_DISABLE_PROXIMITY_SENSOR, LocaleController.getString(R.string.MercurygramDisableProximitySensor))
+                .setChecked(SharedConfig.mg_disableProximitySensor));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDisableProximitySensorAbout)));
+
+        // plus f13: message shot (all accounts)
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusMessageShot)));
+        items.add(MgSettingsScope.globalCheck(ID_MESSAGE_SHOT, LocaleController.getString(R.string.PlusMessageShotSetting))
+                .setChecked(it.belloworld.mercurygram.PlusMessageShot.isEnabled()));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusMessageShotSettingAbout)));
+        // plus f13 end
+
+        // plus f19: transfer boost (all accounts)
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF19Header)));
+        items.add(UItem.asButton(ID_PLUS_F19_DOWNLOAD, LocaleController.getString(R.string.PlusF19DownloadBoost),
+                it.belloworld.mercurygram.PlusTransferBoost.modeLabel(it.belloworld.mercurygram.PlusTransferBoost.getDownloadMode())));
+        items.add(UItem.asButton(ID_PLUS_F19_UPLOAD, LocaleController.getString(R.string.PlusF19UploadBoost),
+                it.belloworld.mercurygram.PlusTransferBoost.modeLabel(it.belloworld.mercurygram.PlusTransferBoost.getUploadMode())));
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusF19About))));
+        // plus f19 end
+
+        // plus f14: profile ID / DC / registration date
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF14Header)));
+        items.add(UItem.asCheck(ID_F14_SHOW_DC, LocaleController.getString(R.string.PlusF14ShowDc))
+                .setChecked(it.belloworld.mercurygram.PlusProfileInfo.isShowDc()));
+        items.add(UItem.asCheck(ID_F14_SHOW_REG_DATE, LocaleController.getString(R.string.PlusF14ShowRegDate))
+                .setChecked(it.belloworld.mercurygram.PlusProfileInfo.isShowRegDate()));
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusF14About))));
+        // plus f14 end
+
+        items.add(UItem.asButton(ID_TRANSLATION,
+                LocaleController.getString(R.string.MercurygramTranslationSettings),
+                translationModeShortLabel()));
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(
+                LocaleController.getString(R.string.MercurygramTranslationRowAbout))));
+
+        items.add(UItem.asButton(ID_TRANSCRIPTION,
+                LocaleController.getString(R.string.MercurygramTranscriptionTitle),
+                transcriptionShortLabel()));
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(
+                LocaleController.getString(R.string.MercurygramTranscriptionEnableInfo))));
+
+    }
+
+    private void fillNetwork(ArrayList<UItem> items) {
+        // plus f17: custom DoH, proxy auto-switch, disable proxy on VPN (app-wide)
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusNetworkHeader)));
+        items.add(UItem.asCheck(ID_PLUS_DOH, LocaleController.getString(R.string.PlusDohEnable))
+                .setChecked(it.belloworld.mercurygram.PlusDoh.isEnabled()));
+        if (it.belloworld.mercurygram.PlusDoh.isEnabled()) {
+            items.add(UItem.asButton(ID_PLUS_DOH_URL, LocaleController.getString(R.string.PlusDohResolver),
+                    it.belloworld.mercurygram.PlusDoh.getLabel()));
+        }
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusDohAbout))));
+        items.add(UItem.asCheck(ID_PLUS_PROXY_SWITCH, LocaleController.getString(R.string.PlusProxyAutoSwitch))
+                .setChecked(it.belloworld.mercurygram.PlusProxySwitch.isEnabled()));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusProxyAutoSwitchAbout)));
+        items.add(UItem.asCheck(ID_PLUS_VPN_NO_PROXY, LocaleController.getString(R.string.PlusVpnDisableProxy))
+                .setChecked(it.belloworld.mercurygram.PlusVpnProxy.isEnabled()));
+        items.add(UItem.asShadow(LocaleController.getString(
+                it.belloworld.mercurygram.PlusVpnProxy.shouldBypass() ? R.string.PlusVpnDisableProxyActive : R.string.PlusVpnDisableProxyAbout)));
+        // plus f17 end
+
+        // Tor lives on its own screen so the proxy list can reach it too
+        // (that screen is available before login, where Settings is not).
+        if (it.belloworld.mercurygram.tor.MgTorClient.showTorSettings()) { // hanako: see MgTorClient.isAvailableInThisBuild
+            items.add(UItem.asButton(ID_TOR_SETTINGS,
+                    LocaleController.getString(R.string.MercurygramTor),
+                    LocaleController.getString(SharedConfig.mg_useTor
+                            ? R.string.NotificationsOn : R.string.NotificationsOff)));
+            items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(
+                    LocaleController.getString(R.string.MercurygramTorAbout))));
+        }
+
     }
 
     @Override
     protected void onClick(UItem item, View view, int position, float x, float y) {
+        // hanako: hub rows
+        if (item.id >= ID_PAGE && item.id < ID_PAGE + 20) {
+            presentFragment(new MercurygramSettingsActivity(item.id - ID_PAGE));
+            return;
+        }
+        if (item.id == ID_HUB_CHAT_LOCK) {
+            it.belloworld.mercurygram.PlusChatLock.openSettings(this);
+            return;
+        }
+        if (item.id == ID_HUB_FILTERS) {
+            presentFragment(new PlusMessageFiltersActivity());
+            return;
+        }
+        if (item.id == ID_HUB_BACKUP) {
+            presentFragment(new HanakoBackupActivity());
+            return;
+        }
+        if (item.id == ID_HUB_PUSH) {
+            presentFragment(new MgUnifiedPushSettingsActivity());
+            return;
+        }
         if (item.id == ID_PLUS_GHOST_EXCEPTIONS) { // plus f01
             presentFragment(new PlusGhostExceptionsActivity());
             return;
         }
         // plus f03 begin
         if (item.id == it.belloworld.mercurygram.PlusScheduledSend.SETTINGS_ROW_ID) {
+            if (!it.belloworld.mercurygram.PlusGhost.isHidden(getCurrentAccount(), it.belloworld.mercurygram.PlusGhost.OPT_ONLINE)) {
+                return; // needs Stay offline (row is greyed out)
+            }
             it.belloworld.mercurygram.PlusScheduledSend.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusScheduledSend.isEnabled(getCurrentAccount()));
             refreshList();
             return;
