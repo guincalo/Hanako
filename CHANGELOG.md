@@ -7,6 +7,8 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-09
+
 ### Changed
 - **New package ID `moe.hanako.chan`** (was `it.belloworld.mercurygram`). Hanako now installs as a
   separate app next to v1.0.x (and next to upstream Mercurygram) instead of replacing it, so you
@@ -15,14 +17,12 @@ Telegram/Mercurygram base it is built on.
   titles fit on one line, in English and Smug. The ghost mode options can now be translated.
   Longer explanations moved to the README ("Limits worth knowing"). Other languages show the new
   English text until their translations catch up.
+- The Smug language was rewritten for variety: fewer "label, tease" strings, more labels that are
+  jokes on their own, plain buttons where clarity matters, and clear errors and delete prompts.
 
 ### Added
 - Russian translation of all Hanako settings, dialogs and messages.
 - A tiny easter egg behind `tg://hanako`.
-
-### Changed
-- The Smug language was rewritten for variety: fewer "label, tease" strings, more labels that are
-  jokes on their own, plain buttons where clarity matters, and clear errors and delete prompts.
 
 ## [1.0.1] - 2026-10-09
 
@@ -92,6 +92,7 @@ First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
 ### Other
 - Telegram Premium upsells and promo rows hidden; upstream Mercurygram update checks disabled.
 
-[Unreleased]: https://github.com/guincalo/Hanako/compare/v1.0.1...hanako
+[Unreleased]: https://github.com/guincalo/Hanako/compare/v1.1.0...hanako
+[1.1.0]: https://github.com/guincalo/Hanako/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/guincalo/Hanako/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/guincalo/Hanako/releases/tag/v1.0.0
