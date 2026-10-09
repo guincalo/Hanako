@@ -47,7 +47,8 @@ jobs:
       - name: Decide whether to build
         id: decide
         env:
-          REPO_URL: https://github.com/${{ github.repository }}.git
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
@@ -73,7 +74,13 @@ jobs:
 
           # Branch push: if a release tag points at this commit, its run owns the build.
           # ls-remote lists annotated tags twice; the peeled "^{}" line carries the commit.
-          TAGS=$(git ls-remote --tags "${REPO_URL}" 'refs/tags/v*' \
+          # Authenticated, so it also works if the repository is private; fail with a clear message.
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 -w0)"
+          if ! REFS=$(git -c http.extraHeader="${AUTH}" ls-remote --tags "${REPO_URL}" 'refs/tags/v*'); then
+            echo "::error::Could not list the release tags of ${REPO_URL}."
+            exit 1
+          fi
+          TAGS=$(printf '%s\n' "${REFS}" \
             | awk -v sha="${GITHUB_SHA}" '$1 == sha { sub("refs/tags/", "", $2); sub("\\^\\{\\}$", "", $2); print $2 }' \
             | sort -u | paste -sd, -)
           if [ -n "${TAGS}" ]; then
@@ -117,7 +124,11 @@ jobs:
       - name: Version and signing key
         id: prep
         env:
-          HANAKO_KEYSTORE_B64: ${{ secrets.HANAKO_KEYSTORE_B64 }}
+          # only "is it set?" is checked here; the key itself is used by the signing step alone
+          HAS_KEY: ${{ secrets.HANAKO_KEYSTORE_B64 != '' }}
+          # refs whose builds may carry the private key (A-17): tags plus these branches.
+          # Any other branch (a manual run included) gets the public debug key.
+          SIGN_REFS: 'refs/heads/hanako refs/heads/plus refs/heads/feature/backup'
         run: |
           set -euo pipefail
           APP_VN=$(grep '^APP_VERSION_NAME=' gradle.properties | cut -d= -f2)
@@ -137,7 +148,15 @@ jobs:
           # is Telegram's PUBLIC key: it is only a DEBUG FALLBACK for forks and
           # PRs without the secrets, and such APKs are labelled "-UNOFFICIAL".
           # Tag (release) runs refuse to fall back.
-          if [ -n "${HANAKO_KEYSTORE_B64}" ]; then
+          #
+          # Gradle always builds with the public debug key, so no Gradle task, plugin or
+          # submodule script ever sees the private key or its passwords. The private key is
+          # applied afterwards by apksigner in its own step (key in $RUNNER_TEMP, deleted after).
+          echo "ks=$(base64 -w0 TMessagesProj/config/release.keystore)" >> "$GITHUB_OUTPUT"
+          ALLOWED=false
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then ALLOWED=true; fi
+          for r in ${SIGN_REFS}; do [ "${GITHUB_REF}" = "$r" ] && ALLOWED=true; done
+          if [ "${HAS_KEY}" = "true" ] && [ "${ALLOWED}" = "true" ]; then
             echo "private=true" >> "$GITHUB_OUTPUT"
             echo "suffix=" >> "$GITHUB_OUTPUT"
             echo "Signed with the **private Hanako release key**." >> "$GITHUB_STEP_SUMMARY"
@@ -148,9 +167,8 @@ jobs:
             fi
             echo "private=false" >> "$GITHUB_OUTPUT"
             echo "suffix=-UNOFFICIAL-debugkey" >> "$GITHUB_OUTPUT"
-            echo "ks=$(base64 -w0 TMessagesProj/config/release.keystore)" >> "$GITHUB_OUTPUT"
-            echo "::warning::Signing secrets absent: APK signed with the PUBLIC in-repo debug key. Do not distribute it."
-            echo "⚠️ Signed with the public in-repo **debug fallback** key (secrets absent). Not for distribution." >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::APK signed with the PUBLIC in-repo debug key (no secrets, or ${GITHUB_REF} may not use the private key). Do not distribute it."
+            echo "⚠️ Signed with the public in-repo **debug fallback** key (no secrets, or this ref may not use the private key). Not for distribution." >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Build APK
@@ -167,14 +185,40 @@ jobs:
           # Telegram's official public Android keys (DrKLO BuildVars.java)
           app-id: '4'
           app-hash: '014b35b6184100b085b0d0572f9b5103'
-          # private key from secrets; public debug key only as fallback (see prep)
-          release-keystore-b64: ${{ steps.prep.outputs.private == 'true' && secrets.HANAKO_KEYSTORE_B64 || steps.prep.outputs.ks }}
-          release-keystore-password: ${{ steps.prep.outputs.private == 'true' && secrets.HANAKO_KEYSTORE_PASSWORD || 'android' }}
-          release-key-alias: ${{ steps.prep.outputs.private == 'true' && secrets.HANAKO_KEY_ALIAS || 'androidkey' }}
-          release-key-password: ${{ steps.prep.outputs.private == 'true' && secrets.HANAKO_KEY_PASSWORD || 'android' }}
+          # always the public debug key; the private key is applied by the next step
+          release-keystore-b64: ${{ steps.prep.outputs.ks }}
+          release-keystore-password: 'android'
+          release-key-alias: 'androidkey'
+          release-key-password: 'android'
+
+      - name: Sign with the Hanako release key
+        if: steps.prep.outputs.private == 'true'
+        env:
+          HANAKO_KEYSTORE_B64: ${{ secrets.HANAKO_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.HANAKO_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.HANAKO_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.HANAKO_KEY_PASSWORD }}
+          APK: ${{ steps.build.outputs.apk_path }}
+        run: |
+          set -euo pipefail
+          APKSIGNER=$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/apksigner | sort -V | tail -1)
+          KS="${RUNNER_TEMP}/hanako-release.jks"
+          ( umask 077; printf '%s' "${HANAKO_KEYSTORE_B64}" | base64 -d > "${KS}" )
+          # replaces the debug signature (v1/v2/v3 as the APK's minSdk needs)
+          "${APKSIGNER}" sign --ks "${KS}" --ks-key-alias "${KEY_ALIAS}" \
+            --ks-pass env:KS_PASS --key-pass env:KEY_PASS --out "${APK}.signed" "${APK}"
+          rm -f "${KS}"
+          "${APKSIGNER}" verify "${APK}.signed"
+          mv "${APK}.signed" "${APK}"
+
+      - name: Remove signing key
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/hanako-release.jks"
 
       - name: Name APK
         id: out
+        env:
+          EXPECTED_CERT: ${{ vars.HANAKO_CERT_SHA256 }}
         run: |
           set -euo pipefail
           NAME="Hanako-${{ steps.prep.outputs.label }}-arm64-v8a${{ steps.prep.outputs.suffix }}.apk"
@@ -186,6 +230,18 @@ jobs:
           if [ -n "${APKSIGNER}" ]; then
             CERT=$("${APKSIGNER}" verify --print-certs "dist/${NAME}" | grep -m1 'SHA-256 digest' | awk '{print $NF}' || true)
             echo "Signing cert SHA-256: \`${CERT}\`" >> "$GITHUB_STEP_SUMMARY"
+            # B-21: with the repository variable HANAKO_CERT_SHA256 set, a private build signed
+            # with any other certificate fails (a misconfigured secret never ships).
+            if [ "${{ steps.prep.outputs.private }}" = "true" ]; then
+              if [ -n "${EXPECTED_CERT}" ]; then
+                if [ "${CERT,,}" != "${EXPECTED_CERT,,}" ]; then
+                  echo "::error::Signing certificate ${CERT} is not the expected Hanako certificate."
+                  exit 1
+                fi
+              elif [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+                echo "::warning::Set the repository variable HANAKO_CERT_SHA256 so releases check their signing certificate."
+              fi
+            fi
           fi
           echo "apk_name=${NAME}" >> "$GITHUB_OUTPUT"
 
@@ -207,6 +263,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Download APK
         uses: actions/download-artifact@v4
@@ -237,7 +295,9 @@ jobs:
           cat notes.md
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
+        # pinned to a full commit SHA (v2 as of 2026-04-12): a moved tag can't run new code
+        # with this job's contents: write token
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           name: 🌸 Hanako ${{ github.ref_name }}
           body_path: notes.md
