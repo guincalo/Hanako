@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hanako 🌸</title>
+    <meta name="description" content="An unofficial Telegram client for Android, built on Mercurygram." />
+    <link rel="icon" type="image/png" href="hanako.png" />
+    <style>
+      @font-face {
+        font-family: "Playtime";
+        src: url("playtime.woff2") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: "Playtime";
+        src: url("playtime_bold.woff2") format("woff2");
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+      }
+      :root {
+        --paper: #eeecf3;
+        --ink: #2f2654;
+        --violet: #3e3570;
+        --lilac: #928aa9;
+        --quiet: #3e3570;
+        --on-violet: #ffffff;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #1e1936;
+          --ink: #e6e2f0;
+          --violet: #b8aee0;
+          --quiet: #928aa9;
+          --on-violet: #1e1936;
+        }
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font: 400 1.1rem/1.6 "Playtime", "Comic Neue", ui-rounded, "Nunito", system-ui, sans-serif;
+        font-synthesis: none;
+      }
+      main, footer {
+        max-width: 36rem;
+        margin: 0 auto;
+        padding: 0 1.25rem;
+      }
+      main { padding-top: clamp(3rem, 12vh, 7rem); }
+      header {
+        display: grid;
+        grid-template-columns: 96px 1fr;
+        column-gap: 1.25rem;
+        align-items: center;
+      }
+      header img { width: 96px; height: 96px; display: block; }
+      h1 {
+        margin: 0;
+        font-size: clamp(2.5rem, 9vw, 3.25rem);
+        line-height: 1.05;
+        font-weight: 700;
+      }
+      .lede { margin: 1.5rem 0 0; font-size: 1.25rem; line-height: 1.55; }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem 1.25rem;
+        margin-top: 1.75rem;
+      }
+      .button {
+        display: inline-block;
+        padding: 0.6rem 1.1rem;
+        border: 2px solid var(--violet);
+        border-radius: 6px;
+        font-weight: 700;
+        text-decoration: none;
+        line-height: 1.4;
+      }
+      .button.solid { background: var(--violet); color: var(--on-violet); }
+      .button.solid:hover { text-decoration: underline; }
+      .button:not(.solid):hover { background: var(--violet); color: var(--on-violet); }
+      a { color: var(--violet); text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+      a:hover { text-decoration-thickness: 2px; }
+      a:focus-visible { outline: 3px solid var(--violet); outline-offset: 3px; border-radius: 2px; }
+      .warning {
+        margin: 3.5rem 0 0;
+        padding-left: 1.1rem;
+        border-left: 2px solid var(--lilac);
+      }
+      h2 {
+        margin: 2.25rem 0 0.35rem;
+        font-size: 1.25rem;
+        line-height: 1.35;
+        font-weight: 700;
+      }
+      .part { margin-top: 3.5rem; }
+      .part > p:first-child { margin: 0; }
+      .part > h2.top { margin-top: 0; }
+      ul, ol { margin: 0; padding-left: 1.25rem; }
+      li::marker { color: var(--quiet); }
+      ol li { padding-left: 0.25rem; }
+      ol li + li { margin-top: 0.75rem; }
+      .small { font-size: 1rem; color: var(--quiet); margin: 1.5rem 0 0; }
+      code { font: inherit; }
+      button, input, select, textarea { font-family: inherit; }
+      .shots {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem 1.25rem;
+        margin-top: 0.75rem;
+      }
+      .shots figure { margin: 0; flex: 1 1 200px; max-width: 260px; }
+      .shots img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid var(--lilac);
+        border-radius: 8px;
+      }
+      .shots figcaption { margin-top: 0.5rem; font-size: 1rem; line-height: 1.5; color: var(--quiet); }
+      @media (max-width: 480px) {
+        .shots figure { flex-basis: 100%; }
+      }
+      footer {
+        margin-top: 4.5rem;
+        padding-bottom: 3rem;
+        font-size: 1rem;
+        color: var(--quiet);
+      }
+      footer p { margin: 0; }
+      @media (max-width: 420px) {
+        body { font-size: 1.0625rem; }
+        header { grid-template-columns: 72px 1fr; column-gap: 1rem; }
+        header img { width: 72px; height: 72px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="hanako.png" alt="Hanako app icon" width="96" height="96" />
+        <h1>Hanako</h1>
+      </header>
+      <p class="lede">An unofficial Telegram client for Android, built on Mercurygram.</p>
+      <div class="actions">
+        <a class="button solid" href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22moe.hanako.chan%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%22author%22%3A%22guincalo%22%2C%22name%22%3A%22Hanako%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D" target="_blank" rel="noopener">Add to Obtainium</a>
+        <a class="button" href="https://github.com/guincalo/Hanako/releases/latest" target="_blank" rel="noopener">Download APK</a>
+        <a href="https://github.com/guincalo/Hanako" target="_blank" rel="noopener">Source on GitHub</a>
+      </div>
+
+      <p class="warning">
+        Hanako is experimental, and a fully vibecoded fork. Every change it adds on top of Mercurygram was
+        written by AI coding agents, and most of it was never compiled or tested by a human before release.
+        Expect bugs and use it at your own risk. Hanako is not affiliated with Telegram or the Mercurygram
+        project, so please don’t report Hanako bugs to them.
+      </p>
+
+      <section class="part" aria-label="Features">
+        <p>Everything Mercurygram does, plus the following.</p>
+
+        <h2>Ghost mode and privacy</h2>
+        <ul>
+          <li>Per-account ghost mode: no read receipts, typing, online status or story views</li>
+          <li>Ghost exceptions for chosen chats</li>
+          <li>Send as scheduled, so sending never shows you online</li>
+          <li>Story ghost guard</li>
+          <li>Peek at chats without marking them read</li>
+          <li>Ask before sending voice, stickers, GIFs or calls</li>
+          <li>Screenshots allowed, content protection ignored</li>
+        </ul>
+
+        <h2>Chat lock and hidden chats</h2>
+        <ul>
+          <li>Lock chats with biometrics</li>
+          <li>Hide locked chats; long-press the app title to reveal them</li>
+          <li>Hide their notification text</li>
+        </ul>
+
+        <h2>Deleted and edited messages</h2>
+        <ul>
+          <li>Deleted messages stay in the chat, greyed out</li>
+          <li>Edits keep their history</li>
+          <li>Media is saved, including view-once</li>
+          <li>Vanished chats log</li>
+          <li>Deleted media browser</li>
+        </ul>
+
+        <h2>Activity log</h2>
+        <ul>
+          <li>A local last-seen and read log per contact, built from updates the app already receives</li>
+        </ul>
+
+        <h2>Streamer mode</h2>
+        <ul>
+          <li>Pseudonyms</li>
+          <li>Masked avatars and titles</li>
+          <li>Dotted-out phone numbers</li>
+          <li>Optional screen-capture block</li>
+        </ul>
+
+        <h2>Messages and chats</h2>
+        <ul>
+          <li>Regex message filters and shadow-ban</li>
+          <li>Message shots as images</li>
+          <li>OpenPGP via OpenKeychain</li>
+          <li>Profile ID with DC and registration date</li>
+        </ul>
+
+        <h2>Plugins</h2>
+        <ul>
+          <li>JSON rule plugins</li>
+          <li>Opt-in code plugins</li>
+        </ul>
+
+        <h2>Network</h2>
+        <ul>
+          <li>Custom DNS-over-HTTPS</li>
+          <li>Proxy auto-switch</li>
+          <li>Disable the proxy while a VPN is on</li>
+        </ul>
+      </section>
+
+      <section class="part" id="screenshots">
+        <h2 class="top">Screenshots</h2>
+        <div class="shots">
+          <figure>
+            <img src="shot-settings.webp" alt="Telegram settings screen with the Hanako entry in the list" loading="lazy" />
+            <figcaption>Hanako sits right in Telegram's settings</figcaption>
+          </figure>
+          <figure>
+            <img src="shot-ghost.webp" alt="Hanako ghost mode settings with exceptions and quiet sending options" loading="lazy" />
+            <figcaption>Ghost mode, exceptions and quiet sending</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="part" id="install">
+        <h2 class="top">Install</h2>
+        <ol>
+          <li>
+            On your phone, tap
+            <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22moe.hanako.chan%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%22author%22%3A%22guincalo%22%2C%22name%22%3A%22Hanako%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D" target="_blank" rel="noopener">Add to Obtainium</a>.
+            It fills in everything, installs stable releases and keeps Hanako updated.
+          </li>
+          <li>
+            Or <a href="https://github.com/guincalo/Hanako/releases/latest" target="_blank" rel="noopener">download</a>
+            <code>Hanako-&lt;version&gt;-arm64-v8a.apk</code> from the latest release and install it. Only
+            arm64-v8a builds are published.
+          </li>
+          <li>
+            If you want release candidates too, use the
+            <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22moe.hanako.chan%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%22author%22%3A%22guincalo%22%2C%22name%22%3A%22Hanako%20%28Stable%20%2B%20Pre-release%29%22%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3A%20true%2C%20%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%28-%5B0-9A-Za-z.%5D%2B%29%3F-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D" target="_blank" rel="noopener">stable and pre-release Obtainium link</a>
+            instead.
+          </li>
+        </ol>
+        <p class="small">
+          The package ID is <code>moe.hanako.chan</code>. It installs as a separate app beside old Hanako
+          v1.0.x or Mercurygram, so you’ll need to log in again. The in-app updater is off; Obtainium or
+          GitHub Releases handle updates.
+        </p>
+      </section>
+    </main>
+    <footer>
+      <p>
+        Hanako vibecoded by <a href="https://github.com/guincalo/Hanako" target="_blank" rel="noopener">guincalo</a>,
+        licensed under <a href="https://github.com/guincalo/Hanako/blob/hanako/LICENSE" target="_blank" rel="noopener">GPL-2.0</a>
+        and based on <a href="https://github.com/Mercurygram/Mercurygram" target="_blank" rel="noopener">Mercurygram</a>.
+      </p>
+    </footer>
+  </body>
+</html>
