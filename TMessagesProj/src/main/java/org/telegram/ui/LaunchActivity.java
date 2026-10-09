@@ -2315,7 +2315,14 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                 }
                                 case "tg": {
                                     String url = data.toString();
-                                    if (url.startsWith("tg:premium_offer") || url.startsWith("tg://premium_offer")) {
+                                    if (url.startsWith("tg:hanako") || url.startsWith("tg://hanako")) { // hanako: easter egg
+                                        AndroidUtilities.runOnUIThread(() -> {
+                                            BulletinFactory factory = BulletinFactory.global();
+                                            if (factory != null) {
+                                                factory.createSimpleBulletin(R.raw.info, LocaleController.getString(R.string.HanakoEasterEgg)).show();
+                                            }
+                                        }, 300);
+                                    } else if (url.startsWith("tg:premium_offer") || url.startsWith("tg://premium_offer")) {
                                         String finalUrl = url;
                                         AndroidUtilities.runOnUIThread(() -> {
                                         if (!actionBarLayout.getFragmentStack().isEmpty()) {

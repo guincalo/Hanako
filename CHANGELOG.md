@@ -18,6 +18,7 @@ Telegram/Mercurygram base it is built on.
 
 ### Added
 - Russian translation of all Hanako settings, dialogs and messages.
+- A tiny easter egg behind `tg://hanako`.
 
 ### Changed
 - The Smug language was rewritten for variety: fewer "label, tease" strings, more labels that are
