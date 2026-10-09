@@ -5,12 +5,6 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
-    # Upstream (DrKLO/Telegram) template workflow, kept verbatim to avoid
-    # rebase conflicts. It is effectively dead (only push to release/** and
-    # manual dispatch) and its actions are not SHA-pinned like ours, so let
-    # Dependabot skip it instead of diverging it from upstream.
-    exclude-paths:
-      - ".github/workflows/generate-apk-aab-debug-release.yml"
     groups:
       github-actions:
         patterns:
