@@ -7,6 +7,17 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+### Added
+- **Backup & export** (Settings → Mercurygram → Backup & export):
+  - Export / import all Hanako and Mercurygram settings as a JSON file. Import validates the file,
+    then restarts the app to apply it.
+  - Encrypted full backup of every logged-in account (session + settings) to move to a new install,
+    package or phone without logging in again. Password-protected (PBKDF2-HMAC-SHA256, AES-256-GCM).
+    Restore from the same screen or from the login screen ("Restore from Hanako backup").
+  - Chat export like Telegram Desktop: pick a chat (or use the chat's ⋮ menu), a date range, which
+    media to include and a size limit, and get messages.html and/or result.json plus media folders
+    in a folder you choose.
+
 ## [1.1.0] - 2026-10-09
 
 ### Changed
