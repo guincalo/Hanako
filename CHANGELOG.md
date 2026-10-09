@@ -21,7 +21,17 @@ Telegram/Mercurygram base it is built on.
     Restore from the same screen or from the login screen ("Restore from Hanako backup").
   - Chat export like Telegram Desktop: pick a chat (or use the chat's ⋮ menu), a date range, which
     media to include and a size limit, and get messages.html and/or result.json plus media folders
-    in a folder you choose.
+    in a folder you choose. Runs in the background with a progress notification.
+  - Backup, settings import and chat export ask you to confirm it's you first; hidden accounts are
+    left out unless you add them while signed in to one.
+- **Hanako settings** are now a short list of sections with their current state, and every option
+  can be found from Settings search.
+- A one-time notice after login explains ghost mode and the other privacy defaults.
+- A streamer-mode indicator in the chat list.
+
+### Changed
+- Hanako's proxy auto-switch is now "Switch to the fastest working proxy" and says when it switches.
+- Tor settings are hidden: Mercurygram's Tor plugin only works with apps signed by Mercurygram.
 
 ## [1.1.0] - 2026-10-09
 
