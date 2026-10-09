@@ -158,9 +158,10 @@ printf 'APP_ID = 12345\nAPP_HASH = aaaaaaaabbbbbbccccccfffffff001122\n' > API_KE
 Native libraries (BoringSSL, openh264, opus, libvpx, dav1d, FFmpeg, tlottie, TDLib) are built from
 source on the first build and cached afterwards.
 
-**CI:** `.github/workflows/hanako.yml` builds a signed arm64 APK on every push to the `plus` or
-`hanako` branch (downloadable as a workflow artifact). Pushing a tag `v*` builds the APK and publishes
-a GitHub Release with the APK and that version's section of [CHANGELOG.md](CHANGELOG.md).
+**CI:** `.github/workflows/hanako.yml` builds a signed arm64 APK on every push to `hanako` (kept as a
+workflow artifact for 14 days). Pushing a release tag `vX.Y.Z` validates it, builds once and publishes a
+GitHub Release with the APK, its SHA-256 and that version's section of [CHANGELOG.md](CHANGELOG.md). A
+branch push of an already-tagged commit is skipped, and docs-only changes don't trigger a build.
 
 ## Contributing
 

@@ -1,14 +1,26 @@
 name: Hanako build
 
-# Branch pushes build a signed arm64 APK and keep it as a workflow artifact.
-# Pushing a tag v* (e.g. v1.0.0) does the same and then publishes a GitHub
-# Release with the APK and that version's CHANGELOG.md section as notes.
-# Adapted from the earlier plus.yml personal build.
+# CI and releases in one pipeline:
+#   * branch push    -> signed arm64 APK kept as a workflow artifact (14 days).
+#                       Skipped when the commit already carries a release tag,
+#                       because the tag's own run builds and publishes it.
+#                       Docs-only pushes don't build at all.
+#   * tag vX.Y.Z     -> validated (semver + CHANGELOG section) before the
+#                       25-minute build, then published as a GitHub Release
+#                       with the APK, its SHA-256 and the CHANGELOG notes.
+#   * manual run     -> always builds.
+# See RELEASING.md for the release checklist.
 
 on:
   push:
     branches: [plus, hanako]
     tags: ['v*']
+    # path filters only apply to branch pushes; tag pushes always run
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/assets/**'
   workflow_dispatch:
 
 concurrency:
@@ -17,7 +29,65 @@ concurrency:
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+    steps:
+      - name: Checkout
+        if: github.ref_type == 'tag'
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
+
+      - name: Decide whether to build
+        id: decide
+        env:
+          REPO_URL: https://github.com/${{ github.repository }}.git
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG="${GITHUB_REF_NAME}"
+            if ! [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+              echo "::error::Tag '${TAG}' is not a release tag (expected vMAJOR.MINOR.PATCH[-pre])."
+              exit 1
+            fi
+            VER="${TAG#v}"
+            if ! grep -qF "## [${VER}]" CHANGELOG.md; then
+              echo "::error file=CHANGELOG.md::No '## [${VER}]' section. Add release notes before tagging."
+              exit 1
+            fi
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "Release **${TAG}**: tag and changelog OK." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Branch push: if a release tag points at this commit, its run owns the build.
+          # ls-remote lists annotated tags twice; the peeled "^{}" line carries the commit.
+          TAGS=$(git ls-remote --tags "${REPO_URL}" 'refs/tags/v*' \
+            | awk -v sha="${GITHUB_SHA}" '$1 == sha { sub("refs/tags/", "", $2); sub("\\^\\{\\}$", "", $2); print $2 }' \
+            | sort -u | paste -sd, -)
+          if [ -n "${TAGS}" ]; then
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping branch build: ${GITHUB_SHA::7} is tagged ${TAGS}; the tag run builds and publishes it."
+            echo "Skipped: \`${GITHUB_SHA::7}\` is tagged **${TAGS}**, whose run builds and publishes the APK." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
+    name: Build APK
+    needs: preflight
+    if: needs.preflight.outputs.build == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -95,9 +165,12 @@ jobs:
         with:
           name: hanako-arm64
           path: dist/
+          if-no-files-found: error
+          retention-days: ${{ github.ref_type == 'tag' && 90 || 14 }}
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    name: Publish release
+    if: github.ref_type == 'tag'
     needs: build
     runs-on: ubuntu-24.04
     permissions:
@@ -123,8 +196,8 @@ jobs:
             found { print }
           ' CHANGELOG.md > notes.md
           if ! grep -q '[^[:space:]]' notes.md; then
-            echo "::warning::No CHANGELOG.md section for ${VER}"
-            echo "See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/CHANGELOG.md)." > notes.md
+            echo "::error file=CHANGELOG.md::Section for ${VER} is empty."
+            exit 1
           fi
           {
             echo
