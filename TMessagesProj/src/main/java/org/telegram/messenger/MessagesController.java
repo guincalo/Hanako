@@ -13010,6 +13010,7 @@ public class MessagesController extends BaseController implements NotificationCe
             for (int a = 0; a < resetDialogsAll.dialogs.size(); a++) {
                 TLRPC.Dialog d = resetDialogsAll.dialogs.get(a);
                 DialogObject.initDialog(d);
+                it.belloworld.mercurygram.PlusReadLedger.clamp(currentAccount, d); // hanako
                 if (d.id == 0) {
                     continue;
                 }
@@ -13543,6 +13544,9 @@ public class MessagesController extends BaseController implements NotificationCe
             for (int a = 0; a < dialogsRes.dialogs.size(); a++) {
                 TLRPC.Dialog d = dialogsRes.dialogs.get(a);
                 DialogObject.initDialog(d);
+                if (loadType != DIALOGS_LOAD_TYPE_CACHE) {
+                    it.belloworld.mercurygram.PlusReadLedger.clamp(currentAccount, d); // hanako
+                }
                 if (d.id == 0) {
                     continue;
                 }
@@ -13906,6 +13910,7 @@ public class MessagesController extends BaseController implements NotificationCe
         TLRPC.TL_messages_getUnreadMentions req = new TLRPC.TL_messages_getUnreadMentions();
         req.peer = peer;
         req.limit = 1;
+        req.min_id = it.belloworld.mercurygram.PlusReadLedger.get(currentAccount, -peer.channel_id, 0); // hanako: only mentions after the local read
         getConnectionsManager().sendRequest(req, (response, error) -> {
             TLRPC.messages_Messages res = (TLRPC.messages_Messages) response;
             if (res != null) {
@@ -14759,6 +14764,7 @@ public class MessagesController extends BaseController implements NotificationCe
 
         if (threadId != 0) {
             createReadTask = maxPositiveId != Integer.MAX_VALUE;
+            it.belloworld.mercurygram.PlusReadLedger.record(currentAccount, dialogId, threadId, maxPositiveId); // hanako
         } else {
             boolean countMessages = getNotificationsController().showBadgeMessages;
             if (!DialogObject.isEncryptedDialog(dialogId)) {
@@ -14772,6 +14778,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 dialogs_read_inbox_max.put(dialogId, Math.max(value, maxPositiveId));
 
                 getMessagesStorage().processPendingRead(dialogId, maxPositiveId, maxNegativeId, scheduledCount);
+                it.belloworld.mercurygram.PlusReadLedger.record(currentAccount, dialogId, 0, maxPositiveId); // hanako
                 getMessagesStorage().getStorageQueue().postRunnable(() -> AndroidUtilities.runOnUIThread(() -> {
                     TLRPC.Dialog dialog = dialogs_dict.get(dialogId);
                     if (dialog != null) {
@@ -16894,6 +16901,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                 message.dialog_id = -channelId;
                                 message.unread = !(message.action instanceof TLRPC.TL_messageActionChannelCreate || channelFinal != null && channelFinal.left || (message.out ? outboxValue : inboxValue) >= message.id);
                             }
+                            it.belloworld.mercurygram.PlusReadLedger.clamp(currentAccount, ((TLRPC.TL_updates_channelDifferenceTooLong) res).dialog); // hanako
                             getMessagesStorage().overwriteChannel(channelId, (TLRPC.TL_updates_channelDifferenceTooLong) res, newDialogType, () -> AndroidUtilities.runOnUIThread(() -> {
                                 NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.onReceivedChannelDifference, channelId);
                             }));
@@ -19401,7 +19409,9 @@ public class MessagesController extends BaseController implements NotificationCe
                     stillUnreadMessagesCount = new LongSparseIntArray();
                 }
                 markAsReadMessagesInbox.put(dialogId, update.max_id);
-                stillUnreadMessagesCount.put(dialogId, update.still_unread_count);
+                if (it.belloworld.mercurygram.PlusReadLedger.get(currentAccount, dialogId, 0) <= update.max_id) { // hanako: a stale server count must not beat a local read
+                    stillUnreadMessagesCount.put(dialogId, update.still_unread_count);
+                }
                 dialogs_read_inbox_max.put(dialogId, Math.max(value, update.max_id));
                 FileLog.d("TL_updateReadChannelInbox " + dialogId + "  new unread = " + update.still_unread_count + " max id = " + update.max_id + " from get diff " + fromGetDifference);
             } else if (

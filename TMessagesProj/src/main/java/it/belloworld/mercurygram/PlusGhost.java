@@ -191,6 +191,11 @@ public final class PlusGhost {
         return manualReadWindowOpen(account, dialogId);
     }
 
+    /** hanako: would a read receipt for this dialog be dropped right now? (PlusReadLedger) */
+    public static boolean readsHidden(int account, long dialogId) {
+        return validAccount(account) && active(account, OPT_READS) && !readsAllowed(account, dialogId);
+    }
+
     /** Called by SecretChatHelper before it sends decryptedMessageActionReadMessages. */
     public static boolean blockSecretRead(int account, long encryptedDialogId) {
         return active(account, OPT_READS) && !readsAllowed(account, encryptedDialogId);
