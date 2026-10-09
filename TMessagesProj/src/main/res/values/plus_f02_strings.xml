@@ -17,5 +17,5 @@
     <string name="PlusGhostOptNoStories">Don\'t mark stories as seen</string>
     <string name="PlusGhostOptReadOnReply">Read the chat when I reply</string>
     <string name="PlusGhostOptForceOffline">Force offline if shown online</string>
-    <string name="PlusGhostSettingsInfo">Applies to this account. Mark as read still sends a receipt for that chat, and story reactions or replies still count as views.</string>
+    <string name="PlusGhostSettingsInfo">Mark as read still sends a receipt for that chat, and story reactions or replies still count as views.</string>
 </resources>

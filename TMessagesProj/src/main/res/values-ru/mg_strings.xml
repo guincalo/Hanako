@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="MercurygramSettings">Hanako</string>
-    <string name="MercurygramSettingsInfo">Функции, специфичные для Hanako</string>
+    <string name="MercurygramSettingsInfo">Режим призрака, блокировка чатов, копии и другое</string>
     <string name="MercurygramSettingsGeneral">Основное</string>
     <string name="MercurygramSettingsMedia">Медиа</string>
     <string name="MercurygramSettingsUpdates">Обновления</string>

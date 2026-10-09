@@ -65,7 +65,7 @@
     <string name="NtfyDefaultServerDisableUP">Disable UnifiedPush</string>
     <string name="NtfyDefaultServerWarningRow">⚠ The default ntfy.sh server is blocked. Push notifications will not work. Please use a self-hosted ntfy server or switch to a different distributor.</string>
     <string name="MercurygramSettings">Hanako</string>
-    <string name="MercurygramSettingsInfo">Features specific to Hanako</string>
+    <string name="MercurygramSettingsInfo">Ghost mode, chat lock, backups and more</string>
     <string name="MercurygramSettingsGeneral">General</string>
     <string name="MercurygramSettingsMedia">Media</string>
     <string name="MercurygramSettingsUpdates">Updates</string>

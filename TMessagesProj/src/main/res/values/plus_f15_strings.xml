@@ -4,5 +4,5 @@
     <string name="PlusF15Header">Emoji interactions</string>
     <string name="PlusF15DisableInteractions">Disable emoji interactions</string>
     <string name="PlusF15HideChoosingSticker">Don\'t send \"choosing a sticker\"</string>
-    <string name="PlusF15About">Applies to this account, even with ghost mode off. Nobody sees your emoji taps or that you\'re picking a sticker.</string>
+    <string name="PlusF15About">Works even with ghost mode off. Nobody sees your emoji taps or that you\'re picking a sticker.</string>
 </resources>

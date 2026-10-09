@@ -10,10 +10,10 @@
     <string name="HanakoBackupSettingsHeader">Settings</string>
     <string name="HanakoBackupExportSettings">Export settings</string>
     <string name="HanakoBackupImportSettings">Import settings</string>
-    <string name="HanakoBackupSettingsInfo">Hanako and Mercurygram options only (not Telegram\'s own settings, chats or accounts), saved as a JSON file.</string>
+    <string name="HanakoBackupSettingsInfo">Hanako options as a JSON file. Doesn\'t include messages or logins. Per-chat lists (locked chats, exceptions, filters) are only added if you tick them.</string>
     <string name="HanakoBackupChatHeader">Chat export</string>
     <string name="HanakoBackupExportChat">Export a chat</string>
-    <string name="HanakoBackupChatInfo">Saves one chat\'s history as HTML and/or JSON (Telegram Desktop format), with the media you choose.</string>
+    <string name="HanakoBackupChatInfo">Saves one chat\'s history as HTML and/or JSON (Telegram Desktop format), with the media you choose. It runs in the background with a notification; an interrupted export can\'t be resumed.</string>
     <string name="HanakoBackupRestoreLogin">Restore from Hanako backup</string>
     <string name="HanakoBackupWarningTitle">Keep this file secret</string>
     <string name="HanakoBackupWarning">Anyone who has this file and its password gets full access to your accounts: chats, contacts, everything, with no login code or 2-step verification password. Use a strong password and keep the file somewhere safe.</string>
@@ -21,7 +21,7 @@
     <string name="HanakoBackupPasswordTitle">Backup password</string>
     <string name="HanakoBackupPasswordHint">Password</string>
     <string name="HanakoBackupPasswordRepeat">Repeat password</string>
-    <string name="HanakoBackupPasswordInfo">At least 8 characters. A forgotten password cannot be recovered.</string>
+    <string name="HanakoBackupPasswordInfo">Use at least 12 characters, or a few random words. If you forget it, the backup can\'t be opened.</string>
     <string name="HanakoBackupPasswordEnter">Enter the password this backup was created with.</string>
     <string name="HanakoBackupPasswordTooShort">The password must be at least 8 characters</string>
     <string name="HanakoBackupPasswordMismatch">The passwords don\'t match</string>
@@ -35,12 +35,12 @@
     <string name="HanakoBackupRestoreIntro">This backup contains:</string>
     <string name="HanakoBackupRestoreSettingsToo">Hanako settings from the backup are restored too.</string>
     <string name="HanakoBackupRestoreOldDevice">Afterwards, stop using these accounts on the old install: uninstall it or clear its data, but do not log out there, as that would end the session here too. Using one session on two devices at once can make Telegram terminate it. The local cache is rebuilt and secret chats are not transferred.</string>
-    <string name="HanakoBackupRestoreAction">Restore</string>
+    <string name="HanakoBackupRestoreAction">Restore selected</string>
     <string name="HanakoBackupReplaceAction">Replace existing</string>
     <string name="HanakoBackupNoSlots">No free account slot left for these accounts.</string>
     <string name="HanakoBackupRestored">%1$d account(s) restored. Hanako will restart now.</string>
-    <string name="HanakoBackupAccountNew">new account slot</string>
-    <string name="HanakoBackupAccountReplace">replaces the session here</string>
+    <string name="HanakoBackupAccountNew">new on this phone</string>
+    <string name="HanakoBackupAccountReplace">logged in here: replaces the session on this phone</string>
     <string name="HanakoBackupAccountSkipExisting">already logged in here, skipped</string>
     <string name="HanakoBackupAccountNoSlot">no free slot, skipped</string>
     <string name="HanakoChatExportTitle">Export chat</string>

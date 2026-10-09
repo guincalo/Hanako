@@ -7,7 +7,7 @@
     <string name="PlusF06ModeAlways">Always</string>
     <string name="PlusF06ModeNever">Never</string>
     <string name="PlusF06ConfirmInteract">Confirm story reactions/replies</string>
-    <string name="PlusF06About">Applies to this account. Reacting to or replying to a story always marks it as seen, even in ghost mode.</string>
+    <string name="PlusF06About">Reacting to or replying to a story always marks it as seen, even in ghost mode.</string>
     <string name="PlusF06OpenVisibleTitle">Your view will be visible</string>
     <string name="PlusF06OpenVisibleMessage">Ghost mode isn\'t hiding story views for this account, so the author will see you in the viewers list.</string>
     <string name="PlusF06OpenUnseen">Open without being seen</string>

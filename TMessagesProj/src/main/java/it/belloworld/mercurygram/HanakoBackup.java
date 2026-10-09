@@ -97,7 +97,8 @@ public final class HanakoBackup {
 
     // ---- settings JSON ----
     public static final String SETTINGS_FORMAT = "hanako-settings";
-    public static final int SETTINGS_VERSION = 1;
+    /** v2: preferences and per-chat lists in separate sections (v1 files are still read). */
+    public static final int SETTINGS_VERSION = 2;
 
     // ---- encrypted full backup ----
     public static final String FULL_FORMAT = "hanako-full-backup";
@@ -114,6 +115,23 @@ public final class HanakoBackup {
     private static final int MAX_ENTRY_BYTES = 16 * 1024 * 1024;
     private static final int MAX_SETTINGS_BYTES = 4 * 1024 * 1024;
     public static final int MIN_PASSWORD_LENGTH = 8;
+
+    // ---- error codes (see describeError) ----
+    public static final int ERR_DAMAGED = 0;
+    public static final int ERR_NOT_SETTINGS = 1;
+    public static final int ERR_IS_FULL_BACKUP = 2;
+    public static final int ERR_NOT_BACKUP = 3;
+    public static final int ERR_IS_SETTINGS = 4;
+    public static final int ERR_NEWER = 5;
+    public static final int ERR_NO_ACCOUNTS = 6;
+
+    private static final String RESULT_FILE = "hanako_restore_result.json";
+    private static final String UNDO_FILE = "hanako_settings_undo.json";
+    private static final long UNDO_MAX_AGE_MS = 24L * 60 * 60 * 1000;
+    private static final String HIDDEN_PREFS = "mainconfig";
+    private static final String HIDDEN_HASH_PREFIX = "mg_hiddenAccountHash_";
+    private static final String HIDDEN_SALT_PREFIX = "mg_hiddenAccountSalt_";
+    private static final String HIDDEN_STEALTH_KEY = "mg_hiddenAccountsStealthMode";
 
     private static final String STAGE_DIR = "hanako_restore";
     private static final String STAGE_PLAN = "plan.json";
@@ -182,8 +200,174 @@ public final class HanakoBackup {
     }
 
     public static class InvalidBackupException extends Exception {
+        public final int code;
+
         public InvalidBackupException(String message) {
+            this(ERR_DAMAGED, message);
+        }
+
+        public InvalidBackupException(int code, String message) {
             super(message);
+            this.code = code;
+        }
+    }
+
+    /** Raw exception text, for the "Details" button only. */
+    public static String rawError(Throwable t) {
+        if (t == null) return "";
+        String m = t.getMessage();
+        return t.getClass().getSimpleName() + (TextUtils.isEmpty(m) ? "" : ": " + m);
+    }
+
+    /** Maps a failure to a short localized message that says what to do. */
+    public static String describeError(Throwable t) {
+        if (t instanceof InvalidBackupException) {
+            switch (((InvalidBackupException) t).code) {
+                case ERR_NOT_SETTINGS:
+                    return LocaleController.getString(R.string.HanakoErrNotSettings);
+                case ERR_IS_FULL_BACKUP:
+                    return LocaleController.getString(R.string.HanakoErrIsFullBackup);
+                case ERR_NOT_BACKUP:
+                    return LocaleController.getString(R.string.HanakoErrNotBackup);
+                case ERR_IS_SETTINGS:
+                    return LocaleController.getString(R.string.HanakoErrIsSettings);
+                case ERR_NEWER:
+                    return LocaleController.getString(R.string.HanakoErrNewer);
+                case ERR_NO_ACCOUNTS:
+                    return LocaleController.getString(R.string.HanakoErrNoAccounts);
+                default:
+                    return LocaleController.getString(R.string.HanakoErrDamaged);
+            }
+        }
+        String raw = rawError(t).toLowerCase(java.util.Locale.ROOT);
+        if (raw.contains("enospc") || raw.contains("no space")) {
+            return LocaleController.getString(R.string.HanakoErrNoSpace);
+        }
+        if (raw.contains("file too large")) {
+            return LocaleController.getString(R.string.HanakoErrTooLarge);
+        }
+        if (raw.contains("cannot open output") || raw.contains("cannot create") || raw.contains("permission") || t instanceof SecurityException) {
+            return LocaleController.getString(R.string.HanakoErrCannotWrite);
+        }
+        if (raw.contains("cannot open input") || t instanceof java.io.FileNotFoundException) {
+            return LocaleController.getString(R.string.HanakoErrCannotRead);
+        }
+        if (raw.contains("timeout") || raw.contains("network")) {
+            return LocaleController.getString(R.string.HanakoErrNetwork);
+        }
+        return LocaleController.getString(R.string.HanakoErrGeneric);
+    }
+
+    private static boolean startsWith(byte[] data, byte[] prefix) {
+        if (data == null || data.length < prefix.length) return false;
+        for (int i = 0; i < prefix.length; i++) {
+            if (data[i] != prefix[i]) return false;
+        }
+        return true;
+    }
+
+    /** A Hanako settings JSON picked where a full backup was expected (cheap sniff, no full parse). */
+    private static boolean looksLikeSettings(byte[] data) {
+        if (data == null || data.length == 0) return false;
+        int i = 0;
+        while (i < data.length && (data[i] == ' ' || data[i] == '\n' || data[i] == '\r' || data[i] == '\t' || (data[i] & 0xff) == 0xEF || (data[i] & 0xff) == 0xBB || (data[i] & 0xff) == 0xBF)) i++;
+        if (i >= data.length || data[i] != '{') return false;
+        String head = new String(data, 0, Math.min(data.length, 4096), StandardCharsets.UTF_8);
+        return head.contains(SETTINGS_FORMAT);
+    }
+
+    // =====================================================================================
+    // Hidden accounts (Mercurygram HiddenAccountHelper)
+    // =====================================================================================
+
+    /** Slots and Telegram user ids of the hidden accounts on this device. */
+    static final class HiddenSet {
+        final HashSet<Integer> slots = new HashSet<>();
+        final HashSet<String> userIds = new HashSet<>();
+
+        boolean isEmpty() {
+            return slots.isEmpty() && userIds.isEmpty();
+        }
+
+        /** Whether a preference key belongs to one of these accounts (by user id, or by slot suffix "_N" / "_N_"). */
+        boolean touches(String key) {
+            if (key == null || isEmpty()) return false;
+            for (String id : userIds) {
+                if (key.contains(id)) return true;
+            }
+            for (Integer slot : slots) {
+                String sfx = "_" + slot;
+                if (key.endsWith(sfx) || key.contains(sfx + "_")) return true;
+            }
+            return false;
+        }
+
+        JSONObject toJson() throws JSONException {
+            JSONArray s = new JSONArray();
+            for (Integer slot : slots) s.put(slot.intValue());
+            JSONArray u = new JSONArray();
+            for (String id : userIds) u.put(id);
+            return new JSONObject().put("slots", s).put("ids", u);
+        }
+
+        static HiddenSet fromJson(JSONObject o) {
+            HiddenSet h = new HiddenSet();
+            if (o == null) return h;
+            JSONArray s = o.optJSONArray("slots");
+            if (s != null) for (int i = 0; i < s.length(); i++) h.slots.add(s.optInt(i, -1));
+            JSONArray u = o.optJSONArray("ids");
+            if (u != null) for (int i = 0; i < u.length(); i++) {
+                String id = u.optString(i, "");
+                if (isLong(id) && id.length() >= 5) h.userIds.add(id);
+            }
+            h.slots.remove(-1);
+            return h;
+        }
+    }
+
+    /** Hidden accounts on this device right now. Call after UserConfig is loaded. */
+    static HiddenSet hiddenAccounts() {
+        HiddenSet h = new HiddenSet();
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (!HiddenAccountHelper.isAccountHidden(a)) continue;
+            h.slots.add(a);
+            UserConfig uc = UserConfig.getInstance(a);
+            if (uc.isClientActivated()) h.userIds.add(Long.toString(uc.getClientUserId()));
+        }
+        return h;
+    }
+
+    /** True when there are hidden accounts and the user is signed in to one right now (so they know its code). */
+    public static boolean canOfferHiddenAccounts() {
+        if (!HiddenAccountHelper.hasAnyHiddenAccounts()) return false;
+        return HiddenAccountHelper.isAccountHidden(UserConfig.selectedAccount);
+    }
+
+    public static int visibleAccountCount() {
+        return HiddenAccountHelper.getVisibleAccountsCount();
+    }
+
+    // =====================================================================================
+    // Preferences vs per-chat lists
+    // =====================================================================================
+
+    /**
+     * Keys that are lists of chats, users, accounts or keys rather than switches. They are only
+     * exported when the user ticks "per-chat lists", because they identify people and chats.
+     */
+    static boolean isListKey(String file, String key) {
+        if (file == null || key == null) return false;
+        switch (file) {
+            case "plus_ghost_exceptions":
+                return true;
+            case "plus_f04_filters":
+                return "filters".equals(key) || "banned".equals(key);
+            case "plus_f08_chatlock":
+                return key.startsWith("locked_");
+            case "plus_f18":
+                return !"enabled".equals(key) && !"provider".equals(key);
+            default:
+                return false;
         }
     }
 
@@ -437,8 +621,23 @@ public final class HanakoBackup {
     // Settings export / import
     // =====================================================================================
 
-    /** Builds the settings document from the live state. Call off the UI thread. */
-    public static JSONObject buildSettingsJson() throws JSONException {
+    private static JSONObject accountPrefs(UserConfig uc) throws JSONException {
+        CaptureEditor cap = new CaptureEditor();
+        uc.mg.save(cap);
+        return encodeMap(cap.values, MG_ACCOUNT_KEYS::contains);
+    }
+
+    /**
+     * Builds the settings document from the live state. Call off the UI thread.
+     *
+     * @param includeLists  add the "lists" section: per-account options keyed by Telegram user id,
+     *                      locked / hidden chats, ghost exceptions, message filters and hidden
+     *                      users, OpenPGP key ids. Off for a file meant to be shared.
+     * @param includeHidden keep hidden accounts in (only offered while signed in to one); otherwise
+     *                      nothing that names a hidden account's slot or user id is written.
+     */
+    public static JSONObject buildSettingsJson(boolean includeLists, boolean includeHidden) throws JSONException {
+        final HiddenSet hidden = includeHidden ? new HiddenSet() : hiddenAccounts();
         JSONObject root = new JSONObject();
         root.put("format", SETTINGS_FORMAT);
         root.put("version", SETTINGS_VERSION);
@@ -449,33 +648,45 @@ public final class HanakoBackup {
         root.put("global", encodeMap(prefs("userconfing").getAll(), HanakoBackup::isGlobalSettingKey));
 
         JSONObject files = new JSONObject();
+        JSONObject listFiles = new JSONObject();
         for (String name : SETTINGS_PREF_FILES) {
             Map<String, ?> all = prefs(name).getAll();
-            if (!all.isEmpty()) {
-                files.put(name, encodeMap(all, null));
+            if (all.isEmpty()) continue;
+            JSONObject p = encodeMap(all, key -> !isListKey(name, key) && !hidden.touches(key));
+            if (p.length() > 0) files.put(name, p);
+            if (includeLists) {
+                JSONObject l = encodeMap(all, key -> isListKey(name, key) && !hidden.touches(key));
+                if (l.length() > 0) listFiles.put(name, l);
             }
         }
         root.put("files", files);
 
-        JSONArray accounts = new JSONArray();
-        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
-            UserConfig uc = UserConfig.getInstance(a);
-            if (!uc.isClientActivated()) {
-                continue;
-            }
-            CaptureEditor cap = new CaptureEditor();
-            uc.mg.save(cap);
-            JSONObject acc = new JSONObject();
-            acc.put("user_id", Long.toString(uc.getClientUserId()));
-            acc.put("prefs", encodeMap(cap.values, MG_ACCOUNT_KEYS::contains));
-            accounts.put(acc);
+        // the options of the account in use, without any id: applied to the account in use on import
+        int sel = UserConfig.selectedAccount;
+        if (sel >= 0 && sel < UserConfig.MAX_ACCOUNT_COUNT && UserConfig.getInstance(sel).isClientActivated() && !hidden.slots.contains(sel)) {
+            root.put("current_account", accountPrefs(UserConfig.getInstance(sel)));
         }
-        root.put("accounts", accounts);
+
+        if (includeLists) {
+            JSONArray accounts = new JSONArray();
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                UserConfig uc = UserConfig.getInstance(a);
+                if (!uc.isClientActivated() || hidden.slots.contains(a)) continue;
+                JSONObject acc = new JSONObject();
+                acc.put("user_id", Long.toString(uc.getClientUserId()));
+                acc.put("prefs", accountPrefs(uc));
+                accounts.put(acc);
+            }
+            JSONObject lists = new JSONObject();
+            lists.put("files", listFiles);
+            lists.put("accounts", accounts);
+            root.put("lists", lists);
+        }
         return root;
     }
 
-    public static void writeSettings(Context context, Uri uri) throws Exception {
-        byte[] data = buildSettingsJson().toString(2).getBytes(StandardCharsets.UTF_8);
+    public static void writeSettings(Context context, Uri uri, boolean includeLists, boolean includeHidden) throws Exception {
+        byte[] data = buildSettingsJson(includeLists, includeHidden).toString(2).getBytes(StandardCharsets.UTF_8);
         try (OutputStream os = context.getContentResolver().openOutputStream(uri, "w")) {
             if (os == null) {
                 throw new IOException("cannot open output");
@@ -487,86 +698,108 @@ public final class HanakoBackup {
     /** Parses and validates a settings document. */
     public static JSONObject readSettings(Context context, Uri uri) throws Exception {
         byte[] data = readAll(context.getContentResolver(), uri, MAX_SETTINGS_BYTES);
+        if (startsWith(data, MAGIC)) {
+            throw new InvalidBackupException(ERR_IS_FULL_BACKUP, "full backup picked in Import settings");
+        }
         JSONObject root;
         try {
             root = new JSONObject(new String(data, StandardCharsets.UTF_8));
         } catch (JSONException e) {
-            throw new InvalidBackupException("not a JSON file");
+            throw new InvalidBackupException(ERR_NOT_SETTINGS, "not a JSON file");
         }
         validateSettings(root);
         return root;
     }
 
+    private static void validateFiles(JSONObject files) throws InvalidBackupException {
+        if (files == null) return;
+        Iterator<String> it = files.keys();
+        while (it.hasNext()) {
+            String name = it.next();
+            if (!isSettingsFile(name)) {
+                continue;
+            }
+            JSONObject f = files.optJSONObject(name);
+            if (f == null) {
+                throw new InvalidBackupException("bad section " + name);
+            }
+            validateTyped(f, null);
+        }
+    }
+
+    private static void validateAccounts(JSONArray accounts) throws InvalidBackupException {
+        if (accounts == null) return;
+        for (int i = 0; i < accounts.length(); i++) {
+            JSONObject acc = accounts.optJSONObject(i);
+            if (acc == null || !isLong(acc.optString("user_id"))) {
+                throw new InvalidBackupException("bad account entry");
+            }
+            JSONObject p = acc.optJSONObject("prefs");
+            if (p != null) {
+                validateTyped(p, MG_ACCOUNT_KEYS::contains);
+            }
+        }
+    }
+
     public static void validateSettings(JSONObject root) throws InvalidBackupException {
-        if (!SETTINGS_FORMAT.equals(root.optString("format"))) {
-            throw new InvalidBackupException("not a Hanako settings file");
+        String format = root.optString("format");
+        if (!SETTINGS_FORMAT.equals(format)) {
+            if (FULL_FORMAT.equals(format)) {
+                throw new InvalidBackupException(ERR_IS_FULL_BACKUP, "full backup manifest");
+            }
+            throw new InvalidBackupException(ERR_NOT_SETTINGS, "not a Hanako settings file");
         }
         int version = root.optInt("version", -1);
-        if (version < 1 || version > SETTINGS_VERSION) {
-            throw new InvalidBackupException("unsupported settings version " + version);
+        if (version > SETTINGS_VERSION) {
+            throw new InvalidBackupException(ERR_NEWER, "settings version " + version);
+        }
+        if (version < 1) {
+            throw new InvalidBackupException("bad settings version " + version);
         }
         JSONObject global = root.optJSONObject("global");
         if (global != null) {
             validateTyped(global, HanakoBackup::isGlobalSettingKey);
         }
-        JSONObject files = root.optJSONObject("files");
-        if (files != null) {
-            Iterator<String> it = files.keys();
-            while (it.hasNext()) {
-                String name = it.next();
-                if (!isSettingsFile(name)) {
-                    continue;
-                }
-                JSONObject f = files.optJSONObject(name);
-                if (f == null) {
-                    throw new InvalidBackupException("bad section " + name);
-                }
-                validateTyped(f, null);
-            }
+        validateFiles(root.optJSONObject("files"));
+        validateAccounts(root.optJSONArray("accounts")); // v1
+        JSONObject current = root.optJSONObject("current_account");
+        if (current != null) {
+            validateTyped(current, MG_ACCOUNT_KEYS::contains);
         }
-        JSONArray accounts = root.optJSONArray("accounts");
-        if (accounts != null) {
-            for (int i = 0; i < accounts.length(); i++) {
-                JSONObject acc = accounts.optJSONObject(i);
-                if (acc == null || !isLong(acc.optString("user_id"))) {
-                    throw new InvalidBackupException("bad account entry");
-                }
-                JSONObject p = acc.optJSONObject("prefs");
-                if (p != null) {
-                    validateTyped(p, MG_ACCOUNT_KEYS::contains);
-                }
-            }
+        JSONObject lists = root.optJSONObject("lists");
+        if (lists != null) {
+            validateFiles(lists.optJSONObject("files"));
+            validateAccounts(lists.optJSONArray("accounts"));
         }
     }
 
-    /** Number of individual values the document would apply (for the confirmation dialog). */
-    public static int countSettings(JSONObject root) {
-        int n = 0;
-        JSONObject global = root.optJSONObject("global");
-        if (global != null) {
-            Iterator<String> it = global.keys();
-            while (it.hasNext()) {
-                if (isGlobalSettingKey(it.next())) n++;
-            }
-        }
-        JSONObject files = root.optJSONObject("files");
-        if (files != null) {
-            Iterator<String> it = files.keys();
-            while (it.hasNext()) {
-                String name = it.next();
-                JSONObject f = files.optJSONObject(name);
-                if (isSettingsFile(name) && f != null) n += f.length();
-            }
-        }
-        JSONArray accounts = root.optJSONArray("accounts");
+    /** Whether the document carries per-chat lists (v2 "lists" section, or any v1 file). */
+    public static boolean hasLists(JSONObject root) {
+        if (root.optInt("version", 1) < 2) return true;
+        return root.optJSONObject("lists") != null;
+    }
+
+    /** How many accounts of the document's per-account section are logged in here (and visible). */
+    public static int[] matchingAccounts(JSONObject root) {
+        JSONArray accounts = root.optInt("version", 1) < 2 ? root.optJSONArray("accounts")
+                : (root.optJSONObject("lists") != null ? root.optJSONObject("lists").optJSONArray("accounts") : null);
+        int total = 0;
+        int match = 0;
         if (accounts != null) {
+            HashMap<Long, Integer> here = currentAccountsByUser();
+            HiddenSet hidden = hiddenAccounts();
             for (int i = 0; i < accounts.length(); i++) {
                 JSONObject acc = accounts.optJSONObject(i);
-                JSONObject p = acc != null ? acc.optJSONObject("prefs") : null;
-                if (p != null) n += p.length();
+                if (acc == null) continue;
+                total++;
+                try {
+                    Integer slot = here.get(Long.parseLong(acc.optString("user_id")));
+                    if (slot != null && !hidden.slots.contains(slot)) match++;
+                } catch (NumberFormatException ignore) {
+                }
             }
         }
-        return n;
+        return new int[]{match, total};
     }
 
     /** user id -&gt; slot of the accounts logged in right now. */
@@ -581,18 +814,59 @@ public final class HanakoBackup {
         return map;
     }
 
+    private static void mergeInto(JSONObject target, JSONObject files) throws JSONException {
+        if (files == null) return;
+        Iterator<String> it = files.keys();
+        while (it.hasNext()) {
+            String name = it.next();
+            JSONObject f = files.optJSONObject(name);
+            if (f == null) continue;
+            JSONObject t = target.optJSONObject(name);
+            if (t == null) {
+                t = new JSONObject();
+                target.put(name, t);
+            }
+            Iterator<String> keys = f.keys();
+            while (keys.hasNext()) {
+                String k = keys.next();
+                t.put(k, f.get(k));
+            }
+        }
+    }
+
     /**
      * Turns a validated settings document into the staged form: account sections are resolved to
-     * slots (by Telegram user id); sections for accounts that are not here are dropped.
+     * slots (by Telegram user id; sections for accounts that are not here are dropped), and the
+     * hidden accounts of this device are recorded so the apply step never touches their keys.
+     *
+     * @param withLists also replace the per-chat lists (when the document has them)
      */
-    private static JSONObject resolveSettings(JSONObject root, Map<Long, Integer> userToSlot) throws JSONException {
+    private static JSONObject resolveSettings(JSONObject root, Map<Long, Integer> userToSlot, int currentSlot, boolean withLists, HiddenSet preserve) throws JSONException {
+        boolean v1 = root.optInt("version", 1) < 2;
+        boolean lists = withLists && hasLists(root);
         JSONObject out = new JSONObject();
         JSONObject global = root.optJSONObject("global");
         if (global != null) out.put("global", global);
-        JSONObject files = root.optJSONObject("files");
-        if (files != null) out.put("files", files);
+
+        JSONObject files = new JSONObject();
+        mergeInto(files, root.optJSONObject("files"));
+        JSONArray accounts;
+        if (v1) {
+            accounts = lists ? root.optJSONArray("accounts") : null;
+        } else {
+            JSONObject l = lists ? root.optJSONObject("lists") : null;
+            if (l != null) mergeInto(files, l.optJSONObject("files"));
+            accounts = l != null ? l.optJSONArray("accounts") : null;
+        }
+        out.put("files", files);
+        out.put("replace_prefs", true);
+        out.put("replace_lists", lists);
+
         JSONArray slots = new JSONArray();
-        JSONArray accounts = root.optJSONArray("accounts");
+        JSONObject current = root.optJSONObject("current_account");
+        if (current != null && currentSlot >= 0 && !preserve.slots.contains(currentSlot)) {
+            slots.put(new JSONObject().put("slot", currentSlot).put("prefs", current));
+        }
         if (accounts != null) {
             for (int i = 0; i < accounts.length(); i++) {
                 JSONObject acc = accounts.optJSONObject(i);
@@ -604,20 +878,75 @@ public final class HanakoBackup {
                     slot = null;
                 }
                 JSONObject p = acc.optJSONObject("prefs");
-                if (slot == null || p == null) continue;
+                if (slot == null || p == null || preserve.slots.contains(slot)) continue;
                 slots.put(new JSONObject().put("slot", slot).put("prefs", p));
             }
         }
         out.put("accounts", slots);
+        out.put("preserve", preserve.toJson());
         return out;
     }
 
-    /** Stages a settings import; it is applied on the next start (see {@link #restartApp(Activity)}). */
-    public static void stageSettingsImport(JSONObject root) throws Exception {
+    /**
+     * Stages a settings import; it is applied on the next start (see {@link #restartApp(Activity)}).
+     * The current settings are saved first, so the import can be undone for 24 hours.
+     */
+    public static void stageSettingsImport(JSONObject root, boolean withLists) throws Exception {
+        saveUndoSnapshot();
         JSONObject plan = new JSONObject();
         plan.put("version", 1);
-        plan.put("settings", resolveSettings(root, currentAccountsByUser()));
+        plan.put("settings", resolveSettings(root, currentAccountsByUser(), UserConfig.selectedAccount, withLists, hiddenAccounts()));
         writePlan(plan, null);
+    }
+
+    private static File undoFile() {
+        File files = ApplicationLoader.applicationContext.getFilesDir();
+        if (files == null) files = ApplicationLoader.getFilesDirFixed();
+        return new File(files, UNDO_FILE);
+    }
+
+    private static void saveUndoSnapshot() {
+        try {
+            byte[] data = buildSettingsJson(true, false).toString().getBytes(StandardCharsets.UTF_8);
+            File f = undoFile();
+            File tmp = new File(f.getParentFile(), UNDO_FILE + ".tmp");
+            try (FileOutputStream fos = new FileOutputStream(tmp)) {
+                fos.write(data);
+                fos.getFD().sync();
+            }
+            if (!tmp.renameTo(f)) {
+                tmp.delete();
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+    }
+
+    /** An import made in the last 24 hours can be undone. */
+    public static boolean hasUndo() {
+        File f = undoFile();
+        if (!f.isFile()) return false;
+        if (System.currentTimeMillis() - f.lastModified() > UNDO_MAX_AGE_MS) {
+            f.delete();
+            return false;
+        }
+        return true;
+    }
+
+    /** Stages the settings that were in place before the last import. */
+    public static void stageUndo() throws Exception {
+        File f = undoFile();
+        byte[] data;
+        try (InputStream in = new FileInputStream(f)) {
+            data = readStream(in, MAX_SETTINGS_BYTES);
+        }
+        JSONObject root = new JSONObject(new String(data, StandardCharsets.UTF_8));
+        validateSettings(root);
+        JSONObject plan = new JSONObject();
+        plan.put("version", 1);
+        plan.put("settings", resolveSettings(root, currentAccountsByUser(), UserConfig.selectedAccount, true, hiddenAccounts()));
+        writePlan(plan, null);
+        f.delete();
     }
 
     // =====================================================================================
@@ -631,6 +960,10 @@ public final class HanakoBackup {
         public String phoneHint;
         public byte[] tgnet;
         public JSONObject prefs;
+        /** Hidden account (HiddenAccountHelper): never named in the UI, stays hidden after restore. */
+        public boolean hidden;
+        public String hiddenHash;
+        public String hiddenSalt;
     }
 
     public static final class FullBackup {
@@ -678,7 +1011,7 @@ public final class HanakoBackup {
     }
 
     /** Plain (unencrypted) zip of the full backup. Wipe the returned array after use. */
-    private static byte[] buildFullPlain(boolean includeSettings, int[] outAccountCount) throws Exception {
+    private static byte[] buildFullPlain(boolean includeSettings, boolean includeHidden, int[] outAccountCount) throws Exception {
         Context ctx = ApplicationLoader.applicationContext;
         JSONObject manifest = new JSONObject();
         manifest.put("format", FULL_FORMAT);
@@ -688,9 +1021,14 @@ public final class HanakoBackup {
         manifest.put("created", System.currentTimeMillis() / 1000L);
         JSONArray accounts = new JSONArray();
         ArrayList<byte[]> sessions = new ArrayList<>();
+        SharedPreferences hiddenPrefs = ctx.getSharedPreferences(HIDDEN_PREFS, Context.MODE_PRIVATE);
+        int visibleCount = 0;
+        int hiddenCount = 0;
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             UserConfig uc = UserConfig.getInstance(a);
             if (!uc.isClientActivated()) continue;
+            final boolean hidden = HiddenAccountHelper.isAccountHidden(a);
+            if (hidden && !includeHidden) continue;
             byte[] session = readSessionFile(ctx, a);
             if (session == null) {
                 FileLog.d("hanako backup: no session file for slot " + a);
@@ -721,16 +1059,31 @@ public final class HanakoBackup {
             int idx = sessions.size();
             acc.put("index", idx);
             acc.put("user_id", Long.toString(uc.getClientUserId()));
-            acc.put("name", user != null ? UserObject.getUserName(user) : "");
-            acc.put("username", user != null && UserObject.getPublicUsername(user) != null ? UserObject.getPublicUsername(user) : "");
-            acc.put("phone_hint", user != null ? maskPhone(user.phone) : "");
+            if (hidden) {
+                // never shown by name; the 4-digit code's salted hash travels inside the encrypted file
+                acc.put("name", "");
+                acc.put("username", "");
+                acc.put("phone_hint", "");
+                acc.put("hidden", true);
+                acc.put("hidden_hash", hiddenPrefs.getString(HIDDEN_HASH_PREFIX + a, ""));
+                acc.put("hidden_salt", hiddenPrefs.getString(HIDDEN_SALT_PREFIX + a, ""));
+                hiddenCount++;
+            } else {
+                acc.put("name", user != null ? UserObject.getUserName(user) : "");
+                acc.put("username", user != null && UserObject.getPublicUsername(user) != null ? UserObject.getPublicUsername(user) : "");
+                acc.put("phone_hint", user != null ? maskPhone(user.phone) : "");
+                visibleCount++;
+            }
             acc.put("test_backend", ConnectionsManager.getInstance(a).isTestBackend());
             acc.put("prefs", encodeMap(keep, null));
             accounts.put(acc);
             sessions.add(session);
         }
         manifest.put("accounts", accounts);
-        if (outAccountCount != null) outAccountCount[0] = sessions.size();
+        if (outAccountCount != null) {
+            outAccountCount[0] = visibleCount;
+            if (outAccountCount.length > 1) outAccountCount[1] = hiddenCount;
+        }
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try (ZipOutputStream zos = new ZipOutputStream(bos)) {
@@ -739,7 +1092,7 @@ public final class HanakoBackup {
             zos.closeEntry();
             if (includeSettings) {
                 zos.putNextEntry(new ZipEntry("settings.json"));
-                zos.write(buildSettingsJson().toString().getBytes(StandardCharsets.UTF_8));
+                zos.write(buildSettingsJson(true, includeHidden).toString().getBytes(StandardCharsets.UTF_8));
                 zos.closeEntry();
             }
             for (int i = 0; i < sessions.size(); i++) {
@@ -754,16 +1107,17 @@ public final class HanakoBackup {
 
     /**
      * Writes an encrypted full backup to {@code uri}. Wipes {@code password}. Returns the number of
-     * accounts written. Call off the UI thread (the key derivation takes a second or two).
+     * visible accounts written (hidden ones are never counted in the UI). Call off the UI thread
+     * (the key derivation takes a second or two).
      */
-    public static int writeFullBackup(Context context, Uri uri, char[] password, boolean includeSettings) throws Exception {
+    public static int writeFullBackup(Context context, Uri uri, char[] password, boolean includeSettings, boolean includeHidden) throws Exception {
         byte[] plain = null;
         byte[] key = null;
         try {
-            int[] count = new int[1];
-            plain = buildFullPlain(includeSettings, count);
-            if (count[0] == 0) {
-                throw new InvalidBackupException("no accounts");
+            int[] count = new int[2];
+            plain = buildFullPlain(includeSettings, includeHidden, count);
+            if (count[0] + count[1] == 0) {
+                throw new InvalidBackupException(ERR_NO_ACCOUNTS, "no accounts");
             }
             SecureRandom random = new SecureRandom();
             byte[] salt = new byte[SALT_LEN];
@@ -810,17 +1164,23 @@ public final class HanakoBackup {
         byte[] plain = null;
         try {
             byte[] file = readAll(context.getContentResolver(), uri, MAX_BACKUP_BYTES);
+            if (looksLikeSettings(file)) {
+                throw new InvalidBackupException(ERR_IS_SETTINGS, "settings file picked in Restore full backup");
+            }
             DataInputStream in = new DataInputStream(new ByteArrayInputStream(file));
             byte[] magic = new byte[MAGIC.length];
             try {
                 in.readFully(magic);
             } catch (IOException e) {
-                throw new InvalidBackupException("not a Hanako backup");
+                throw new InvalidBackupException(ERR_NOT_BACKUP, "not a Hanako backup");
             }
             if (!Arrays.equals(magic, MAGIC)) {
-                throw new InvalidBackupException("not a Hanako backup");
+                throw new InvalidBackupException(ERR_NOT_BACKUP, "not a Hanako backup");
             }
             int version = in.readUnsignedByte();
+            if (version > FILE_VERSION) {
+                throw new InvalidBackupException(ERR_NEWER, "backup file version " + version);
+            }
             if (version != FILE_VERSION) {
                 throw new InvalidBackupException("unsupported backup version " + version);
             }
@@ -881,8 +1241,10 @@ public final class HanakoBackup {
         } catch (JSONException ex) {
             throw new InvalidBackupException("bad manifest");
         }
-        if (!FULL_FORMAT.equals(b.manifest.optString("format"))) throw new InvalidBackupException("not a Hanako backup");
-        if (b.manifest.optInt("version", -1) != 1) throw new InvalidBackupException("unsupported manifest version");
+        if (!FULL_FORMAT.equals(b.manifest.optString("format"))) throw new InvalidBackupException(ERR_NOT_BACKUP, "not a Hanako backup");
+        int manifestVersion = b.manifest.optInt("version", -1);
+        if (manifestVersion > 1) throw new InvalidBackupException(ERR_NEWER, "manifest version " + manifestVersion);
+        if (manifestVersion != 1) throw new InvalidBackupException("unsupported manifest version");
         byte[] s = entries.get("settings.json");
         if (s != null) {
             try {
@@ -893,7 +1255,7 @@ public final class HanakoBackup {
             }
         }
         JSONArray accounts = b.manifest.optJSONArray("accounts");
-        if (accounts == null) throw new InvalidBackupException("no accounts");
+        if (accounts == null) throw new InvalidBackupException(ERR_NO_ACCOUNTS, "no accounts");
         for (int i = 0; i < accounts.length(); i++) {
             JSONObject acc = accounts.optJSONObject(i);
             if (acc == null) throw new InvalidBackupException("bad account entry");
@@ -905,13 +1267,19 @@ public final class HanakoBackup {
             e.username = acc.optString("username");
             e.phoneHint = acc.optString("phone_hint");
             e.prefs = acc.optJSONObject("prefs");
+            e.hidden = acc.optBoolean("hidden", false);
+            if (e.hidden) {
+                e.hiddenHash = acc.optString("hidden_hash", "");
+                e.hiddenSalt = acc.optString("hidden_salt", "");
+                if (TextUtils.isEmpty(e.hiddenHash) || TextUtils.isEmpty(e.hiddenSalt)) e.hidden = false;
+            }
             if (e.prefs == null || !e.prefs.has("user")) throw new InvalidBackupException("bad account entry");
             validateTyped(e.prefs, null);
             e.tgnet = entries.get("accounts/" + acc.optInt("index", -1) + "/" + TGNET);
             if (e.tgnet == null || e.tgnet.length == 0) throw new InvalidBackupException("session file missing");
             b.accounts.add(e);
         }
-        if (b.accounts.isEmpty()) throw new InvalidBackupException("no accounts");
+        if (b.accounts.isEmpty()) throw new InvalidBackupException(ERR_NO_ACCOUNTS, "no accounts");
         return b;
     }
 
@@ -970,7 +1338,14 @@ public final class HanakoBackup {
             }
             JSONObject prefs = new JSONObject(e.prefs.toString());
             prefs.put("registeredForPush", new JSONObject().put("t", "b").put("v", false));
-            accs.put(new JSONObject().put("slot", slot).put("user_id", Long.toString(e.userId)).put("prefs", prefs));
+            JSONObject entry = new JSONObject().put("slot", slot).put("user_id", Long.toString(e.userId)).put("prefs", prefs);
+            if (e.hidden) {
+                entry.put("hidden_hash", e.hiddenHash).put("hidden_salt", e.hiddenSalt);
+            } else if (HiddenAccountHelper.isAccountHidden(slot) && UserConfig.getInstance(slot).isClientActivated()) {
+                // replacing the session of an account that is hidden here: it stays hidden
+                entry.put("keep_hidden", true);
+            }
+            accs.put(entry);
             // a slot that held another account stops mapping to it
             Iterator<Map.Entry<Long, Integer>> it = userToSlot.entrySet().iterator();
             while (it.hasNext()) {
@@ -984,7 +1359,8 @@ public final class HanakoBackup {
         }
         plan.put("accounts", accs);
         if (restoreSettings && b.settings != null) {
-            plan.put("settings", resolveSettings(b.settings, userToSlot));
+            int current = UserConfig.selectedAccount;
+            plan.put("settings", resolveSettings(b.settings, userToSlot, current, true, hiddenAccounts()));
         }
         writePlan(plan, dir);
         return accs.length();
@@ -1028,6 +1404,11 @@ public final class HanakoBackup {
      */
     public static void applyPendingAtStartup(Context ctx) {
         if (ctx == null) return;
+        int planned = 0;
+        int restored = 0;
+        boolean settingsPlanned = false;
+        boolean settingsApplied = false;
+        String error = null;
         File dir;
         try {
             File files = ctx.getFilesDir();
@@ -1044,6 +1425,10 @@ public final class HanakoBackup {
                     return; // only the main process applies (and deletes) the staging
                 }
             }
+        } catch (Throwable t) {
+            return;
+        }
+        try {
             File planFile = new File(dir, STAGE_PLAN);
             if (!planFile.isFile()) {
                 return; // incomplete staging: dropped below
@@ -1053,16 +1438,99 @@ public final class HanakoBackup {
                 data = readStream(in, MAX_BACKUP_BYTES);
             }
             JSONObject plan = new JSONObject(new String(data, StandardCharsets.UTF_8));
-            int restored = applyAccounts(ctx, dir, plan.optJSONArray("accounts"));
+            JSONArray accs = plan.optJSONArray("accounts");
+            planned = accs != null ? accs.length() : 0;
+            restored = applyAccounts(ctx, dir, accs);
             JSONObject settings = plan.optJSONObject("settings");
+            settingsPlanned = settings != null;
             if (settings != null) {
                 applySettings(ctx, settings);
+                settingsApplied = true;
             }
-            Log.i(TAG, "applied staged restore: accounts=" + restored + " settings=" + (settings != null));
+            Log.i(TAG, "applied staged restore: accounts=" + restored + "/" + planned + " settings=" + settingsApplied);
         } catch (Throwable t) {
             Log.e(TAG, "staged restore failed", t);
+            error = t.getClass().getSimpleName();
         } finally {
+            writeResult(ctx, planned, restored, settingsPlanned, settingsApplied, error);
             deleteRecursive(dir);
+        }
+    }
+
+    /** Outcome of the staged restore / import, shown once after the restart (showPendingResult). */
+    private static void writeResult(Context ctx, int planned, int restored, boolean settingsPlanned, boolean settingsApplied, String error) {
+        try {
+            if (planned == 0 && !settingsPlanned && error == null) return; // incomplete staging, nothing was tried
+            JSONObject r = new JSONObject();
+            r.put("planned", planned);
+            r.put("restored", restored);
+            r.put("settings_planned", settingsPlanned);
+            r.put("settings", settingsApplied);
+            if (error != null) r.put("error", error);
+            File f = new File(ctx.getFilesDir(), RESULT_FILE);
+            try (FileOutputStream fos = new FileOutputStream(f)) {
+                fos.write(r.toString().getBytes(StandardCharsets.UTF_8));
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "cannot write restore result", t);
+        }
+    }
+
+    /** Shows, once, what the last restore / settings import did. Call on the UI thread from a visible screen. */
+    public static void showPendingResult(BaseFragment fragment) {
+        if (fragment == null || fragment.getParentActivity() == null) return;
+        File f;
+        JSONObject r;
+        try {
+            f = new File(ApplicationLoader.applicationContext.getFilesDir(), RESULT_FILE);
+            if (!f.isFile()) return;
+            byte[] data;
+            try (InputStream in = new FileInputStream(f)) {
+                data = readStream(in, 64 * 1024);
+            }
+            f.delete();
+            r = new JSONObject(new String(data, StandardCharsets.UTF_8));
+        } catch (Throwable t) {
+            FileLog.e(t);
+            return;
+        }
+        int planned = r.optInt("planned", 0);
+        int restored = r.optInt("restored", 0);
+        boolean settingsPlanned = r.optBoolean("settings_planned", false);
+        boolean settings = r.optBoolean("settings", false);
+        boolean failed = r.has("error");
+        StringBuilder msg = new StringBuilder();
+        String title;
+        if (planned > 0) {
+            title = LocaleController.getString(R.string.HanakoBackupRestoreTitle);
+            String accounts = LocaleController.formatPluralString("HanakoAccounts", restored);
+            if (restored == 0) {
+                msg.append(LocaleController.getString(R.string.HanakoResultRestoreFailed));
+            } else if (restored < planned) {
+                msg.append(LocaleController.formatString(R.string.HanakoResultRestorePartial, accounts, planned - restored));
+            } else if (settings) {
+                msg.append(LocaleController.formatString(R.string.HanakoResultRestoredWithSettings, accounts));
+            } else {
+                msg.append(LocaleController.formatString(R.string.HanakoResultRestored, accounts));
+            }
+            if (settingsPlanned && !settings && restored > 0) {
+                msg.append("\n\n").append(LocaleController.getString(R.string.HanakoResultSettingsFailed));
+            }
+            if (restored > 0) {
+                msg.append("\n\n").append(LocaleController.getString(R.string.HanakoResultPasscodeNote));
+            }
+        } else {
+            title = LocaleController.getString(R.string.HanakoBackupImportSettings);
+            msg.append(LocaleController.getString(settings && !failed ? R.string.HanakoResultSettingsImported : R.string.HanakoResultSettingsFailed));
+        }
+        try {
+            org.telegram.ui.ActionBar.AlertDialog.Builder b = new org.telegram.ui.ActionBar.AlertDialog.Builder(fragment.getParentActivity(), fragment.getResourceProvider());
+            b.setTitle(title);
+            b.setMessage(msg.toString());
+            b.setPositiveButton(LocaleController.getString(R.string.OK), null);
+            fragment.showDialog(b.create());
+        } catch (Throwable t) {
+            FileLog.e(t);
         }
     }
 
@@ -1099,6 +1567,23 @@ public final class HanakoBackup {
             }
             putTyped(editor, prefs, null);
             editor.commit();
+
+            // hidden-account state of the slot (Mercurygram HiddenAccountHelper keys in mainconfig)
+            SharedPreferences hiddenPrefs = ctx.getSharedPreferences(HIDDEN_PREFS, Context.MODE_PRIVATE);
+            String hash = acc.optString("hidden_hash", "");
+            String salt = acc.optString("hidden_salt", "");
+            if (!TextUtils.isEmpty(hash) && !TextUtils.isEmpty(salt)) {
+                // stealth mode lets the code be typed into chat search when no passcode is set;
+                // HiddenAccountHelper turns it off again by itself if a passcode exists
+                hiddenPrefs.edit()
+                        .putString(HIDDEN_HASH_PREFIX + slot, hash)
+                        .putString(HIDDEN_SALT_PREFIX + slot, salt)
+                        .putBoolean(HIDDEN_STEALTH_KEY, true)
+                        .commit();
+            } else if (!acc.optBoolean("keep_hidden", false)) {
+                // a stale hidden marker on a reused slot must not hide the restored account
+                hiddenPrefs.edit().remove(HIDDEN_HASH_PREFIX + slot).remove(HIDDEN_SALT_PREFIX + slot).commit();
+            }
             done++;
             if (firstSlot < 0) firstSlot = slot;
         }
@@ -1130,16 +1615,25 @@ public final class HanakoBackup {
             putTyped(e, global, HanakoBackup::isGlobalSettingKey);
             e.commit();
         }
+        // plans staged by older builds carry neither flag: they replaced whole files
+        final boolean replacePrefs = settings.optBoolean("replace_prefs", true);
+        final boolean replaceLists = settings.optBoolean("replace_lists", true);
+        final HiddenSet preserve = HiddenSet.fromJson(settings.optJSONObject("preserve"));
         JSONObject files = settings.optJSONObject("files");
         if (files != null) {
             Iterator<String> it = files.keys();
             while (it.hasNext()) {
-                String name = it.next();
+                final String name = it.next();
                 JSONObject f = files.optJSONObject(name);
                 if (!isSettingsFile(name) || f == null) continue;
-                SharedPreferences.Editor e = ctx.getSharedPreferences(name, Context.MODE_PRIVATE).edit();
-                e.clear();
-                putTyped(e, f, null);
+                SharedPreferences sp = ctx.getSharedPreferences(name, Context.MODE_PRIVATE);
+                SharedPreferences.Editor e = sp.edit();
+                // drop only the kind of values being replaced, and never a hidden account's
+                for (String key : sp.getAll().keySet()) {
+                    boolean list = isListKey(name, key);
+                    if ((list ? replaceLists : replacePrefs) && !preserve.touches(key)) e.remove(key);
+                }
+                putTyped(e, f, key -> (isListKey(name, key) ? replaceLists : replacePrefs) && !preserve.touches(key));
                 e.commit();
             }
         }
@@ -1150,7 +1644,7 @@ public final class HanakoBackup {
                 if (acc == null) continue;
                 int slot = acc.optInt("slot", -1);
                 JSONObject p = acc.optJSONObject("prefs");
-                if (slot < 0 || slot >= UserConfig.MAX_ACCOUNT_COUNT || p == null) continue;
+                if (slot < 0 || slot >= UserConfig.MAX_ACCOUNT_COUNT || p == null || preserve.slots.contains(slot)) continue;
                 SharedPreferences.Editor e = ctx.getSharedPreferences(userConfigPrefsName(slot), Context.MODE_PRIVATE).edit();
                 putTyped(e, p, MG_ACCOUNT_KEYS::contains);
                 e.commit();
@@ -1187,10 +1681,14 @@ public final class HanakoBackup {
         button.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         button.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4));
         int pad = org.telegram.messenger.AndroidUtilities.dp(4);
-        button.setPadding(pad, pad * 2, pad, pad * 2);
+        button.setPadding(pad * 2, pad * 2, pad * 2, pad * 2);
+        button.setMinHeight(org.telegram.messenger.AndroidUtilities.dp(48)); // touch target
+        button.setGravity(Gravity.CENTER);
         button.setOnClickListener(v -> fragment.presentFragment(new it.belloworld.mercurygram.ui.HanakoBackupActivity(true)));
+        // a restore that ended back here (nothing restored) explains itself once
+        org.telegram.messenger.AndroidUtilities.runOnUIThread(() -> showPendingResult(fragment), 600);
         parent.addView(button, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 16, 0, 16, 0));
-        return 44;
+        return 52;
     }
 
     // =====================================================================================
@@ -1277,6 +1775,18 @@ public final class HanakoBackup {
         f.delete();
     }
 
+    /** Name shown for a backup account; hidden accounts are never named. */
+    public static String accountLabel(AccountEntry e) {
+        if (e.hidden) {
+            return LocaleController.getString(R.string.HanakoBackupHiddenAccount);
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(TextUtils.isEmpty(e.name) ? Long.toString(e.userId) : e.name);
+        if (!TextUtils.isEmpty(e.username)) sb.append(" @").append(e.username);
+        if (!TextUtils.isEmpty(e.phoneHint)) sb.append(" ").append(e.phoneHint);
+        return sb.toString();
+    }
+
     /** For the restore summary dialog. */
     public static List<String> describeAccounts(FullBackup b, int[] slots) {
         ArrayList<String> lines = new ArrayList<>();
@@ -1284,9 +1794,7 @@ public final class HanakoBackup {
         for (int i = 0; i < b.accounts.size(); i++) {
             AccountEntry e = b.accounts.get(i);
             StringBuilder sb = new StringBuilder("• ");
-            sb.append(TextUtils.isEmpty(e.name) ? Long.toString(e.userId) : e.name);
-            if (!TextUtils.isEmpty(e.username)) sb.append(" @").append(e.username);
-            if (!TextUtils.isEmpty(e.phoneHint)) sb.append(" ").append(e.phoneHint);
+            sb.append(accountLabel(e));
             sb.append(" — ");
             if (slots[i] < 0) {
                 sb.append(LocaleController.getString(current.containsKey(e.userId) ? R.string.HanakoBackupAccountSkipExisting : R.string.HanakoBackupAccountNoSlot));

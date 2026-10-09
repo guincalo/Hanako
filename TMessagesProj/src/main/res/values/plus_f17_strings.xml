@@ -10,8 +10,8 @@
     <string name="PlusDohTestOk">Resolver works (telegram.org → %1$s)</string>
     <string name="PlusDohTestFail">Resolver did not answer (HTTP/2-only servers aren\'t supported). Using the default lookup.</string>
     <string name="PlusDohAbout">Looks up proxy and backup server addresses through this server. Falls back to the default if it fails.</string>
-    <string name="PlusProxyAutoSwitch">Auto-switch proxy</string>
-    <string name="PlusProxyAutoSwitchAbout">If the proxy can\'t connect for 10 s, switch to the fastest saved proxy that works.</string>
+    <string name="PlusProxyAutoSwitch">Switch to the fastest working proxy</string>
+    <string name="PlusProxyAutoSwitchAbout">If the proxy can\'t connect for 10 s, check every saved proxy and use the fastest one that works. While this is on, it takes over from Telegram\'s own \"Auto-switch proxies\" (Proxy settings), which picks the first that answers.</string>
     <string name="PlusVpnDisableProxy">No proxy while a VPN is on</string>
     <string name="PlusVpnDisableProxyAbout">Connects directly while a VPN is up; the proxy comes back when it goes down. Tor is never bypassed.</string>
     <string name="PlusVpnDisableProxyActive">Applies to all accounts. A VPN is active now, so the proxy is bypassed.</string>

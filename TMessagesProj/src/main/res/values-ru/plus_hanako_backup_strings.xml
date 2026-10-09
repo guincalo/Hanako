@@ -10,10 +10,10 @@
     <string name="HanakoBackupSettingsHeader">Настройки</string>
     <string name="HanakoBackupExportSettings">Экспортировать настройки</string>
     <string name="HanakoBackupImportSettings">Импортировать настройки</string>
-    <string name="HanakoBackupSettingsInfo">Только параметры Hanako и Mercurygram (без настроек самого Telegram, чатов и аккаунтов), в виде JSON-файла.</string>
+    <string name="HanakoBackupSettingsInfo">Параметры Hanako в виде JSON-файла. Без сообщений и данных входа. Списки чатов (блокировки, исключения, фильтры) добавляются, только если отметить их.</string>
     <string name="HanakoBackupChatHeader">Экспорт чата</string>
     <string name="HanakoBackupExportChat">Экспортировать чат</string>
-    <string name="HanakoBackupChatInfo">Сохраняет историю одного чата в HTML и/или JSON (формат Telegram Desktop) вместе с выбранными медиа.</string>
+    <string name="HanakoBackupChatInfo">Сохраняет историю одного чата в HTML и/или JSON (формат Telegram Desktop) вместе с выбранными медиа. Работает в фоне с уведомлением; прерванный экспорт продолжить нельзя.</string>
     <string name="HanakoBackupRestoreLogin">Восстановить из копии Hanako</string>
     <string name="HanakoBackupWarningTitle">Храните этот файл в тайне</string>
     <string name="HanakoBackupWarning">Любой, у кого есть этот файл и пароль к нему, получает полный доступ к вашим аккаунтам: чатам, контактам — всему, без кода входа и пароля двухэтапной проверки. Используйте надёжный пароль и храните файл в безопасном месте.</string>
@@ -21,7 +21,7 @@
     <string name="HanakoBackupPasswordTitle">Пароль копии</string>
     <string name="HanakoBackupPasswordHint">Пароль</string>
     <string name="HanakoBackupPasswordRepeat">Повторите пароль</string>
-    <string name="HanakoBackupPasswordInfo">Не меньше 8 символов. Забытый пароль восстановить невозможно.</string>
+    <string name="HanakoBackupPasswordInfo">Используйте не меньше 12 символов или несколько случайных слов. Если забыть пароль, копию не открыть.</string>
     <string name="HanakoBackupPasswordEnter">Введите пароль, с которым была создана копия.</string>
     <string name="HanakoBackupPasswordTooShort">Пароль должен быть не короче 8 символов</string>
     <string name="HanakoBackupPasswordMismatch">Пароли не совпадают</string>
@@ -35,12 +35,12 @@
     <string name="HanakoBackupRestoreIntro">В копии:</string>
     <string name="HanakoBackupRestoreSettingsToo">Настройки Hanako из копии тоже будут восстановлены.</string>
     <string name="HanakoBackupRestoreOldDevice">После этого не пользуйтесь этими аккаунтами на старой установке: удалите приложение или очистите его данные, но не выходите из аккаунта там — это завершит сеанс и здесь. Одновременное использование одного сеанса на двух устройствах может привести к его завершению Telegram. Локальный кэш будет создан заново, секретные чаты не переносятся.</string>
-    <string name="HanakoBackupRestoreAction">Восстановить</string>
+    <string name="HanakoBackupRestoreAction">Восстановить выбранное</string>
     <string name="HanakoBackupReplaceAction">Заменить текущие</string>
     <string name="HanakoBackupNoSlots">Нет свободных мест для этих аккаунтов.</string>
     <string name="HanakoBackupRestored">Восстановлено аккаунтов: %1$d. Hanako сейчас перезапустится.</string>
-    <string name="HanakoBackupAccountNew">новый слот</string>
-    <string name="HanakoBackupAccountReplace">заменит текущий сеанс</string>
+    <string name="HanakoBackupAccountNew">новый на этом телефоне</string>
+    <string name="HanakoBackupAccountReplace">уже здесь: заменит сеанс на этом телефоне</string>
     <string name="HanakoBackupAccountSkipExisting">уже вошли здесь, пропуск</string>
     <string name="HanakoBackupAccountNoSlot">нет свободного слота, пропуск</string>
     <string name="HanakoChatExportTitle">Экспорт чата</string>

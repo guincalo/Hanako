@@ -260,8 +260,42 @@ public final class PlusChatLock {
      * out of their own chats.
      */
     public static void authenticate(@Nullable CharSequence subtitle, @NonNull AuthCallback callback) {
+        authenticateWith(LocaleController.getString(R.string.PlusF08UnlockTitle), subtitle, authenticators(), callback);
+    }
+
+    /** hanako: biometrics or the device screen lock, whatever the chat lock setting says. */
+    private static final int STRICT_AUTHENTICATORS = BiometricManager.Authenticators.BIOMETRIC_WEAK | BiometricManager.Authenticators.DEVICE_CREDENTIAL;
+
+    /** hanako: true when the device has biometrics or a screen lock it can verify. */
+    public static boolean canAuthenticateStrict() {
+        try {
+            return BiometricManager.from(ApplicationLoader.applicationContext).canAuthenticate(STRICT_AUTHENTICATORS) == BiometricManager.BIOMETRIC_SUCCESS;
+        } catch (Throwable e) {
+            FileLog.e(e);
+            return false;
+        }
+    }
+
+    /**
+     * hanako: confirmation for backup / export / import (HanakoAuthGate). Always allows the
+     * device screen lock. Callers check {@link #canAuthenticateStrict()} first; when the device
+     * cannot verify anything this fails open like {@link #authenticate}.
+     */
+    public static void authenticateStrict(@NonNull CharSequence title, @Nullable CharSequence subtitle, @NonNull AuthCallback callback) {
+        ensureLifecycle();
+        authenticateWith(title, subtitle, STRICT_AUTHENTICATORS, callback);
+    }
+
+    private static void authenticateWith(@NonNull CharSequence title, @Nullable CharSequence subtitle, final int auth, @NonNull AuthCallback callback) {
         AndroidUtilities.runOnUIThread(() -> {
-            if (!canAuthenticate()) {
+            boolean can;
+            try {
+                can = BiometricManager.from(ApplicationLoader.applicationContext).canAuthenticate(auth) == BiometricManager.BIOMETRIC_SUCCESS;
+            } catch (Throwable e) {
+                FileLog.e(e);
+                can = false;
+            }
+            if (!can) {
                 callback.onResult(true);
                 return;
             }
@@ -299,9 +333,8 @@ public final class PlusChatLock {
                         // a single bad attempt; the system prompt stays open
                     }
                 });
-                int auth = authenticators();
                 BiometricPrompt.PromptInfo.Builder builder = new BiometricPrompt.PromptInfo.Builder()
-                        .setTitle(LocaleController.getString(R.string.PlusF08UnlockTitle))
+                        .setTitle(title)
                         .setAllowedAuthenticators(auth)
                         .setConfirmationRequired(false);
                 if (subtitle != null) {
@@ -424,6 +457,16 @@ public final class PlusChatLock {
             }
         } catch (Throwable e) {
             FileLog.e(e);
+        }
+    }
+
+    /** hanako: count a chat as unlocked for this session after another verified confirmation (chat export). */
+    public static void markSessionUnlocked(int account, long dialogId) {
+        if (dialogId == 0) {
+            return;
+        }
+        synchronized (sync) {
+            unlockedDialogs.add(account + ":" + dialogId);
         }
     }
 
