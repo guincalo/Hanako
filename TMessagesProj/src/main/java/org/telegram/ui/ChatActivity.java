@@ -3991,6 +3991,8 @@ public class ChatActivity extends BaseFragment implements
                     it.belloworld.mercurygram.PlusGhostQuick.sendReadReceipt(ChatActivity.this);
                 } else if (id == it.belloworld.mercurygram.PlusDeletedMedia.MENU_ID) { // plus f20
                     presentFragment(new it.belloworld.mercurygram.ui.PlusDeletedMediaActivity(dialog_id));
+                } else if (id == it.belloworld.mercurygram.ui.HanakoChatExportActivity.CHAT_MENU_ID) { // hanako: chat export
+                    presentFragment(new it.belloworld.mercurygram.ui.HanakoChatExportActivity(dialog_id));
                 } else if (id == mg_go_to_first_message) {
                     // Mercurygram: jump to the oldest message by reusing the calendar
                     // jump with a date before any chat can exist (Telegram's launch,
@@ -4458,6 +4460,9 @@ public class ChatActivity extends BaseFragment implements
             }
             if (it.belloworld.mercurygram.PlusDeletedMedia.showChatMenu(currentAccount, dialog_id)) { // plus f20
                 headerItem.lazilyAddSubItem(it.belloworld.mercurygram.PlusDeletedMedia.MENU_ID, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title));
+            }
+            if (chatMode == 0 && it.belloworld.mercurygram.ui.HanakoChatExportActivity.showChatMenu(dialog_id)) { // hanako: chat export
+                headerItem.lazilyAddSubItem(it.belloworld.mercurygram.ui.HanakoChatExportActivity.CHAT_MENU_ID, R.drawable.msg_download, LocaleController.getString(R.string.HanakoChatExportMenu));
             }
             if (ChatObject.isBoostSupported(currentChat) && (getUserConfig().isPremium() || ChatObject.isBoosted(chatInfo) || ChatObject.hasAdminRights(currentChat))) {
                 RLottieDrawable drawable = new RLottieDrawable(R.raw.boosts, dp(24), dp(24));

@@ -9,6 +9,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.text.Editable;
 import android.text.InputType;
@@ -33,6 +34,7 @@ import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.UItem;
 import org.telegram.ui.Components.UniversalAdapter;
 import org.telegram.ui.Components.UniversalFragment;
+import org.telegram.ui.DialogsActivity;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -49,6 +51,7 @@ public class HanakoBackupActivity extends UniversalFragment {
     private static final int ID_IMPORT_SETTINGS = 2;
     private static final int ID_CREATE_BACKUP = 3;
     private static final int ID_RESTORE_BACKUP = 4;
+    private static final int ID_EXPORT_CHAT = 5;
 
     private static final int REQ_EXPORT_SETTINGS = 7301;
     private static final int REQ_IMPORT_SETTINGS = 7302;
@@ -88,6 +91,11 @@ public class HanakoBackupActivity extends UniversalFragment {
         items.add(UItem.asButton(ID_IMPORT_SETTINGS, R.drawable.msg_log, LocaleController.getString(R.string.HanakoBackupImportSettings)));
         items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoBackupSettingsInfo)));
 
+        if (!restoreOnly) {
+            items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoBackupChatHeader)));
+            items.add(UItem.asButton(ID_EXPORT_CHAT, R.drawable.msg_share, LocaleController.getString(R.string.HanakoBackupExportChat)));
+            items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoBackupChatInfo)));
+        }
     }
 
     @Override
@@ -104,6 +112,9 @@ public class HanakoBackupActivity extends UniversalFragment {
                 break;
             case ID_RESTORE_BACKUP:
                 openDocument(REQ_RESTORE_BACKUP);
+                break;
+            case ID_EXPORT_CHAT:
+                openChatPicker();
                 break;
         }
     }
@@ -143,6 +154,24 @@ public class HanakoBackupActivity extends UniversalFragment {
             FileLog.e(e);
             toast(e.getMessage());
         }
+    }
+
+    private void openChatPicker() {
+        Bundle args = new Bundle();
+        args.putBoolean("onlySelect", true);
+        args.putBoolean("checkCanWrite", false);
+        args.putBoolean("allowGlobalSearch", false);
+        args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_DEFAULT);
+        DialogsActivity picker = new DialogsActivity(args);
+        picker.setDelegate((fragment, dids, message, param, notify, scheduleDate, scheduleRepeatPeriod, topicsFragment) -> {
+            if (dids == null || dids.isEmpty()) {
+                return false;
+            }
+            long did = dids.get(0).dialogId;
+            fragment.presentFragment(new HanakoChatExportActivity(did), true);
+            return true;
+        });
+        presentFragment(picker);
     }
 
     @Override
