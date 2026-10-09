@@ -6,8 +6,8 @@
 
 **An unofficial Telegram client for Android, forked from [Mercurygram](https://github.com/Mercurygram/Mercurygram).**
 
-[![Latest release](https://img.shields.io/github/v/release/guincalo/Mercurygram?label=release)](https://github.com/guincalo/Mercurygram/releases/latest)
-[![Build](https://github.com/guincalo/Mercurygram/actions/workflows/hanako.yml/badge.svg?branch=hanako)](https://github.com/guincalo/Mercurygram/actions/workflows/hanako.yml)
+[![Latest release](https://img.shields.io/github/v/release/guincalo/Hanako?label=release)](https://github.com/guincalo/Hanako/releases/latest)
+[![Build](https://github.com/guincalo/Hanako/actions/workflows/hanako.yml/badge.svg?branch=hanako)](https://github.com/guincalo/Hanako/actions/workflows/hanako.yml)
 [![License: GPL v2](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](LICENSE)
 
 </div>
@@ -26,7 +26,7 @@ plugins, message filters, OpenPGP and more. Everything Mercurygram already does 
 
 ## Install
 
-1. Open the [latest release](https://github.com/guincalo/Mercurygram/releases/latest).
+1. Open the [latest release](https://github.com/guincalo/Hanako/releases/latest).
 2. Download `Hanako-<version>-arm64-v8a.apk` and install it. Builds are **arm64-v8a only**.
 
 Notes:
@@ -172,8 +172,8 @@ Building on Windows is not supported; use Linux (or a Linux VM).
 by step.
 
 ```bash
-git clone https://github.com/guincalo/Mercurygram.git
-cd Mercurygram
+git clone https://github.com/guincalo/Hanako.git
+cd Hanako
 # your own Telegram API credentials: https://core.telegram.org/api/obtaining_api_id
 printf 'APP_ID = 12345\nAPP_HASH = aaaaaaaabbbbbbccccccfffffff001122\n' > API_KEYS
 # arm64-v8a release APK; MG_BUILD_TAG must be numeric X.Y.Z.M[.K]
@@ -191,7 +191,7 @@ don't trigger a build.
 
 ## Contributing
 
-Bug reports and feature requests are welcome via [Issues](https://github.com/guincalo/Mercurygram/issues/new/choose).
+Bug reports and feature requests are welcome via [Issues](https://github.com/guincalo/Hanako/issues/new/choose).
 Please include the Hanako version, your Android version and steps to reproduce. Bugs that also happen
 in upstream Mercurygram or Telegram belong to those projects. See [CONTRIBUTING.md](CONTRIBUTING.md)
 before opening a pull request, [SECURITY.md](SECURITY.md) for security reports and

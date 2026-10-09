@@ -88,6 +88,6 @@ First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
 ### Other
 - Telegram Premium upsells and promo rows hidden; upstream Mercurygram update checks disabled.
 
-[Unreleased]: https://github.com/guincalo/Mercurygram/compare/v1.0.1...hanako
-[1.0.1]: https://github.com/guincalo/Mercurygram/compare/v1.0.0...v1.0.1
-[1.0.0]: https://github.com/guincalo/Mercurygram/releases/tag/v1.0.0
+[Unreleased]: https://github.com/guincalo/Hanako/compare/v1.0.1...hanako
+[1.0.1]: https://github.com/guincalo/Hanako/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/guincalo/Hanako/releases/tag/v1.0.0

@@ -7,7 +7,7 @@ safety depends on your messenger.
 ## Reporting a vulnerability
 
 - For problems in **Hanako's own features**, please use GitHub's
-  [private vulnerability reporting](https://github.com/guincalo/Mercurygram/security/advisories/new)
+  [private vulnerability reporting](https://github.com/guincalo/Hanako/security/advisories/new)
   if it is available on this repository, or open an issue that says only that you have a security
   report (no details) and ask for a private channel.
 - For problems that also exist in upstream **Mercurygram** or in official **Telegram**, report them

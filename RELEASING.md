@@ -9,8 +9,8 @@ when a version tag is pushed. Nothing is uploaded by hand.
 2. In [CHANGELOG.md](CHANGELOG.md), rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, add a
    new empty `## [Unreleased]` above it, and update the compare links at the bottom:
    ```
-   [Unreleased]: https://github.com/guincalo/Mercurygram/compare/vX.Y.Z...hanako
-   [X.Y.Z]: https://github.com/guincalo/Mercurygram/compare/vPREVIOUS...vX.Y.Z
+   [Unreleased]: https://github.com/guincalo/Hanako/compare/vX.Y.Z...hanako
+   [X.Y.Z]: https://github.com/guincalo/Hanako/compare/vPREVIOUS...vX.Y.Z
    ```
    Commit and push that to `hanako`.
 3. Tag the commit with an annotated tag and push **only the tag**:

@@ -7,7 +7,7 @@ Contributions are welcome, but please keep that in mind when you read the code.
 ## Before you start
 
 - **Open an issue first** for anything bigger than a typo, so we can agree on the change before you
-  spend time on it. Use the [issue forms](https://github.com/guincalo/Mercurygram/issues/new/choose).
+  spend time on it. Use the [issue forms](https://github.com/guincalo/Hanako/issues/new/choose).
 - Only Hanako's own features belong here. Bugs that also happen in upstream Mercurygram or in
   official Telegram should go to [Mercurygram](https://github.com/Mercurygram/Mercurygram/issues)
   or [Telegram](https://github.com/DrKLO/Telegram/issues).
