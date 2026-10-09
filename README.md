@@ -31,12 +31,11 @@ plugins, message filters, OpenPGP and more. Everything Mercurygram already does 
 
 Notes:
 
-- The package id is still `it.belloworld.mercurygram`, the same as upstream Mercurygram. Hanako
-  therefore **replaces** an installed Mercurygram instead of sitting next to it, and Android only
-  accepts it over an existing install when both are signed with the same key. Hanako release APKs are
-  signed with the key in this repository (`TMessagesProj/config/release.keystore`), not with
-  Mercurygram's, so moving from an official Mercurygram build means uninstalling it first (log in
-  again afterwards; local data is lost).
+- The package id is `moe.hanako.chan`. It replaced the old `it.belloworld.mercurygram` (used by
+  Hanako v1.0.x), so current Hanako installs as a **separate app** next to an old Hanako v1.0.x or
+  upstream Mercurygram install instead of replacing it: log in again, then uninstall the old app
+  if you no longer need it. Hanako release APKs are signed with the key in this repository
+  (`TMessagesProj/config/release.keystore`), not with Mercurygram's.
 - The in-app updater is switched off, so Hanako never offers you an upstream Mercurygram update.
   Check the Releases page (or point [Obtainium](https://obtainium.imranr.dev/) at this repository)
   for new versions.

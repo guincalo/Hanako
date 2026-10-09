@@ -7,7 +7,7 @@
 # anyway, since the reproducibility check reads fdroiddata master.
 # Keys not listed (sudo, subdir, scandelete, submodules, ndk) still ride along
 # from the previous entry, so edits made during upstream review survive.
-it.belloworld.mercurygram:
+moe.hanako.chan:
   rm:
     - TMessagesProj_AppHockeyApp
     - TMessagesProj_AppHuawei

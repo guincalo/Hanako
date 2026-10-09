@@ -8,6 +8,9 @@ Telegram/Mercurygram base it is built on.
 ## [Unreleased]
 
 ### Changed
+- **New package ID `moe.hanako.chan`** (was `it.belloworld.mercurygram`). Hanako now installs as a
+  separate app next to v1.0.x (and next to upstream Mercurygram) instead of replacing it, so you
+  have to log in again. Uninstall the old v1.0.x app once you have moved over.
 - Hanako settings texts are much shorter: descriptions are one or two short sentences and toggle
   titles fit on one line, in English and Smug. The ghost mode options can now be translated.
   Longer explanations moved to the README ("Limits worth knowing"). Other languages show the new

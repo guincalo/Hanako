@@ -10,7 +10,7 @@ Steps per release tag:
   3. Bump CurrentVersion / CurrentVersionCode.
 
 Two F-Droid recipes are kept in sync:
-  * main         -> it.belloworld.mercurygram          (TMessagesProj_App)
+  * main         -> moe.hanako.chan                    (TMessagesProj_App)
   * plugin.tor   -> it.belloworld.mercurygram.plugin.tor (TMessagesProj_PluginTor)
 
 Both APKs come from the same git tag / signing key but get separate recipes.
@@ -36,7 +36,7 @@ from ruamel.yaml import YAML
 
 APPS = {
     'main': {
-        'appid': 'it.belloworld.mercurygram',
+        'appid': 'moe.hanako.chan',
     },
     'plugin.tor': {
         'appid': 'it.belloworld.mercurygram.plugin.tor',

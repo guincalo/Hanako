@@ -113,7 +113,7 @@ unset _filtered_args _arg
 
 case "$MG_APP" in
     main)
-        APPID=it.belloworld.mercurygram
+        APPID=moe.hanako.chan
         GRADLE_MODULE=':TMessagesProj_App'
         ;;
     plugin.tor)

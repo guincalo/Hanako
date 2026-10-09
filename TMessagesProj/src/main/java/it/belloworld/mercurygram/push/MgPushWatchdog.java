@@ -33,7 +33,7 @@ import org.telegram.tgnet.ConnectionsManager;
  */
 public final class MgPushWatchdog {
 
-    public static final String ACTION = "it.belloworld.mercurygram.PUSH_WATCHDOG";
+    public static final String ACTION = "moe.hanako.chan.PUSH_WATCHDOG";
 
     // With an endpoint in hand this only has to catch a subscription that died quietly, so once
     // an hour is enough. Without one there is no push at all and the retry is worth more.
