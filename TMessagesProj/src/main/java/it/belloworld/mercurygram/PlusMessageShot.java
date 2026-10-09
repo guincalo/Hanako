@@ -98,6 +98,7 @@ public final class PlusMessageShot {
      * Service messages and date separators are skipped; album parts render as separate bubbles.
      */
     public static void show(ChatActivity fragment, ArrayList<MessageObject> selected) {
+        HanakoTelemetry.count(HanakoTelemetry.MESSAGE_SHOT); // hanako: usage statistics (off by default)
         final Activity activity = fragment != null ? fragment.getParentActivity() : null;
         if (activity == null || selected == null) {
             return;

@@ -127,4 +127,27 @@
     <string name="HanakoErrFloodWaitLong">Telegram asked to wait %1$s before more requests. Try the export again later.</string>
     <string name="HanakoBackupSkippedAccounts_one">%1$d account couldn\'t be included: its login data couldn\'t be read. Log in to it normally on the new phone.</string>
     <string name="HanakoBackupSkippedAccounts_other">%1$d accounts couldn\'t be included: their login data couldn\'t be read. Log in to them normally on the new phone.</string>
+    <string name="HanakoTelemetryTitle">Usage statistics</string>
+    <string name="HanakoTelemetryEnable">Send usage statistics</string>
+    <string name="HanakoTelemetryInfo">Off by default. When on, Hanako counts per day which of its features are used, and keeps crash and error reports (error type, code location, app and Android version, phone model), to send to the address below once a day. Never message text, names, usernames, phone numbers, chat or user IDs, titles, file names or contacts. Turning it off deletes what wasn\'t sent.</string>
+    <string name="HanakoTelemetryEndpoint">Upload address</string>
+    <string name="HanakoTelemetryEndpointHint">https://example.org/hanako-telemetry</string>
+    <string name="HanakoTelemetryEndpointNone">None</string>
+    <string name="HanakoTelemetryEndpointBad">Only https:// addresses can be used.</string>
+    <string name="HanakoTelemetryEndpointInfo">Without an address nothing is ever sent. Uploads use your proxy or Tor; with an MTProto proxy, or a proxy with a password, nothing is sent.</string>
+    <string name="HanakoTelemetryKey">Upload key</string>
+    <string name="HanakoTelemetryKeyHint">Key from the receiver</string>
+    <string name="HanakoTelemetryKeySet">Set</string>
+    <string name="HanakoTelemetryKeyNotSet">Not set</string>
+    <string name="HanakoTelemetryView">View what would be sent</string>
+    <string name="HanakoTelemetryViewInfo">This is the exact data of the next upload. Today\'s counts are sent tomorrow.</string>
+    <string name="HanakoTelemetrySendNow">Send now</string>
+    <string name="HanakoTelemetrySending">Sending…</string>
+    <string name="HanakoTelemetryClear">Delete collected data</string>
+    <string name="HanakoTelemetryCleared">Collected data deleted</string>
+    <string name="HanakoTelemetryResetId">Reset install ID</string>
+    <string name="HanakoTelemetryIdReset">New random install ID made</string>
+    <string name="HanakoTelemetryLastResult">Last upload: %1$s</string>
+    <string name="HanakoTelemetryResultOk">sent</string>
+    <string name="HanakoTelemetryResultProxy">not sent, the proxy can\'t carry it</string>
 </resources>

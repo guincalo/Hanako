@@ -116,6 +116,7 @@ public final class PlusGhost {
     }
 
     public static void setEnabled(int account, boolean value) {
+        HanakoTelemetry.count(HanakoTelemetry.GHOST_TOGGLE); // hanako: usage statistics (off by default)
         SharedPreferences p = prefs();
         p.edit().putBoolean(PlusUtil.accountKey(p, "on", account), value).apply();
         onSettingsChanged(account);
@@ -128,6 +129,7 @@ public final class PlusGhost {
     }
 
     public static void setHidden(int account, int opt, boolean value) {
+        HanakoTelemetry.count(HanakoTelemetry.GHOST_OPTION); // hanako: usage statistics (off by default)
         SharedPreferences p = prefs();
         p.edit().putBoolean(PlusUtil.accountKey(p, OPT_KEYS[opt], account), value).apply();
         if (opt == OPT_ONLINE) {

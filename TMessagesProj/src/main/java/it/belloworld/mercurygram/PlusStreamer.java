@@ -122,6 +122,7 @@ public final class PlusStreamer {
 
     /** Turns streamer mode on/off and redraws everything right away. */
     public static void setEnabled(boolean value, BaseFragment from) {
+        HanakoTelemetry.count(HanakoTelemetry.STREAMER_TOGGLE); // hanako: usage statistics (off by default)
         ensureLoaded();
         enabled = value;
         prefs().edit().putBoolean("enabled", value).apply();

@@ -24,13 +24,30 @@ Telegram/Mercurygram base it is built on.
     in a folder you choose. Runs in the background with a progress notification.
   - Backup, settings import and chat export ask you to confirm it's you first; hidden accounts are
     left out unless you add them while signed in to one.
-- **Hanako settings** are now a short list of sections with their current state, and every option
-  can be found from Settings search.
+- **Hanako settings** are now a short list of sections with their current state, and their pages
+  can be found from Settings search (page level).
 - A one-time notice after login explains ghost mode and the other privacy defaults.
 - A streamer-mode indicator in the chat list.
 
+- Optional **usage statistics** for whoever runs a build (off by default, Settings → Hanako →
+  Device and data → Usage statistics): daily feature counts and scrubbed crash/error reports, sent
+  once a day over HTTPS to an address you set, through your proxy or Tor. Shows exactly what would
+  be sent. Receiver and summary script in `Tools/hanako-telemetry/`.
+
 ### Changed
 - Hanako's proxy auto-switch is now "Switch to the fastest working proxy" and says when it switches.
+- Ghost mode and activity log settings now belong to the Telegram account, not the account slot,
+  so they stay with the account after a restore into another slot.
+- Restoring a backup changes each account only once its new session is safely in place; a restore
+  that isn't finished within 30 minutes is dropped instead of applied later in the background.
+- A full backup needs a screen lock or a Telegram passcode; the passcode check waits longer after
+  wrong tries, like Telegram's own lock screen. A locked chat always asks Chat lock itself.
+- Backup passwords need at least 12 characters.
+- Shareable settings exports only carry switches and numbers (no Tor bridges, URLs or keys).
+- Chat export: fixes for Android 15's time limit, slow networks and long exports (expired file
+  references are refreshed), no chat title in the notification for hidden accounts, locked chats
+  or streamer mode, and a notification permission request.
+- New launcher icon, readable at small sizes.
 - Tor settings are hidden: Mercurygram's Tor plugin only works with apps signed by Mercurygram.
 
 ## [1.1.0] - 2026-10-09

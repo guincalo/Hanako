@@ -82,6 +82,7 @@ public final class PlusActivityLog {
     }
 
     public static void setEnabled(int account, boolean value) {
+        HanakoTelemetry.count(HanakoTelemetry.ACTIVITY_LOG_TOGGLE); // hanako: usage statistics (off by default)
         SharedPreferences p = prefs();
         p.edit().putBoolean(PlusUtil.accountKey(p, "on", account), value).apply();
     }

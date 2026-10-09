@@ -141,4 +141,27 @@
     <string name="HanakoBackupSkippedAccounts_few">%1$d аккаунта не вошли в копию: их данные входа не удалось прочитать. Войдите в них на новом телефоне обычным способом.</string>
     <string name="HanakoBackupSkippedAccounts_many">%1$d аккаунтов не вошли в копию: их данные входа не удалось прочитать. Войдите в них на новом телефоне обычным способом.</string>
     <string name="HanakoBackupSkippedAccounts_other">%1$d аккаунта не вошли в копию: их данные входа не удалось прочитать. Войдите в них на новом телефоне обычным способом.</string>
+    <string name="HanakoTelemetryTitle">Статистика использования</string>
+    <string name="HanakoTelemetryEnable">Отправлять статистику</string>
+    <string name="HanakoTelemetryInfo">По умолчанию выключено. Если включить, Hanako считает по дням, какие её функции используются, и сохраняет отчёты о сбоях и ошибках (тип ошибки, место в коде, версии приложения и Android, модель телефона), чтобы раз в день отправлять их по адресу ниже. Никогда — текст сообщений, имена, юзернеймы, номера телефонов, ID чатов и пользователей, названия, имена файлов и контакты. При выключении неотправленное удаляется.</string>
+    <string name="HanakoTelemetryEndpoint">Адрес отправки</string>
+    <string name="HanakoTelemetryEndpointHint">https://example.org/hanako-telemetry</string>
+    <string name="HanakoTelemetryEndpointNone">Нет</string>
+    <string name="HanakoTelemetryEndpointBad">Можно указать только адрес https://.</string>
+    <string name="HanakoTelemetryEndpointInfo">Без адреса ничего не отправляется. Отправка идёт через ваш прокси или Tor; с прокси MTProto или прокси с паролем ничего не отправляется.</string>
+    <string name="HanakoTelemetryKey">Ключ отправки</string>
+    <string name="HanakoTelemetryKeyHint">Ключ от приёмника</string>
+    <string name="HanakoTelemetryKeySet">Задан</string>
+    <string name="HanakoTelemetryKeyNotSet">Не задан</string>
+    <string name="HanakoTelemetryView">Что будет отправлено</string>
+    <string name="HanakoTelemetryViewInfo">Это точные данные следующей отправки. Счётчики за сегодня уйдут завтра.</string>
+    <string name="HanakoTelemetrySendNow">Отправить сейчас</string>
+    <string name="HanakoTelemetrySending">Отправка…</string>
+    <string name="HanakoTelemetryClear">Удалить собранные данные</string>
+    <string name="HanakoTelemetryCleared">Собранные данные удалены</string>
+    <string name="HanakoTelemetryResetId">Сбросить ID установки</string>
+    <string name="HanakoTelemetryIdReset">Создан новый случайный ID</string>
+    <string name="HanakoTelemetryLastResult">Последняя отправка: %1$s</string>
+    <string name="HanakoTelemetryResultOk">отправлено</string>
+    <string name="HanakoTelemetryResultProxy">не отправлено, прокси не подходит</string>
 </resources>

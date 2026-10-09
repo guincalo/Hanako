@@ -765,6 +765,7 @@ public final class HanakoBackup {
     }
 
     public static void writeSettings(Context context, Uri uri, boolean includeLists, boolean includeHidden) throws Exception {
+        HanakoTelemetry.count(HanakoTelemetry.SETTINGS_EXPORT); // hanako: usage statistics (off by default)
         byte[] data = buildSettingsJson(includeLists, includeHidden).toString(2).getBytes(StandardCharsets.UTF_8);
         try (OutputStream os = openTruncated(context, uri)) {
             if (os == null) {
@@ -1037,6 +1038,7 @@ public final class HanakoBackup {
      * The current settings are saved first, so the import can be undone for 24 hours.
      */
     public static void stageSettingsImport(JSONObject root, boolean withLists) throws Exception {
+        HanakoTelemetry.count(HanakoTelemetry.SETTINGS_IMPORT); // hanako: usage statistics (off by default)
         saveUndoSnapshot(); // throws: no import without the promised undo
         JSONObject plan = new JSONObject();
         plan.put("version", 1);
@@ -1078,6 +1080,7 @@ public final class HanakoBackup {
 
     /** Stages the settings that were in place before the last import. */
     public static void stageUndo() throws Exception {
+        HanakoTelemetry.count(HanakoTelemetry.SETTINGS_UNDO); // hanako: usage statistics (off by default)
         File f = undoFile();
         byte[] data;
         try (InputStream in = new FileInputStream(f)) {
@@ -1273,6 +1276,7 @@ public final class HanakoBackup {
      * never counted in the UI). Call off the UI thread (the key derivation takes a second or two).
      */
     public static int[] writeFullBackup(Context context, Uri uri, char[] password, boolean includeSettings, boolean includeHidden) throws Exception {
+        HanakoTelemetry.count(HanakoTelemetry.BACKUP_CREATE); // hanako: usage statistics (off by default)
         byte[] plain = null;
         byte[] key = null;
         try {
@@ -1487,6 +1491,7 @@ public final class HanakoBackup {
 
     /** Stages the restore; applied at the next process start. Returns the number of staged accounts. */
     public static int stageFullRestore(FullBackup b, int[] slots, boolean restoreSettings) throws Exception {
+        HanakoTelemetry.count(HanakoTelemetry.BACKUP_RESTORE); // hanako: usage statistics (off by default)
         Context ctx = ApplicationLoader.applicationContext;
         File dir = stageDir(ctx);
         deleteRecursive(dir);

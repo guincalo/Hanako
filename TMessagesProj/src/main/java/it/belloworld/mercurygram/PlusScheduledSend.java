@@ -147,6 +147,7 @@ public final class PlusScheduledSend {
                     && mc.diceEmojies.contains(p.message.replace("\ufe0f", ""))) {
                 return; // a scheduled dice is sent as plain emoji text
             }
+            HanakoTelemetry.count(HanakoTelemetry.SCHEDULED_SEND); // hanako: usage statistics (off by default)
 
             long groupId = 0;
             if (p.params != null) {

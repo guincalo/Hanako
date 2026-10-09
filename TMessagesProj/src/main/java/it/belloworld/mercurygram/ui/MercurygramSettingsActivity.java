@@ -120,6 +120,7 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     private static final int ID_HUB_FILTERS = 8821;
     private static final int ID_HUB_BACKUP = 8822;
     private static final int ID_HUB_PUSH = 8823;
+    private static final int ID_HUB_TELEMETRY = 8824;
 
     private final int page;
     /** "412 MB" for the deleted-media row, computed off the UI thread. */
@@ -133,6 +134,7 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     public MercurygramSettingsActivity(int page) {
         super();
         this.page = page;
+        it.belloworld.mercurygram.HanakoTelemetry.countPage(page); // hanako: usage statistics (off by default)
     }
 
     public static String pageTitle(int page) {
@@ -418,6 +420,8 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             addPage(items, PAGE_UPDATES, R.drawable.msg_retry, "");
         }
         items.add(UItem.asButton(ID_HUB_BACKUP, R.drawable.msg_download, LocaleController.getString(R.string.HanakoBackupTitle)));
+        items.add(UItem.asButton(ID_HUB_TELEMETRY, R.drawable.msg_stats, LocaleController.getString(R.string.HanakoTelemetryTitle),
+                onOff(it.belloworld.mercurygram.HanakoTelemetry.isEnabled())));
         items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoHubFooter)));
     }
 
@@ -657,6 +661,10 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         }
         if (item.id == ID_HUB_BACKUP) {
             presentFragment(new HanakoBackupActivity());
+            return;
+        }
+        if (item.id == ID_HUB_TELEMETRY) {
+            presentFragment(new HanakoTelemetryActivity());
             return;
         }
         if (item.id == ID_HUB_PUSH) {

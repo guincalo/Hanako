@@ -61,6 +61,7 @@ public final class PlusProxySwitch implements NotificationCenter.NotificationCen
     }
 
     public static void setEnabled(boolean enabled) {
+        HanakoTelemetry.count(HanakoTelemetry.PROXY_AUTOSWITCH_TOGGLE); // hanako: usage statistics (off by default)
         prefs().edit().putBoolean(KEY_ENABLED, enabled).apply();
         if (!enabled) {
             AndroidUtilities.runOnUIThread(() -> {
@@ -191,6 +192,7 @@ public final class PlusProxySwitch implements NotificationCenter.NotificationCen
             return;
         }
         lastSwitchTime = SystemClock.elapsedRealtime();
+        HanakoTelemetry.count(HanakoTelemetry.PROXY_AUTOSWITCH); // hanako: usage statistics (off by default)
         SharedPreferences.Editor editor = MessagesController.getGlobalMainSettings().edit();
         editor.putBoolean("proxy_enabled", true);
         best.settings.toSharedPreferences(editor);

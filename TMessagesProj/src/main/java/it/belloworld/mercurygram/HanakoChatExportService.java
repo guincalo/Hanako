@@ -81,6 +81,7 @@ public class HanakoChatExportService extends Service {
     /** Starts an export; false when one is already running. UI thread. */
     public static boolean start(int account, HanakoChatExport.Options options, Uri tree, String title) {
         if (running != null) return false;
+        HanakoTelemetry.count(HanakoTelemetry.CHAT_EXPORT); // hanako: usage statistics (off by default)
         chatTitle = title;
         titlePrivate = HiddenAccountHelper.isAccountHidden(account)
                 || PlusChatLock.isLocked(account, options.dialogId);

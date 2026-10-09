@@ -261,6 +261,7 @@ public final class PlusMessageFilters {
 
     /** Inserts or replaces (by id) a filter. */
     public static void putFilter(Filter filter) {
+        HanakoTelemetry.count(HanakoTelemetry.MESSAGE_FILTER_ADD); // hanako: usage statistics (off by default)
         ensureLoaded();
         if (filter == null || TextUtils.isEmpty(filter.pattern)) {
             return;
@@ -316,6 +317,7 @@ public final class PlusMessageFilters {
     }
 
     public static void addBanned(long userId, long dialogId) {
+        HanakoTelemetry.count(HanakoTelemetry.USER_HIDE); // hanako: usage statistics (off by default)
         ensureLoaded();
         if (userId == 0) {
             return;

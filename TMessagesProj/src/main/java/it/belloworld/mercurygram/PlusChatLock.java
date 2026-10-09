@@ -213,6 +213,7 @@ public final class PlusChatLock {
     }
 
     public static void setLocked(int account, long dialogId, boolean locked) {
+        HanakoTelemetry.count(HanakoTelemetry.CHAT_LOCK_SET); // hanako: usage statistics (off by default)
         HashSet<Long> set = lockedSet(account);
         if (set == null || dialogId == 0) {
             return;
@@ -260,6 +261,7 @@ public final class PlusChatLock {
      * out of their own chats.
      */
     public static void authenticate(@Nullable CharSequence subtitle, @NonNull AuthCallback callback) {
+        HanakoTelemetry.count(HanakoTelemetry.CHAT_LOCK_UNLOCK); // hanako: usage statistics (off by default)
         authenticateWith(LocaleController.getString(R.string.PlusF08UnlockTitle), subtitle, authenticators(), callback);
     }
 

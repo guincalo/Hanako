@@ -1,0 +1,16 @@
+[Unit]
+Description=Hanako telemetry receiver (127.0.0.1:2590, appends JSON lines)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 %h/.local/lib/hanako-telemetry/receiver.py
+Restart=on-failure
+RestartSec=5
+MemoryMax=64M
+# no extra privileges, writes only its data dir
+NoNewPrivileges=yes
+PrivateTmp=yes
+UMask=0077
+
+[Install]
+WantedBy=default.target

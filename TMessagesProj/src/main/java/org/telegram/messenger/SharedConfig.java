@@ -228,6 +228,7 @@ public class SharedConfig {
     // toggle and letting MTProto connect direct.
     public static void toggleMgUseTor() {
         mg_useTor = !mg_useTor;
+        it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.TOR_TOGGLE); // hanako
         ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
                 .edit()
                 .putBoolean("mg_useTor", mg_useTor)

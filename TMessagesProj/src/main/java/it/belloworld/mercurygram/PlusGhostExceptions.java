@@ -116,6 +116,7 @@ public final class PlusGhostExceptions {
     }
 
     public static void setFlags(int account, long dialogId, int flags) {
+        HanakoTelemetry.count(HanakoTelemetry.GHOST_EXCEPTION); // hanako: usage statistics (off by default)
         if (!PlusUtil.validAccount(account) || dialogId == 0) {
             return;
         }

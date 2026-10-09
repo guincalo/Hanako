@@ -344,6 +344,7 @@ public final class PlusDeletedMedia {
      * this writes through MediaStore itself. Callback on the UI thread.
      */
     public static void export(Item item, Utilities.Callback<Boolean> callback) {
+        HanakoTelemetry.count(HanakoTelemetry.DELETED_MEDIA_EXPORT); // hanako: usage statistics (off by default)
         Utilities.globalQueue.postRunnable(() -> {
             boolean ok = false;
             try {

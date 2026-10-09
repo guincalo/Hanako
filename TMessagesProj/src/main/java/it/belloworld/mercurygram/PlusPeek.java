@@ -89,6 +89,7 @@ public final class PlusPeek {
 
     /** ChatActivity.setInPreviewMode (after super). */
     public static void onPreviewMode(Object fragment, int account, long dialogId, boolean preview) {
+        if (preview) HanakoTelemetry.count(HanakoTelemetry.PEEK); // hanako: usage statistics (off by default)
         if (fragment == null) {
             return;
         }

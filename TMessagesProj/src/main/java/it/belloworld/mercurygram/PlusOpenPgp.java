@@ -931,6 +931,7 @@ public final class PlusOpenPgp {
 
     /** plus f18 hook: ChatActivity message option "Decrypt / verify". */
     public static void decrypt(BaseFragment fragment, MessageObject message) {
+        HanakoTelemetry.count(HanakoTelemetry.OPENPGP_DECRYPT); // hanako: usage statistics (off by default)
         Activity activity = fragment == null ? null : fragment.getParentActivity();
         String block = message == null || message.messageOwner == null ? null : findArmor(message.messageOwner.message);
         if (activity == null || block == null) {
