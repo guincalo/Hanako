@@ -21,7 +21,9 @@ when a version tag is pushed. Nothing is uploaded by hand.
 4. CI then:
    - checks that the tag looks like `vMAJOR.MINOR.PATCH` (optionally `-pre`) and that CHANGELOG.md
      has a `## [X.Y.Z]` section, and stops before building if not;
-   - builds the signed arm64-v8a APK once;
+   - builds the arm64-v8a APK once, signed with the private key from the `HANAKO_KEYSTORE_B64`,
+     `HANAKO_KEYSTORE_PASSWORD`, `HANAKO_KEY_ALIAS` and `HANAKO_KEY_PASSWORD` repository secrets
+     (a tag run fails if they are missing rather than falling back to the public debug key);
    - publishes a GitHub Release named `🌸 Hanako vX.Y.Z` with the APK, its SHA-256 file and that
      CHANGELOG section as notes. Tags with a `-suffix` are marked as pre-releases.
 5. Check the release page and download the APK once to make sure it installs.

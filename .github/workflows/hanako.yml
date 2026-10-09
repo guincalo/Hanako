@@ -114,8 +114,10 @@ jobs:
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL || true
           df -h /
 
-      - name: Version and in-repo signing key
+      - name: Version and signing key
         id: prep
+        env:
+          HANAKO_KEYSTORE_B64: ${{ secrets.HANAKO_KEYSTORE_B64 }}
         run: |
           set -euo pipefail
           APP_VN=$(grep '^APP_VERSION_NAME=' gradle.properties | cut -d= -f2)
@@ -129,7 +131,27 @@ jobs:
           fi
           echo "tag=${BUILD_TAG}" >> "$GITHUB_OUTPUT"
           echo "label=${LABEL}" >> "$GITHUB_OUTPUT"
-          echo "ks=$(base64 -w0 TMessagesProj/config/release.keystore)" >> "$GITHUB_OUTPUT"
+          # Release signing uses Hanako's private key from repository secrets
+          # (HANAKO_KEYSTORE_B64 / HANAKO_KEYSTORE_PASSWORD / HANAKO_KEY_ALIAS /
+          # HANAKO_KEY_PASSWORD). The in-repo TMessagesProj/config/release.keystore
+          # is Telegram's PUBLIC key: it is only a DEBUG FALLBACK for forks and
+          # PRs without the secrets, and such APKs are labelled "-UNOFFICIAL".
+          # Tag (release) runs refuse to fall back.
+          if [ -n "${HANAKO_KEYSTORE_B64}" ]; then
+            echo "private=true" >> "$GITHUB_OUTPUT"
+            echo "suffix=" >> "$GITHUB_OUTPUT"
+            echo "Signed with the **private Hanako release key**." >> "$GITHUB_STEP_SUMMARY"
+          else
+            if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+              echo "::error::HANAKO_KEYSTORE_B64 secret missing; refusing to publish a release signed with the public debug key."
+              exit 1
+            fi
+            echo "private=false" >> "$GITHUB_OUTPUT"
+            echo "suffix=-UNOFFICIAL-debugkey" >> "$GITHUB_OUTPUT"
+            echo "ks=$(base64 -w0 TMessagesProj/config/release.keystore)" >> "$GITHUB_OUTPUT"
+            echo "::warning::Signing secrets absent: APK signed with the PUBLIC in-repo debug key. Do not distribute it."
+            echo "⚠️ Signed with the public in-repo **debug fallback** key (secrets absent). Not for distribution." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Build APK
         id: build
@@ -145,19 +167,26 @@ jobs:
           # Telegram's official public Android keys (DrKLO BuildVars.java)
           app-id: '4'
           app-hash: '014b35b6184100b085b0d0572f9b5103'
-          release-keystore-b64: ${{ steps.prep.outputs.ks }}
-          release-keystore-password: android
-          release-key-alias: androidkey
-          release-key-password: android
+          # private key from secrets; public debug key only as fallback (see prep)
+          release-keystore-b64: ${{ steps.prep.outputs.private == 'true' && secrets.HANAKO_KEYSTORE_B64 || steps.prep.outputs.ks }}
+          release-keystore-password: ${{ steps.prep.outputs.private == 'true' && secrets.HANAKO_KEYSTORE_PASSWORD || 'android' }}
+          release-key-alias: ${{ steps.prep.outputs.private == 'true' && secrets.HANAKO_KEY_ALIAS || 'androidkey' }}
+          release-key-password: ${{ steps.prep.outputs.private == 'true' && secrets.HANAKO_KEY_PASSWORD || 'android' }}
 
       - name: Name APK
         id: out
         run: |
           set -euo pipefail
-          NAME="Hanako-${{ steps.prep.outputs.label }}-arm64-v8a.apk"
+          NAME="Hanako-${{ steps.prep.outputs.label }}-arm64-v8a${{ steps.prep.outputs.suffix }}.apk"
           mkdir -p dist
           cp "${{ steps.build.outputs.apk_path }}" "dist/${NAME}"
           (cd dist && sha256sum "${NAME}" > "${NAME}.sha256")
+          # record the signing certificate so the summary shows which key was used
+          APKSIGNER=$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "${APKSIGNER}" ]; then
+            CERT=$("${APKSIGNER}" verify --print-certs "dist/${NAME}" | grep -m1 'SHA-256 digest' | awk '{print $NF}' || true)
+            echo "Signing cert SHA-256: \`${CERT}\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "apk_name=${NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK

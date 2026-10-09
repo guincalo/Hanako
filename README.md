@@ -34,8 +34,13 @@ Notes:
 - The package id is `moe.hanako.chan`. It replaced the old `it.belloworld.mercurygram` (used by
   Hanako v1.0.x), so current Hanako installs as a **separate app** next to an old Hanako v1.0.x or
   upstream Mercurygram install instead of replacing it: log in again, then uninstall the old app
-  if you no longer need it. Hanako release APKs are signed with the key in this repository
-  (`TMessagesProj/config/release.keystore`), not with Mercurygram's.
+  if you no longer need it. Hanako release APKs are signed with Hanako's own private release key (certificate SHA-256
+  `EE:38:A0:6C:C9:9F:C8:BB:9E:5B:5A:83:74:88:5C:E4:69:0A:89:D2:76:0B:8A:A4:7C:56:1B:4D:F9:64:65:60`).
+  Builds up to v1.1.0 used the public Telegram key in this repository, so moving from v1.1.0 or
+  older to a build signed with the new key needs an uninstall and reinstall (make a Hanako full
+  backup first and restore it afterwards). The in-repo `TMessagesProj/config/release.keystore` is
+  only a debug fallback for builds without the signing secrets; those APKs are named
+  `*-UNOFFICIAL-debugkey.apk` and must not be distributed.
 - The in-app updater is switched off, so Hanako never offers you an upstream Mercurygram update.
   Check the Releases page, or let Obtainium track it (below), for new versions.
 - The version shown in the app follows the Telegram base it is built on (for example

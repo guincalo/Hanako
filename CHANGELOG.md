@@ -7,6 +7,11 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+### Security
+- Release APKs are now signed with a private Hanako key instead of Telegram's public in-repo key,
+  so nobody else can build an APK that installs as a Hanako update. **The signing key changed:**
+  uninstall the old Hanako and install the new APK (make a full backup first, restore it after).
+
 ### Added
 - **Backup & export** (Settings → Mercurygram → Backup & export):
   - Export / import all Hanako and Mercurygram settings as a JSON file. Import validates the file,
