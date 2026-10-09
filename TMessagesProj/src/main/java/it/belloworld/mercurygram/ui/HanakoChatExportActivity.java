@@ -8,6 +8,7 @@ import android.app.Activity;
 import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.View;
@@ -68,6 +69,17 @@ public class HanakoChatExportActivity extends UniversalFragment {
     private AlertDialog progressDialog;
     private TextView progressText;
     private android.widget.ProgressBar progressBar;
+
+    /*
+     * The chat's own Chat lock was passed for this export. It is never turned into a session
+     * unlock: the chat stays locked everywhere else.
+     */
+    private boolean lockVerified;
+
+    public HanakoChatExportActivity(long dialogId, boolean lockVerified) {
+        this(dialogId);
+        this.lockVerified = lockVerified;
+    }
 
     public HanakoChatExportActivity(long dialogId) {
         super();
@@ -298,6 +310,7 @@ public class HanakoChatExportActivity extends UniversalFragment {
             return;
         }
         Runnable pick = () -> {
+            askNotificationPermission();
             try {
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
                 startActivityForResult(intent, REQ_TREE);
@@ -307,10 +320,10 @@ public class HanakoChatExportActivity extends UniversalFragment {
             }
         };
         // a locked chat (reached some other way) is never exported without its unlock
-        if (PlusChatLock.isDialogLockedNow(currentAccount, dialogId)) {
+        if (!lockVerified && PlusChatLock.isDialogLockedNow(currentAccount, dialogId)) {
             PlusChatLock.authenticate(PlusChatLock.dialogName(currentAccount, dialogId), success -> {
                 if (success) {
-                    PlusChatLock.markSessionUnlocked(currentAccount, dialogId);
+                    lockVerified = true;
                     pick.run();
                 }
             });
@@ -388,6 +401,25 @@ public class HanakoChatExportActivity extends UniversalFragment {
         showDialog(b.create());
     }
 
+    private static final int REQ_NOTIFICATIONS = 7315; // next to the service's 7310-7314
+
+    /** Android 13+: the progress notification (with Cancel) needs POST_NOTIFICATIONS. */
+    private static boolean notificationsAllowed() {
+        if (Build.VERSION.SDK_INT < 33) return true;
+        return ApplicationLoader.applicationContext.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    /* Asked once per export start; the export runs either way (the in-app dialog shows it). */
+    private void askNotificationPermission() {
+        if (notificationsAllowed() || getParentActivity() == null || Build.VERSION.SDK_INT < 33) return;
+        try {
+            getParentActivity().requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
     private void runExport(Uri tree) {
         if (!HanakoChatExportService.start(currentAccount, options, tree, chatName())) {
             toast(LocaleController.getString(R.string.HanakoChatExportBusy));
@@ -406,14 +438,18 @@ public class HanakoChatExportActivity extends UniversalFragment {
         progressBar = new android.widget.ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
         progressBar.setIndeterminate(true);
         layout.addView(progressBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 4, 24, 4));
+        progressBar.setContentDescription(LocaleController.getString(R.string.HanakoChatExportTitle));
         progressText = new TextView(activity);
+        progressText.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         progressText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         progressText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
         layout.addView(progressText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 4, 24, 4));
         TextView hint = new TextView(activity);
         hint.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
         hint.setTextColor(Theme.getColor(Theme.key_dialogTextGray3, getResourceProvider()));
-        hint.setText(LocaleController.getString(R.string.HanakoChatExportBackgroundHint));
+        // without notifications "Hide" would leave an export nobody can see or cancel
+        final boolean canHide = notificationsAllowed();
+        hint.setText(LocaleController.getString(canHide ? R.string.HanakoChatExportBackgroundHint : R.string.HanakoChatExportNoNotifHint));
         layout.addView(hint, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 8, 24, 4));
         HanakoChatExport.Progress p = HanakoChatExportService.lastProgress();
         updateProgressViews(p != null ? p : new HanakoChatExport.Progress());
@@ -421,7 +457,9 @@ public class HanakoChatExportActivity extends UniversalFragment {
         AlertDialog.Builder b = new AlertDialog.Builder(activity, getResourceProvider());
         b.setTitle(LocaleController.getString(R.string.HanakoChatExportTitle));
         b.setView(layout);
-        b.setPositiveButton(LocaleController.getString(R.string.HanakoChatExportHide), (d, w) -> dismissProgressDialog());
+        if (canHide) {
+            b.setPositiveButton(LocaleController.getString(R.string.HanakoChatExportHide), (d, w) -> dismissProgressDialog());
+        }
         b.setNegativeButton(LocaleController.getString(R.string.Cancel), (d, w) -> {
             HanakoChatExportService.cancelRunning();
             dismissProgressDialog();

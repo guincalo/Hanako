@@ -92,6 +92,10 @@ public final class HanakoChatExport {
     private static final int PAGE = 100;
     private static final int CHUNK = 512 * 1024;
     private static final long REQUEST_TIMEOUT_SEC = 90;
+    /** Timed out sends of one request before the export gives up. */
+    private static final int MAX_ATTEMPTS = 3;
+    /** A longer FLOOD_WAIT ends the export with an error instead of sleeping for hours. */
+    public static final int MAX_FLOOD_WAIT_SEC = 10 * 60;
     private static final Pattern FLOOD = Pattern.compile("^FLOOD(?:_PREMIUM)?_WAIT_(\\d+)$");
     private static final Pattern MIGRATE = Pattern.compile("^FILE_MIGRATE_(\\d+)$");
 
@@ -309,7 +313,8 @@ public final class HanakoChatExport {
 
     /** Blocking RPC with FLOOD_WAIT handling. Returns null on a non-retryable error. */
     private TLObject call(TLObject req, int dcId, int connectionType) throws Exception {
-        int timeouts = 0;
+        int attempts = 0; // timed out sends, each one waited REQUEST_TIMEOUT_SEC
+        int migrations = 0;
         while (!cancelled.get()) {
             final CountDownLatch latch = new CountDownLatch(1);
             final TLObject[] response = new TLObject[1];
@@ -340,14 +345,15 @@ public final class HanakoChatExport {
                 latch.countDown();
             }, null, null, flags, dcId, connectionType, true);
             boolean done = false;
+            int waited = 0; // per attempt: every retry gets the full timeout again
             while (!done && !cancelled.get()) {
                 done = latch.await(1, TimeUnit.SECONDS);
-                if (!done && ++timeouts > REQUEST_TIMEOUT_SEC) break;
+                if (!done && ++waited > REQUEST_TIMEOUT_SEC) break;
             }
             if (!done) {
                 ConnectionsManager.getInstance(account).cancelRequest(token, true);
                 if (cancelled.get()) return null;
-                if (timeouts > REQUEST_TIMEOUT_SEC * 3) throw new IOException("network timeout");
+                if (++attempts >= MAX_ATTEMPTS) throw new IOException("network timeout");
                 continue;
             }
             if (err[0] == null) {
@@ -360,6 +366,10 @@ public final class HanakoChatExport {
             Matcher flood = FLOOD.matcher(text);
             if (flood.matches()) {
                 int seconds = Integer.parseInt(flood.group(1));
+                if (seconds > MAX_FLOOD_WAIT_SEC) {
+                    // waiting hours would burn the Android dataSync time budget; stop instead
+                    throw new FloodWaitTooLongException(seconds);
+                }
                 floodWait(Math.max(1, seconds));
                 continue;
             }
@@ -368,9 +378,12 @@ public final class HanakoChatExport {
                 continue;
             }
             Matcher migrate = MIGRATE.matcher(text);
-            if (migrate.matches() && req instanceof TLRPC.TL_upload_getFile) {
+            if (migrate.matches() && req instanceof TLRPC.TL_upload_getFile && ++migrations <= 2) {
                 dcId = Integer.parseInt(migrate.group(1));
                 continue;
+            }
+            if (text.startsWith("FILE_REFERENCE_") && req instanceof TLRPC.TL_upload_getFile) {
+                throw new FileReferenceExpiredException();
             }
             if (req instanceof TLRPC.TL_upload_getFile) {
                 FileLog.d("hanako export: getFile failed " + err[0].code + " " + text);
@@ -379,6 +392,23 @@ public final class HanakoChatExport {
             throw new IOException(text.isEmpty() ? ("error " + err[0].code) : text);
         }
         return null;
+    }
+
+    /** upload.getFile answered FILE_REFERENCE_*: the caller re-fetches the message and retries. */
+    static final class FileReferenceExpiredException extends IOException {
+        FileReferenceExpiredException() {
+            super("file reference expired");
+        }
+    }
+
+    /** Telegram asked to wait longer than MAX_FLOOD_WAIT_SEC. */
+    public static final class FloodWaitTooLongException extends IOException {
+        public final int seconds;
+
+        FloodWaitTooLongException(int seconds) {
+            super("flood wait " + seconds + " s");
+            this.seconds = seconds;
+        }
     }
 
     /** upload.getFile result, copied out of the native buffer. */
@@ -853,7 +883,12 @@ public final class HanakoChatExport {
                     loc.access_hash = photo.access_hash;
                     loc.file_reference = photo.file_reference != null ? photo.file_reference : new byte[0];
                     loc.thumb_size = size.type != null ? size.type : "";
-                    info.path = download(loc, photo.dc_id, info.size, info.folder, name, "image/jpeg");
+                    final long photoId = photo.id;
+                    info.path = download(loc, photo.dc_id, info.size, info.folder, name, "image/jpeg", () -> {
+                        TLRPC.MessageMedia fresh = refetchMedia(m.id);
+                        if (fresh != null && fresh.photo != null && fresh.photo.id == photoId) return fresh.photo.file_reference;
+                        return null;
+                    });
                 }
                 info.downloaded = info.path != null && !info.path.startsWith("(");
             }
@@ -926,8 +961,13 @@ public final class HanakoChatExport {
                 loc.access_hash = doc.access_hash;
                 loc.file_reference = doc.file_reference != null ? doc.file_reference : new byte[0];
                 loc.thumb_size = "";
+                final long docId = doc.id;
                 info.path = download(loc, doc.dc_id, doc.size, info.folder, name,
-                        TextUtils.isEmpty(doc.mime_type) ? "application/octet-stream" : doc.mime_type);
+                        TextUtils.isEmpty(doc.mime_type) ? "application/octet-stream" : doc.mime_type, () -> {
+                    TLRPC.MessageMedia fresh = refetchMedia(m.id);
+                    if (fresh != null && fresh.document != null && fresh.document.id == docId) return fresh.document.file_reference;
+                    return null;
+                });
                 info.downloaded = info.path != null && !info.path.startsWith("(");
             }
             return info;
@@ -982,8 +1022,39 @@ public final class HanakoChatExport {
         return folder + "/" + displayName(out, name);
     }
 
+    /** Gives a fresh file_reference for a media file, or null. */
+    private interface FileReferenceSource {
+        byte[] fresh() throws Exception;
+    }
+
+    /*
+     * File references from the history page expire after a while (long exports, FLOOD_WAITs).
+     * Asking for the message again returns its media with a new reference.
+     */
+    private TLRPC.MessageMedia refetchMedia(int messageId) throws Exception {
+        MessagesController mc = MessagesController.getInstance(account);
+        TLObject req;
+        if (DialogObject.isChatDialog(options.dialogId) && ChatObject.isChannel(mc.getChat(-options.dialogId))) {
+            TLRPC.TL_channels_getMessages r = new TLRPC.TL_channels_getMessages();
+            r.channel = mc.getInputChannel(-options.dialogId);
+            r.id.add(messageId);
+            req = r;
+        } else {
+            TLRPC.TL_messages_getMessages r = new TLRPC.TL_messages_getMessages();
+            r.id.add(messageId);
+            req = r;
+        }
+        TLObject res = call(req, ConnectionsManager.DEFAULT_DATACENTER_ID, ConnectionsManager.ConnectionTypeGeneric);
+        if (!(res instanceof TLRPC.messages_Messages)) return null;
+        for (TLRPC.Message msg : ((TLRPC.messages_Messages) res).messages) {
+            if (msg.id == messageId) return msg.media;
+        }
+        return null;
+    }
+
     /** Downloads a file into {@code folder}; returns its relative path, or a TD placeholder on failure. */
-    private String download(TLRPC.InputFileLocation location, int dcId, long size, String folder, String name, String mime) throws Exception {
+    private String download(TLRPC.InputFileLocation location, int dcId, long size, String folder, String name, String mime,
+                            FileReferenceSource refSource) throws Exception {
         if (cancelled.get()) return FAILED;
         Uri dir = subdir(folder);
         Uri out = DocumentsContract.createDocument(resolver, dir, mime, name);
@@ -998,13 +1069,28 @@ public final class HanakoChatExport {
                 return FAILED;
             }
             long offset = 0;
+            boolean refreshed = false;
             while (!cancelled.get()) {
                 TLRPC.TL_upload_getFile req = new TLRPC.TL_upload_getFile();
                 req.location = location;
                 req.offset = offset;
                 req.limit = CHUNK;
                 req.cdn_supported = false;
-                TLObject res = call(req, dcId > 0 ? dcId : ConnectionsManager.DEFAULT_DATACENTER_ID, ConnectionsManager.ConnectionTypeDownload);
+                TLObject res;
+                try {
+                    res = call(req, dcId > 0 ? dcId : ConnectionsManager.DEFAULT_DATACENTER_ID, ConnectionsManager.ConnectionTypeDownload);
+                } catch (FileReferenceExpiredException e) {
+                    // once per file: take a fresh reference and continue at the same offset
+                    byte[] ref = refreshed || refSource == null ? null : refSource.fresh();
+                    if (ref == null) break;
+                    refreshed = true;
+                    if (location instanceof TLRPC.TL_inputPhotoFileLocation) {
+                        ((TLRPC.TL_inputPhotoFileLocation) location).file_reference = ref;
+                    } else if (location instanceof TLRPC.TL_inputDocumentFileLocation) {
+                        ((TLRPC.TL_inputDocumentFileLocation) location).file_reference = ref;
+                    }
+                    continue;
+                }
                 if (!(res instanceof Chunk)) {
                     break;
                 }

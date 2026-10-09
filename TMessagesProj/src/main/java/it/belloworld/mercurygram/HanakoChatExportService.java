@@ -32,14 +32,23 @@ import java.util.ArrayList;
  */
 public class HanakoChatExportService extends Service {
 
+    // Notification and PendingIntent request ids, all here so they don't collide: 7310-7314 are
+    // not used by upstream Telegram (its ids are small, or derived from dialog ids).
     private static final int NOTIFICATION_ID = 7310;
     private static final int NOTIFICATION_DONE_ID = 7311;
+    private static final int REQ_LAUNCH = 7312;
+    private static final int REQ_CANCEL = 7313;
+    private static final int REQ_OPEN_FOLDER = 7314;
     private static final String ACTION_CANCEL = "moe.hanako.chatexport.CANCEL";
     private static final long WAKELOCK_MS = 6L * 60 * 60 * 1000;
 
     private static HanakoChatExport running;
     private static HanakoChatExport.Progress lastProgress;
     private static String chatTitle;
+    /** The title is never shown for a hidden account or a locked chat (see notifTitle). */
+    private static boolean titlePrivate;
+    /** The worker is started by onStartCommand, after startForeground (see start). */
+    private static boolean workerStarted;
     private static final ArrayList<HanakoChatExport.Listener> listeners = new ArrayList<>();
 
     private PowerManager.WakeLock wakeLock;
@@ -73,6 +82,9 @@ public class HanakoChatExportService extends Service {
     public static boolean start(int account, HanakoChatExport.Options options, Uri tree, String title) {
         if (running != null) return false;
         chatTitle = title;
+        titlePrivate = HiddenAccountHelper.isAccountHidden(account)
+                || PlusChatLock.isLocked(account, options.dialogId);
+        workerStarted = false;
         lastProgress = new HanakoChatExport.Progress();
         final Context ctx = ApplicationLoader.applicationContext;
         running = new HanakoChatExport(account, options, tree, new HanakoChatExport.Listener() {
@@ -107,9 +119,20 @@ public class HanakoChatExportService extends Service {
         } catch (Throwable t) {
             // the app is in the foreground here, so this should not happen; export anyway
             FileLog.e(t);
+            startWorker();
         }
-        running.start();
         return true;
+    }
+
+    /*
+     * The worker starts only once the service is in the foreground. Started earlier, a very
+     * short export (bad peer, folder error) could finish and stop the service before
+     * startForeground ran, which crashes on API 26+ ("did not then call startForeground").
+     */
+    private static void startWorker() {
+        if (running == null || workerStarted) return;
+        workerStarted = true;
+        running.start();
     }
 
     // ------------------------------------------------------------------ service
@@ -139,6 +162,7 @@ public class HanakoChatExportService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+        startWorker();
         try {
             if (wakeLock == null) {
                 PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
@@ -152,9 +176,19 @@ public class HanakoChatExportService extends Service {
         return START_NOT_STICKY;
     }
 
+    // API 34 calls this one-argument version (shortService only, kept for safety)
     @Override
     public void onTimeout(int startId) {
-        // Android 15 dataSync time limit: stop cleanly, the partial export stays readable
+        cancelRunning();
+        stopSelf();
+    }
+
+    /*
+     * Android 15+ dataSync time limit (6 h per day). The service must stop within seconds or
+     * the system crashes the app; the partial export stays readable.
+     */
+    @Override
+    public void onTimeout(int startId, int fgsType) {
         cancelRunning();
         stopSelf();
     }
@@ -178,7 +212,7 @@ public class HanakoChatExportService extends Service {
     private static PendingIntent launchApp(Context ctx) {
         Intent launch = ctx.getPackageManager().getLaunchIntentForPackage(ctx.getPackageName());
         if (launch == null) return null;
-        return PendingIntent.getActivity(ctx, 7312, launch, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        return PendingIntent.getActivity(ctx, REQ_LAUNCH, launch, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     public static String progressText(HanakoChatExport.Progress p) {
@@ -198,11 +232,25 @@ public class HanakoChatExportService extends Service {
         return text;
     }
 
+    /** "Exporting <chat>", or a generic title for hidden accounts, locked chats and streamer mode. */
+    private static String notifTitle() {
+        if (titlePrivate || PlusStreamer.isEnabled() || chatTitle == null) {
+            return LocaleController.getString(R.string.HanakoChatExportNotifTitleGeneric);
+        }
+        return LocaleController.formatString(R.string.HanakoChatExportNotifTitle, chatTitle);
+    }
+
     private static Notification buildProgress(Context ctx, HanakoChatExport.Progress p) {
         NotificationsController.checkOtherNotificationsChannel();
         NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, NotificationsController.OTHER_NOTIFICATIONS_CHANNEL);
-        b.setSmallIcon(android.R.drawable.stat_sys_download);
-        b.setContentTitle(LocaleController.formatString(R.string.HanakoChatExportNotifTitle, chatTitle != null ? chatTitle : ""));
+        b.setSmallIcon(R.drawable.notification);
+        b.setContentTitle(notifTitle());
+        // the lock screen never shows the chat title
+        b.setVisibility(NotificationCompat.VISIBILITY_PRIVATE);
+        b.setPublicVersion(new NotificationCompat.Builder(ctx, NotificationsController.OTHER_NOTIFICATIONS_CHANNEL)
+                .setSmallIcon(R.drawable.notification)
+                .setContentTitle(LocaleController.getString(R.string.HanakoChatExportNotifTitleGeneric))
+                .build());
         String text = progressText(p);
         b.setContentText(text.replace('\n', ' '));
         b.setStyle(new NotificationCompat.BigTextStyle().bigText(text));
@@ -219,7 +267,7 @@ public class HanakoChatExportService extends Service {
         if (content != null) b.setContentIntent(content);
         Intent cancel = new Intent(ctx, HanakoChatExportService.class).setAction(ACTION_CANCEL);
         int flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
-        PendingIntent cancelPi = PendingIntent.getService(ctx, 7313, cancel, flags);
+        PendingIntent cancelPi = PendingIntent.getService(ctx, REQ_CANCEL, cancel, flags);
         b.addAction(0, LocaleController.getString(R.string.Cancel), cancelPi);
         return b.build();
     }
@@ -265,7 +313,7 @@ public class HanakoChatExportService extends Service {
         try {
             NotificationsController.checkOtherNotificationsChannel();
             NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, NotificationsController.OTHER_NOTIFICATIONS_CHANNEL);
-            b.setSmallIcon(error != null ? android.R.drawable.stat_notify_error : android.R.drawable.stat_sys_download_done);
+            b.setSmallIcon(R.drawable.notification);
             b.setContentTitle(LocaleController.getString(error != null ? R.string.HanakoChatExportFailedTitle : R.string.HanakoChatExportDoneTitle));
             String text = summary(error, p);
             b.setContentText(text.replace('\n', ' '));
@@ -274,7 +322,7 @@ public class HanakoChatExportService extends Service {
             PendingIntent content = launchApp(ctx);
             Intent open = error == null ? openFolderIntent(exportDir) : null;
             if (open != null) {
-                PendingIntent openPi = PendingIntent.getActivity(ctx, 7314, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                PendingIntent openPi = PendingIntent.getActivity(ctx, REQ_OPEN_FOLDER, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                 b.addAction(0, LocaleController.getString(R.string.HanakoChatExportOpenFolder), openPi);
                 b.setContentIntent(openPi);
             } else if (content != null) {
