@@ -16,6 +16,10 @@ Telegram/Mercurygram base it is built on.
 ### Added
 - Russian translation of all Hanako settings, dialogs and messages.
 
+### Changed
+- The Smug language was rewritten for variety: fewer "label, tease" strings, more labels that are
+  jokes on their own, plain buttons where clarity matters, and clear errors and delete prompts.
+
 ## [1.0.1] - 2026-10-09
 
 ### Fixed
