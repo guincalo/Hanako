@@ -3,6 +3,13 @@
 All notable changes to Hanako are listed here. Hanako is versioned by its Git tags (`vX.Y.Z`); the
 version shown inside the app follows the Telegram/Mercurygram base it is built on.
 
+## [1.0.1] - 2026-10-09
+
+### Fixed
+- Hanako feature settings showed `LOC_ERR:null` instead of their text: the feature strings were
+  never compiled into the app's language files. They now are, in English and in Smug.
+- The Hanako entry in Settings now uses a Hanako glyph instead of Mercurygram's.
+
 ## [1.0.0] - 2026-10-08
 
 First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
