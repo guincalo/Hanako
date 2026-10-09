@@ -13,6 +13,9 @@ Telegram/Mercurygram base it is built on.
   Longer explanations moved to the README ("Limits worth knowing"). Other languages show the new
   English text until their translations catch up.
 
+### Added
+- Russian translation of all Hanako settings, dialogs and messages.
+
 ## [1.0.1] - 2026-10-09
 
 ### Fixed

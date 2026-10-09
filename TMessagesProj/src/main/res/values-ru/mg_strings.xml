@@ -248,4 +248,23 @@
     <string name="MercurygramQrLogin">Войти по QR-коду</string>
     <string name="MercurygramQrLoginInfo">Откройте Telegram на телефоне, где вы уже вошли, перейдите в Настройки &gt; Устройства и отсканируйте этот код.</string>
     <string name="MercurygramGoToFirstMessage">К первому сообщению</string>
+    <string name="MercurygramAcceptPreReleaseUpdatesAbout">Получать тестовые сборки (5 чисел в версии) через встроенное обновление. Они могут падать или работать не полностью.</string>
+    <string name="MercurygramAcceptPreReleaseUpdatesWarningMessage">Предварительные сборки — это тестовые снимки разработки: возможны сбои и недоделанные функции. Позже можно вернуться. Продолжить?</string>
+    <string name="MercurygramConfirmInternalLinksAbout">Показывает ссылки t.me и tg:// перед открытием, чтобы ссылка не вступила тайком в канал и не запустила бота.</string>
+    <string name="MercurygramDeleteForAllByDefaultAbout">При удалении сообщений заранее отмечает «Удалить для всех». Отметку можно снять.</string>
+    <string name="MercurygramDisableAiEditorAbout">Скрывает кнопку ИИ в редакторах. Она отправляет черновик в ИИ-сервис Telegram.</string>
+    <string name="MercurygramDisableGlobalSearchAbout">Поиск только по вашим чатам и контактам, без публичных имён, каналов и постов.</string>
+    <string name="MercurygramDisableInstantViewAbout">Ссылки открываются в браузере, а не в Instant View, который собирают серверы Telegram.</string>
+    <string name="MercurygramDisableLinkPreviewsAbout">Не загружать превью ссылок при наборе, чтобы серверы Telegram не открывали ваши ссылки.</string>
+    <string name="MercurygramDisableLivePhotosAbout">Отправлять только фото из Motion Photo. Нажмите значок движения, чтобы отправить его как Live Photo.</string>
+    <string name="MercurygramDisableProximitySensorAbout">Экран не гаснет у лица во время звонков и прослушивания. Поднести к уху для прослушивания не получится.</string>
+    <string name="MercurygramHidePremiumPromoAbout">Скрывает пункты и баннеры Premium, Business и подарков. Ничего не разблокирует.</string>
+    <string name="MercurygramPreferSecretChatsAbout">Кнопка нового сообщения создаёт секретный чат со сквозным шифрованием. Он не синхронизируется с другими устройствами.</string>
+    <string name="MercurygramReduceTrackingFingerprintAbout">Ключ сессии меняется каждый час, а не раз в сутки, — так сложнее отслеживать устройство. Трафика чуть больше.</string>
+    <string name="MercurygramReduceTrackingFingerprintWarningMessage">Ключ сессии будет меняться каждый час. Пассивно отслеживать вас станет сложнее, но факт использования Telegram не скрывается. Продолжить?</string>
+    <string name="MercurygramSavedMessagesHistoryAbout">Удалённые сообщения остаются в чате серыми, у изменённых сохраняются прошлые версии, медиа тоже. Кроме секретных чатов.</string>
+    <string name="MercurygramShowCharCounterAbout">Показывает число символов в сообщении, например для групп с ограничением длины.</string>
+    <string name="MercurygramStripTrackingParamsAbout">Убирает параметры отслеживания (utm_*, fbclid и подобные) из ссылок, которые вы открываете, вставляете или пересылаете.</string>
+    <string name="MercurygramTorAbout">Пускает трафик сообщений Telegram через встроенный Tor, чтобы скрыть ваш IP. Медиа загружаются напрямую.</string>
+    <string name="RearRoundVideos">Задняя камера для видеосообщений</string>
 </resources>
