@@ -210,7 +210,7 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Hanako ${{ github.ref_name }}
+          name: 🌸 Hanako ${{ github.ref_name }}
           body_path: notes.md
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
