@@ -1,7 +1,11 @@
 # Changelog
 
-All notable changes to Hanako are listed here. Hanako is versioned by its Git tags (`vX.Y.Z`); the
-version shown inside the app follows the Telegram/Mercurygram base it is built on.
+All notable changes to Hanako are listed here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Hanako is versioned by its Git tags
+(`vX.Y.Z`, [Semantic Versioning](https://semver.org/)); the version shown inside the app follows the
+Telegram/Mercurygram base it is built on.
+
+## [Unreleased]
 
 ## [1.0.1] - 2026-10-09
 
@@ -71,4 +75,6 @@ First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
 ### Other
 - Telegram Premium upsells and promo rows hidden; upstream Mercurygram update checks disabled.
 
+[Unreleased]: https://github.com/guincalo/Mercurygram/compare/v1.0.1...hanako
+[1.0.1]: https://github.com/guincalo/Mercurygram/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/guincalo/Mercurygram/releases/tag/v1.0.0

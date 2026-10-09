@@ -1,107 +1,32 @@
-# Contributing to Mercurygram
+# Contributing to Hanako
 
-Thanks for considering a contribution. Mercurygram is a rebase fork of upstream
-Telegram. Read [`AGENTS.md`](AGENTS.md) before you start — the rebase workflow
-shapes how patches must be structured.
+Hanako is a small, **fully vibecoded** fork of [Mercurygram](https://github.com/Mercurygram/Mercurygram):
+its own changes are written by AI coding agents and mostly not tested by a human before release.
+Contributions are welcome, but please keep that in mind when you read the code.
 
-## Translations
+## Before you start
 
-Mercurygram-only strings (those introduced by `[MG]` commits) are kept in the
-same Android resource files as upstream Telegram. There is no Crowdin / Weblate
-/ Transifex — translations land via GitHub pull requests.
+- **Open an issue first** for anything bigger than a typo, so we can agree on the change before you
+  spend time on it. Use the [issue forms](https://github.com/guincalo/Mercurygram/issues/new/choose).
+- Only Hanako's own features belong here. Bugs that also happen in upstream Mercurygram or in
+  official Telegram should go to [Mercurygram](https://github.com/Mercurygram/Mercurygram/issues)
+  or [Telegram](https://github.com/DrKLO/Telegram/issues).
 
-### What needs translating
+## Pull requests
 
-The MG-only string keys are prefixed with `Mercurygram` (and a few `mg_…` for
-SharedPreferences-related labels) inside
-[`TMessagesProj/src/main/res/values/strings.xml`](TMessagesProj/src/main/res/values/strings.xml).
+- Branch off `hanako` and open the PR against `hanako`.
+- Keep a PR to one change, and say how you checked it (built it, ran it on a device, or not at all).
+- Hanako's features live mostly in `TMessagesProj/src/main/java/it/belloworld/mercurygram/`
+  (`Plus*.java`) with their strings in `TMessagesProj/src/main/res/values/plus_*_strings.xml`.
+  Prefer new files there over editing upstream Telegram files.
+- User-visible changes get a line under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md).
 
-Run the helper to see exactly which keys are still missing in each locale:
+## Building
 
-```sh
-./scripts/check-mg-translations.sh
-```
+See [Building](README.md#building) in the README. CI builds every push to `hanako`; releases are
+described in [RELEASING.md](RELEASING.md).
 
-Currently shipped locales:
+## License
 
-```
-ar  de  es  it  ko  nl  pt-rBR  ru  uk
-```
-
-### How to translate (app strings)
-
-1. Fork the repo, branch off `master`.
-2. Edit `TMessagesProj/src/main/res/values-<locale>/strings.xml`. Add the
-   missing `<string name="Mercurygram…">…</string>` entries (the script output
-   lists the key names to copy).
-3. Use the English value in
-   `TMessagesProj/src/main/res/values/strings.xml` as the source of truth.
-4. Mind Android XML escaping:
-   - apostrophe `'` → `\'`
-   - double-quote `"` → `\"`
-   - ampersand `&` → `&amp;`
-   - Keep proper nouns untranslated: `Mercurygram`, `UnifiedPush`, `GitHub`,
-     `Live Photos`, `Live Photo`, `Google Motion Photo`.
-5. Re-run `./scripts/check-mg-translations.sh` — your locale should now show
-   no missing keys (or fewer than before).
-6. Open a PR titled `[MG] translations(<locale>): <short note>`.
-
-You do **not** need to know which `[MG] …` commit originally introduced a
-string. The maintainer folds translation PRs back into the originating commit
-via `git rebase --autosquash` before the next upstream rebase, to keep the
-patch series small (see [`AGENTS.md`](AGENTS.md), "Keep the commit count low").
-
-### Adding a new locale
-
-Only locales that already exist in upstream Telegram make sense — otherwise
-none of the ~10.6k upstream strings will be translated and the app will fall
-back to English everywhere except the MG screens. Open an issue first if
-unsure.
-
-To add one: create `TMessagesProj/src/main/res/values-<locale>/strings.xml`
-with at least the 15 MG keys, then translate as above.
-
-### Translation status
-
-The current MG translations for `de`, `es`, `pt-rBR`, `nl`, `ru`, `uk`, `ko`,
-`ar` were seeded by AI and are explicitly considered drafts awaiting
-native-speaker review. Italian (`it`) was reviewed by a native speaker.
-Corrections via PR are very welcome — don't assume anything is locked in.
-
-## F-Droid metadata translations
-
-The store listings under
-[`TMessagesProj_App/fastlane/metadata/android/`](TMessagesProj_App/fastlane/metadata/android)
-follow the standard fastlane F-Droid layout:
-
-```
-TMessagesProj_App/fastlane/metadata/android/<locale>/
-    name.txt          # short app name
-    summary.txt       # one-line summary
-    description.txt   # long description
-```
-
-They live under the app module rather than the repo root so that F-Droid
-scopes them to `it.belloworld.mercurygram` alone; the Tor plugin has its own
-listing in `TMessagesProj_PluginTor/src/main/play/listings/`.
-
-Source of truth: `TMessagesProj_App/fastlane/metadata/android/en-US/`.
-Translators may add or update `name.txt`, `summary.txt`, `description.txt` for
-any locale. F-Droid renders these with a small HTML subset (`<b>`, `<i>`,
-`<br>`, `<a>`) — Markdown is shown literally, so don't use it.
-
-## Code contributions
-
-For non-translation code changes, follow the conventions in
-[`AGENTS.md`](AGENTS.md):
-
-- Tag commits `[MG]` (Mercurygram features) or `[TF]` (Telegram-FOSS / de-googling).
-- Prefer adding new files in `it.belloworld.mercurygram.*` over modifying
-  upstream files.
-- New `SharedConfig` flags use the `mg_` SharedPreferences prefix.
-- Bug fixes against an existing `[MG]` feature should be folded into the
-  introducing commit (`git commit --fixup` + `git rebase --autosquash`),
-  not added as new follow-up commits.
-- Keep `AGENTS.md` / `README.md` in sync with any change to build, config,
-  or workflow.
-
+Hanako is licensed under the [GNU General Public License v2.0](LICENSE). By contributing you agree
+that your contribution is released under the same license.

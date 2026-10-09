@@ -7,6 +7,7 @@
 **An unofficial Telegram client for Android, forked from [Mercurygram](https://github.com/Mercurygram/Mercurygram).**
 
 [![Latest release](https://img.shields.io/github/v/release/guincalo/Mercurygram?label=release)](https://github.com/guincalo/Mercurygram/releases/latest)
+[![Build](https://github.com/guincalo/Mercurygram/actions/workflows/hanako.yml/badge.svg?branch=hanako)](https://github.com/guincalo/Mercurygram/actions/workflows/hanako.yml)
 [![License: GPL v2](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](LICENSE)
 
 </div>
@@ -143,8 +144,9 @@ Building on Windows is not supported; use Linux (or a Linux VM).
 
 **Prerequisites:** Android SDK with the NDK version pinned by `ndkVersion` in
 `TMessagesProj/build.gradle`, JDK 17, `git`, and the native toolchain: Ninja, Meson, `nasm`, `make`,
-`cmake`, `pkg-config`, `gperf`, `python3` and `curl`. See upstream Mercurygram's
-[build notes](https://github.com/Mercurygram/Mercurygram#building) for details.
+`cmake`, `pkg-config`, `gperf`, `python3` and `curl`. The CI build action,
+[`.github/actions/build-mg/action.yml`](.github/actions/build-mg/action.yml), shows a working setup step
+by step.
 
 ```bash
 git clone https://github.com/guincalo/Mercurygram.git
@@ -160,14 +162,17 @@ source on the first build and cached afterwards.
 
 **CI:** `.github/workflows/hanako.yml` builds a signed arm64 APK on every push to `hanako` (kept as a
 workflow artifact for 14 days). Pushing a release tag `vX.Y.Z` validates it, builds once and publishes a
-GitHub Release with the APK, its SHA-256 and that version's section of [CHANGELOG.md](CHANGELOG.md). A
-branch push of an already-tagged commit is skipped, and docs-only changes don't trigger a build.
+GitHub Release with the APK, its SHA-256 and that version's section of [CHANGELOG.md](CHANGELOG.md); see
+[RELEASING.md](RELEASING.md). A branch push of an already-tagged commit is skipped, and docs-only changes
+don't trigger a build.
 
 ## Contributing
 
-Bug reports are welcome via [Issues](https://github.com/guincalo/Mercurygram/issues/new/choose). Please
-include the Hanako version, your Android version and steps to reproduce. Bugs that also happen in
-upstream Mercurygram or Telegram belong to those projects; bugs in Hanako's own features do not.
+Bug reports and feature requests are welcome via [Issues](https://github.com/guincalo/Mercurygram/issues/new/choose).
+Please include the Hanako version, your Android version and steps to reproduce. Bugs that also happen
+in upstream Mercurygram or Telegram belong to those projects. See [CONTRIBUTING.md](CONTRIBUTING.md)
+before opening a pull request, [SECURITY.md](SECURITY.md) for security reports and
+[RELEASING.md](RELEASING.md) for how releases are made.
 
 ## Credits
 

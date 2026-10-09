@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Bug in upstream Mercurygram
+    url: https://github.com/Mercurygram/Mercurygram/issues
+    about: The bug also happens in official Mercurygram builds? Please report it there.
+  - name: Bug in official Telegram for Android
+    url: https://github.com/DrKLO/Telegram/issues
+    about: The bug also happens in the official Telegram app? Please report it there.
