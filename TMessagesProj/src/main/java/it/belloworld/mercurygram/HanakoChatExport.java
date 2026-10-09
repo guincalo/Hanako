@@ -71,10 +71,22 @@ public final class HanakoChatExport {
         public boolean json = true;
     }
 
-    public interface Listener {
-        void onProgress(int messages, int media);
+    /** Snapshot for the progress UI / notification. */
+    public static final class Progress {
+        public int messages;
+        /** messages expected in the range, 0 = unknown */
+        public int total;
+        public int media;
+        public int failed;
+        /** seconds left of a FLOOD_WAIT pause, 0 = not waiting */
+        public int waitSeconds;
+    }
 
-        void onFinished(boolean cancelled, String error, int messages, int media);
+    public interface Listener {
+        void onProgress(Progress progress);
+
+        /** @param exportDir the ChatExport_… folder (null if it was never created) */
+        void onFinished(boolean cancelled, Throwable error, Progress progress, Uri exportDir);
     }
 
     private static final int PAGE = 100;
@@ -102,6 +114,9 @@ public final class HanakoChatExport {
     private Writer html;
     private int messageCount;
     private int mediaCount;
+    private int failedCount;
+    private int totalCount;
+    private volatile int waitSeconds;
     private String lastHtmlDay;
     private final SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
     private final SimpleDateFormat fileFormat = new SimpleDateFormat("dd-MM-yyyy_HH-mm-ss", Locale.US);
@@ -126,6 +141,32 @@ public final class HanakoChatExport {
         cancelled.set(true);
     }
 
+    public boolean isCancelled() {
+        return cancelled.get();
+    }
+
+    public Uri getExportDir() {
+        return exportDir;
+    }
+
+    public long getDialogId() {
+        return options.dialogId;
+    }
+
+    public int getAccount() {
+        return account;
+    }
+
+    public Progress snapshot() {
+        Progress p = new Progress();
+        p.messages = messageCount;
+        p.total = totalCount > 0 ? Math.max(totalCount, messageCount) : 0;
+        p.media = mediaCount;
+        p.failed = failedCount;
+        p.waitSeconds = waitSeconds;
+        return p;
+    }
+
     public static boolean canExport(long dialogId) {
         return dialogId != 0 && !DialogObject.isEncryptedDialog(dialogId);
     }
@@ -133,7 +174,7 @@ public final class HanakoChatExport {
     // =====================================================================================
 
     private void run() {
-        String error = null;
+        Throwable error = null;
         try {
             Context ctx = ApplicationLoader.applicationContext;
             resolver = ctx.getContentResolver();
@@ -149,24 +190,59 @@ public final class HanakoChatExport {
                 throw new IOException("cannot create export folder");
             }
             openWriters(mc);
+            countTotal(peer);
+            progress();
             exportHistory(peer);
         } catch (Throwable t) {
             if (!cancelled.get()) {
                 FileLog.e(t);
-                error = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
+                error = t;
             }
         } finally {
             closeWriters();
         }
-        final String err = error;
+        final Throwable err = error;
         final boolean wasCancelled = cancelled.get();
-        AndroidUtilities.runOnUIThread(() -> listener.onFinished(wasCancelled, err, messageCount, mediaCount));
+        waitSeconds = 0;
+        final Progress p = snapshot();
+        final Uri dir = exportDir;
+        AndroidUtilities.runOnUIThread(() -> listener.onFinished(wasCancelled, err, p, dir));
     }
 
     private void progress() {
-        final int m = messageCount;
-        final int f = mediaCount;
-        AndroidUtilities.runOnUIThread(() -> listener.onProgress(m, f));
+        final Progress p = snapshot();
+        AndroidUtilities.runOnUIThread(() -> listener.onProgress(p));
+    }
+
+    /**
+     * Messages in the chosen range, for a determinate progress bar: the history count for the
+     * whole chat, or a dated messages.search count for a range. 0 when unknown (never fatal).
+     */
+    private void countTotal(TLRPC.InputPeer peer) {
+        try {
+            TLRPC.messages_Messages res;
+            if (options.fromDate <= 0 && options.toDate <= 0) {
+                TLRPC.TL_messages_getHistory req = new TLRPC.TL_messages_getHistory();
+                req.peer = peer;
+                req.limit = 1;
+                res = (TLRPC.messages_Messages) call(req, ConnectionsManager.DEFAULT_DATACENTER_ID, ConnectionsManager.ConnectionTypeGeneric);
+            } else {
+                TLRPC.TL_messages_search req = new TLRPC.TL_messages_search();
+                req.peer = peer;
+                req.q = "";
+                req.filter = new TLRPC.TL_inputMessagesFilterEmpty();
+                req.min_date = Math.max(0, options.fromDate);
+                req.max_date = Math.max(0, options.toDate);
+                req.limit = 1;
+                res = (TLRPC.messages_Messages) call(req, ConnectionsManager.DEFAULT_DATACENTER_ID, ConnectionsManager.ConnectionTypeGeneric);
+            }
+            if (res != null) {
+                totalCount = res.count > 0 ? res.count : res.messages.size();
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
+            totalCount = 0;
+        }
     }
 
     // =====================================================================================
@@ -284,11 +360,11 @@ public final class HanakoChatExport {
             Matcher flood = FLOOD.matcher(text);
             if (flood.matches()) {
                 int seconds = Integer.parseInt(flood.group(1));
-                sleep(Math.max(1, seconds) * 1000L + 500);
+                floodWait(Math.max(1, seconds));
                 continue;
             }
             if (err[0].code == 420) {
-                sleep(5000);
+                floodWait(5);
                 continue;
             }
             Matcher migrate = MIGRATE.matcher(text);
@@ -312,6 +388,21 @@ public final class HanakoChatExport {
         Chunk(byte[] data) {
             this.data = data;
         }
+    }
+
+    /** Telegram asked to slow down: wait, counting the seconds down in the progress UI. */
+    private void floodWait(int seconds) throws InterruptedException {
+        long end = System.currentTimeMillis() + seconds * 1000L + 500;
+        while (!cancelled.get() && System.currentTimeMillis() < end) {
+            int left = (int) Math.max(1, (end - System.currentTimeMillis() + 999) / 1000);
+            if (left != waitSeconds) {
+                waitSeconds = left;
+                progress();
+            }
+            Thread.sleep(Math.min(250, Math.max(1, end - System.currentTimeMillis())));
+        }
+        waitSeconds = 0;
+        progress();
     }
 
     private void sleep(long ms) throws InterruptedException {
@@ -876,9 +967,15 @@ public final class HanakoChatExport {
     private String writeBytes(String folder, String name, String mime, byte[] data) throws IOException {
         Uri dir = subdir(folder);
         Uri out = DocumentsContract.createDocument(resolver, dir, mime, name);
-        if (out == null) return FAILED;
+        if (out == null) {
+            failedCount++;
+            return FAILED;
+        }
         try (OutputStream os = resolver.openOutputStream(out, "w")) {
-            if (os == null) return FAILED;
+            if (os == null) {
+                failedCount++;
+                return FAILED;
+            }
             os.write(data);
         }
         mediaCount++;
@@ -890,10 +987,16 @@ public final class HanakoChatExport {
         if (cancelled.get()) return FAILED;
         Uri dir = subdir(folder);
         Uri out = DocumentsContract.createDocument(resolver, dir, mime, name);
-        if (out == null) return FAILED;
+        if (out == null) {
+            failedCount++;
+            return FAILED;
+        }
         boolean ok = false;
         try (OutputStream os = resolver.openOutputStream(out, "w")) {
-            if (os == null) return FAILED;
+            if (os == null) {
+                failedCount++;
+                return FAILED;
+            }
             long offset = 0;
             while (!cancelled.get()) {
                 TLRPC.TL_upload_getFile req = new TLRPC.TL_upload_getFile();
@@ -921,6 +1024,7 @@ public final class HanakoChatExport {
                 DocumentsContract.deleteDocument(resolver, out);
             } catch (Exception ignore) {
             }
+            if (!cancelled.get()) failedCount++;
             return FAILED;
         }
         mediaCount++;

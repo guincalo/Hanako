@@ -536,6 +536,12 @@
             android:exported="true"
             android:foregroundServiceType="dataSync"
         />
+        <!-- hanako: chat export runs as a foreground service with a progress notification -->
+        <service
+            android:name="it.belloworld.mercurygram.HanakoChatExportService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+        />
         <service
             android:name=".ImportingService"
             android:enabled="true"

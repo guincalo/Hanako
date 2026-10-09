@@ -35,7 +35,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
+import it.belloworld.mercurygram.HanakoBackup;
 import it.belloworld.mercurygram.HanakoChatExport;
+import it.belloworld.mercurygram.HanakoChatExportService;
+import it.belloworld.mercurygram.PlusChatLock;
 
 public class HanakoChatExportActivity extends UniversalFragment {
 
@@ -60,9 +63,11 @@ public class HanakoChatExportActivity extends UniversalFragment {
     private final long dialogId;
     private final HanakoChatExport.Options options = new HanakoChatExport.Options();
 
-    private HanakoChatExport running;
+    /** "Last 7 days" etc. shown instead of a bare date while the preset is in effect. */
+    private CharSequence fromPresetLabel;
     private AlertDialog progressDialog;
     private TextView progressText;
+    private android.widget.ProgressBar progressBar;
 
     public HanakoChatExportActivity(long dialogId) {
         super();
@@ -104,7 +109,7 @@ public class HanakoChatExportActivity extends UniversalFragment {
     protected void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
         items.add(UItem.asHeader(chatName()));
         items.add(UItem.asButton(ID_FROM, LocaleController.getString(R.string.HanakoChatExportFrom),
-                options.fromDate > 0 ? formatDate(options.fromDate) : LocaleController.getString(R.string.HanakoChatExportBeginning)));
+                options.fromDate > 0 ? (fromPresetLabel != null ? fromPresetLabel : formatDate(options.fromDate)) : LocaleController.getString(R.string.HanakoChatExportBeginning)));
         items.add(UItem.asButton(ID_TO, LocaleController.getString(R.string.HanakoChatExportTo),
                 options.toDate > 0 ? formatDate(options.toDate) : LocaleController.getString(R.string.HanakoChatExportNow)));
         items.add(UItem.asShadow(null));
@@ -184,6 +189,7 @@ public class HanakoChatExportActivity extends UniversalFragment {
         b.setTitle(LocaleController.getString(R.string.HanakoChatExportFrom));
         b.setItems(labels, (d, which) -> {
             int now = (int) (System.currentTimeMillis() / 1000L);
+            fromPresetLabel = which >= 1 && which <= 4 ? labels[which] : null;
             switch (which) {
                 case 0:
                     options.fromDate = 0;
@@ -240,6 +246,7 @@ public class HanakoChatExportActivity extends UniversalFragment {
                 c.clear();
                 c.set(year, month, dayOfMonth, 0, 0, 0);
                 if (from) {
+                    fromPresetLabel = null;
                     options.fromDate = (int) (c.getTimeInMillis() / 1000L);
                 } else {
                     // inclusive: up to the end of the picked day
@@ -282,14 +289,34 @@ public class HanakoChatExportActivity extends UniversalFragment {
             toast(LocaleController.getString(R.string.HanakoChatExportBadRange));
             return;
         }
-        if (running != null) return;
-        try {
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-            startActivityForResult(intent, REQ_TREE);
-        } catch (Exception e) {
-            FileLog.e(e);
-            toast(e.getMessage());
+        if (HanakoChatExportService.isRunning()) {
+            if (HanakoChatExportService.runningDialogId() == dialogId) {
+                showProgressDialog();
+            } else {
+                toast(LocaleController.getString(R.string.HanakoChatExportBusy));
+            }
+            return;
         }
+        Runnable pick = () -> {
+            try {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+                startActivityForResult(intent, REQ_TREE);
+            } catch (Exception e) {
+                FileLog.e(e);
+                toast(HanakoBackup.describeError(e));
+            }
+        };
+        // a locked chat (reached some other way) is never exported without its unlock
+        if (PlusChatLock.isDialogLockedNow(currentAccount, dialogId)) {
+            PlusChatLock.authenticate(PlusChatLock.dialogName(currentAccount, dialogId), success -> {
+                if (success) {
+                    PlusChatLock.markSessionUnlocked(currentAccount, dialogId);
+                    pick.run();
+                }
+            });
+            return;
+        }
+        pick.run();
     }
 
     @Override
@@ -307,72 +334,124 @@ public class HanakoChatExportActivity extends UniversalFragment {
         runExport(tree);
     }
 
+    private final HanakoChatExport.Listener listener = new HanakoChatExport.Listener() {
+        @Override
+        public void onProgress(HanakoChatExport.Progress p) {
+            updateProgressViews(p);
+        }
+
+        @Override
+        public void onFinished(boolean cancelled, Throwable error, HanakoChatExport.Progress p, Uri exportDir) {
+            dismissProgressDialog();
+            if (getParentActivity() == null) {
+                return;
+            }
+            if (cancelled) {
+                askKeepPartial(exportDir);
+                return;
+            }
+            HanakoChatExportService.cancelDoneNotification();
+            AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
+            b.setTitle(LocaleController.getString(error != null ? R.string.HanakoChatExportFailedTitle : R.string.HanakoChatExportDoneTitle));
+            b.setMessage(HanakoChatExportService.summary(error, p));
+            if (error == null && exportDir != null) {
+                b.setNeutralButton(LocaleController.getString(R.string.HanakoChatExportOpenFolder), (d, w) -> openFolder(exportDir));
+            }
+            b.setPositiveButton(LocaleController.getString(R.string.HanakoChatExportDoneButton), null);
+            showDialog(b.create());
+        }
+    };
+
+    private void openFolder(Uri exportDir) {
+        Intent intent = HanakoChatExportService.openFolderIntent(exportDir);
+        if (intent == null || getParentActivity() == null) return;
+        try {
+            getParentActivity().startActivity(intent);
+        } catch (Exception e) {
+            FileLog.e(e);
+            toast(LocaleController.getString(R.string.HanakoChatExportNoFileManager));
+        }
+    }
+
+    private void askKeepPartial(Uri exportDir) {
+        if (exportDir == null || getParentActivity() == null) {
+            toast(LocaleController.getString(R.string.HanakoChatExportCancelled));
+            return;
+        }
+        AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
+        b.setTitle(LocaleController.getString(R.string.HanakoChatExportTitle));
+        b.setMessage(LocaleController.getString(R.string.HanakoChatExportStoppedAsk));
+        b.setPositiveButton(LocaleController.getString(R.string.HanakoChatExportKeep), null);
+        b.setNegativeButton(LocaleController.getString(R.string.Delete), (d, w) ->
+                HanakoChatExportService.deleteExport(exportDir, () -> toast(LocaleController.getString(R.string.HanakoChatExportDeleted))));
+        b.makeRed(android.content.DialogInterface.BUTTON_NEGATIVE);
+        showDialog(b.create());
+    }
+
     private void runExport(Uri tree) {
+        if (!HanakoChatExportService.start(currentAccount, options, tree, chatName())) {
+            toast(LocaleController.getString(R.string.HanakoChatExportBusy));
+            return;
+        }
+        HanakoChatExportService.addListener(listener);
+        showProgressDialog();
+    }
+
+    private void showProgressDialog() {
         Activity activity = getParentActivity();
-        if (activity == null) return;
+        if (activity == null || progressDialog != null) return;
+        HanakoChatExportService.addListener(listener);
         LinearLayout layout = new LinearLayout(activity);
         layout.setOrientation(LinearLayout.VERTICAL);
+        progressBar = new android.widget.ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal);
+        progressBar.setIndeterminate(true);
+        layout.addView(progressBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 4, 24, 4));
         progressText = new TextView(activity);
-        progressText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        progressText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         progressText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
-        progressText.setText(LocaleController.formatString(R.string.HanakoChatExportProgress, 0, 0));
         layout.addView(progressText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 4, 24, 4));
-
-        final HanakoChatExport export = new HanakoChatExport(currentAccount, options, tree, new HanakoChatExport.Listener() {
-            @Override
-            public void onProgress(int messages, int media) {
-                if (progressText != null) {
-                    progressText.setText(LocaleController.formatString(R.string.HanakoChatExportProgress, messages, media));
-                }
-            }
-
-            @Override
-            public void onFinished(boolean cancelled, String error, int messages, int media) {
-                running = null;
-                if (progressDialog != null) {
-                    try {
-                        progressDialog.dismiss();
-                    } catch (Exception ignore) {
-                    }
-                    progressDialog = null;
-                }
-                progressText = null;
-                String text;
-                if (cancelled) {
-                    text = LocaleController.getString(R.string.HanakoChatExportCancelled);
-                } else if (error != null) {
-                    text = LocaleController.formatString(R.string.HanakoBackupFailed, error);
-                } else {
-                    text = LocaleController.formatString(R.string.HanakoChatExportDone, messages, media);
-                }
-                if (getParentActivity() != null) {
-                    AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
-                    b.setTitle(LocaleController.getString(R.string.HanakoChatExportTitle));
-                    b.setMessage(text);
-                    b.setPositiveButton(LocaleController.getString(R.string.OK), null);
-                    showDialog(b.create());
-                } else {
-                    toast(text);
-                }
-            }
-        });
-        running = export;
+        TextView hint = new TextView(activity);
+        hint.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        hint.setTextColor(Theme.getColor(Theme.key_dialogTextGray3, getResourceProvider()));
+        hint.setText(LocaleController.getString(R.string.HanakoChatExportBackgroundHint));
+        layout.addView(hint, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 8, 24, 4));
+        HanakoChatExport.Progress p = HanakoChatExportService.lastProgress();
+        updateProgressViews(p != null ? p : new HanakoChatExport.Progress());
 
         AlertDialog.Builder b = new AlertDialog.Builder(activity, getResourceProvider());
         b.setTitle(LocaleController.getString(R.string.HanakoChatExportTitle));
         b.setView(layout);
-        b.setNegativeButton(LocaleController.getString(R.string.Cancel), (d, w) -> export.cancel());
+        b.setPositiveButton(LocaleController.getString(R.string.HanakoChatExportHide), (d, w) -> dismissProgressDialog());
+        b.setNegativeButton(LocaleController.getString(R.string.Cancel), (d, w) -> {
+            HanakoChatExportService.cancelRunning();
+            dismissProgressDialog();
+        });
         progressDialog = b.create();
-        progressDialog.setCancelable(false);
         progressDialog.setCanceledOnTouchOutside(false);
-        progressDialog.show();
-        export.start();
+        showDialog(progressDialog, d -> {
+            progressDialog = null;
+            progressText = null;
+            progressBar = null;
+        });
     }
 
-    @Override
-    public void onFragmentDestroy() {
-        super.onFragmentDestroy();
-        // leaving the screen does not stop a running export; it finishes in the background
+    private void updateProgressViews(HanakoChatExport.Progress p) {
+        if (p == null) return;
+        if (progressText != null) {
+            progressText.setText(HanakoChatExportService.progressText(p));
+        }
+        if (progressBar != null) {
+            if (p.total > 0) {
+                progressBar.setIndeterminate(false);
+                progressBar.setMax(p.total);
+                progressBar.setProgress(Math.min(p.messages, p.total));
+            } else {
+                progressBar.setIndeterminate(true);
+            }
+        }
+    }
+
+    private void dismissProgressDialog() {
         if (progressDialog != null) {
             try {
                 progressDialog.dismiss();
@@ -380,6 +459,24 @@ public class HanakoChatExportActivity extends UniversalFragment {
             }
             progressDialog = null;
         }
+        progressText = null;
+        progressBar = null;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (HanakoChatExportService.isRunning() && HanakoChatExportService.runningDialogId() == dialogId) {
+            showProgressDialog();
+        }
+    }
+
+    @Override
+    public void onFragmentDestroy() {
+        super.onFragmentDestroy();
+        // leaving the screen does not stop a running export: the notification takes over
+        HanakoChatExportService.removeListener(listener);
+        dismissProgressDialog();
     }
 
     private void refresh() {
