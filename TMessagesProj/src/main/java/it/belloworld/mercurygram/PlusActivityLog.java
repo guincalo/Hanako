@@ -77,19 +77,23 @@ public final class PlusActivityLog {
     }
 
     public static boolean isEnabled(int account) {
-        return prefs().getBoolean("on_" + account, false);
+        SharedPreferences p = prefs();
+        return p.getBoolean(PlusUtil.accountKey(p, "on", account), false);
     }
 
     public static void setEnabled(int account, boolean value) {
-        prefs().edit().putBoolean("on_" + account, value).apply();
+        SharedPreferences p = prefs();
+        p.edit().putBoolean(PlusUtil.accountKey(p, "on", account), value).apply();
     }
 
     public static int getScope(int account) {
-        return prefs().getInt("scope_" + account, SCOPE_CONTACTS);
+        SharedPreferences p = prefs();
+        return p.getInt(PlusUtil.accountKey(p, "scope", account), SCOPE_CONTACTS);
     }
 
     public static void setScope(int account, int scope) {
-        prefs().edit().putInt("scope_" + account, scope).apply();
+        SharedPreferences p = prefs();
+        p.edit().putInt(PlusUtil.accountKey(p, "scope", account), scope).apply();
     }
 
     /** Global (all accounts). */
@@ -102,17 +106,36 @@ public final class PlusActivityLog {
         queue.postRunnable(PlusActivityLog::pruneInternal);
     }
 
+    /*
+     * "u_<user>" + "_u<self>": the per-person override, keyed by the account's own user id
+     * (old "u_<slot>_<user>" keys are moved over on first read, see PlusUtil.accountKey).
+     */
+    private static String overrideKey(int account, long userId) {
+        SharedPreferences p = prefs();
+        String old = "u_" + account + "_" + userId;
+        long self = PlusUtil.validAccount(account) ? UserConfig.getInstance(account).getClientUserId() : 0;
+        if (self == 0) {
+            return old;
+        }
+        String key = "u_" + userId + "_u" + self;
+        if (!p.contains(key) && p.contains(old)) {
+            p.edit().putInt(key, p.getInt(old, 0)).remove(old).apply();
+        }
+        return key;
+    }
+
     /** 1 = always log, -1 = never log, 0 = follow the account scope. */
     public static int getUserOverride(int account, long userId) {
-        return prefs().getInt("u_" + account + "_" + userId, 0);
+        return prefs().getInt(overrideKey(account, userId), 0);
     }
 
     public static void setUserOverride(int account, long userId, int value) {
         SharedPreferences.Editor e = prefs().edit();
+        String key = overrideKey(account, userId);
         if (value == 0) {
-            e.remove("u_" + account + "_" + userId);
+            e.remove(key);
         } else {
-            e.putInt("u_" + account + "_" + userId, value);
+            e.putInt(key, value);
         }
         e.apply();
     }

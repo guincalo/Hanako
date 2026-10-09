@@ -137,7 +137,8 @@ public class HanakoBackupActivity extends UniversalFragment {
                 confirmUndo();
                 break;
             case ID_CREATE_BACKUP:
-                gate(R.string.HanakoAuthBackup, this::showBackupWarning);
+                // a full backup copies the login sessions: refused on a phone with no lock at all
+                HanakoAuthGate.require(this, LocaleController.getString(R.string.HanakoAuthBackup), true, this::showBackupWarning);
                 break;
             case ID_RESTORE_BACKUP:
                 if (UserConfig.getActivatedAccountsCount() > 0) {
@@ -168,6 +169,7 @@ public class HanakoBackupActivity extends UniversalFragment {
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
         wipePending();
+        HanakoAuthGate.forget();
     }
 
     private void gate(int subtitleRes, Runnable action) {
@@ -234,18 +236,16 @@ public class HanakoBackupActivity extends UniversalFragment {
                 return false;
             }
             final long did = dids.get(0).dialogId;
-            if (PlusChatLock.isDialogLockedNow(account, did) && !HanakoAuthGate.recentlyVerified()) {
-                // a locked chat is never exported without its unlock
+            if (PlusChatLock.isDialogLockedNow(account, did)) {
+                // A locked chat always asks Chat lock itself (its biometrics-only setting
+                // included); "Confirm it's you" never stands in for it. The unlock is for
+                // this export only, the chat stays locked in normal use.
                 PlusChatLock.authenticate(PlusChatLock.dialogName(account, did), success -> {
                     if (success) {
-                        PlusChatLock.markSessionUnlocked(account, did);
-                        fragment.presentFragment(new HanakoChatExportActivity(did), true);
+                        fragment.presentFragment(new HanakoChatExportActivity(did, true), true);
                     }
                 });
                 return true;
-            }
-            if (PlusChatLock.isDialogLockedNow(account, did)) {
-                PlusChatLock.markSessionUnlocked(account, did);
             }
             fragment.presentFragment(new HanakoChatExportActivity(did), true);
             return true;
@@ -523,7 +523,7 @@ public class HanakoBackupActivity extends UniversalFragment {
         final Context ctx = ApplicationLoader.applicationContext;
         final AlertDialog progress = showProgress();
         Utilities.globalQueue.postRunnable(() -> {
-            int count = 0;
+            int[] count = {0, 0};
             Throwable error = null;
             try {
                 count = HanakoBackup.writeFullBackup(ctx, uri, password, true, withHidden);
@@ -533,7 +533,8 @@ public class HanakoBackupActivity extends UniversalFragment {
             } finally {
                 Arrays.fill(password, '\0');
             }
-            final int n = count;
+            final int n = count[0];
+            final int skipped = count[1];
             final Throwable err = error;
             AndroidUtilities.runOnUIThread(() -> {
                 dismiss(progress);
@@ -547,6 +548,10 @@ public class HanakoBackupActivity extends UniversalFragment {
                 String text = TextUtils.isEmpty(name)
                         ? LocaleController.formatString(R.string.HanakoBackupSavedDialogNoName, accounts)
                         : LocaleController.formatString(R.string.HanakoBackupSavedDialog, name, accounts);
+                if (skipped > 0) {
+                    // an account whose session file could not be read is not in the file
+                    text += "\n\n" + LocaleController.formatPluralString("HanakoBackupSkippedAccounts", skipped);
+                }
                 if (getParentActivity() == null) {
                     toast(text);
                     return;
@@ -754,7 +759,8 @@ public class HanakoBackupActivity extends UniversalFragment {
                     return;
                 }
                 if (getParentActivity() == null) {
-                    HanakoBackup.restartApp(null);
+                    // never restart without a visible confirmation: the staged restore is
+                    // applied at the next start (if within 30 minutes) and explains itself then
                     return;
                 }
                 AlertDialog.Builder done = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
@@ -831,19 +837,29 @@ public class HanakoBackupActivity extends UniversalFragment {
             if (i > 0 && Math.abs(c - pw.charAt(i - 1)) != 1) sequential = false;
         }
         distinct = chars.size();
-        String lowerPw = pw.toString().toLowerCase(Locale.ROOT);
+        if (len < HanakoBackup.MIN_PASSWORD_LENGTH) return STRENGTH_WEAK;
         for (String w : COMMON) {
-            if (lowerPw.contains(w) && len - w.length() < 6) return STRENGTH_WEAK;
+            if (containsIgnoreCase(pw, w) && len - w.length() < 6) return STRENGTH_WEAK;
         }
         if (sequential || distinct <= Math.max(2, len / 4)) return STRENGTH_WEAK;
         int classes = (lower ? 1 : 0) + (upper ? 1 : 0) + (digit ? 1 : 0) + (other ? 1 : 0);
         if (len >= 16 || (len >= 12 && classes >= 3)) return STRENGTH_STRONG;
-        if (len >= 12 || (len >= HanakoBackup.MIN_PASSWORD_LENGTH + 2 && classes >= 3)) return STRENGTH_OK;
-        return STRENGTH_WEAK;
+        return STRENGTH_OK; // at least MIN_PASSWORD_LENGTH (12) and not trivial
     }
 
-    /** Five groups of four random letters/digits, about 100 bits. */
-    private static String generatePassphrase() {
+    /* Substring test on the field's text without making a String copy of the password. */
+    private static boolean containsIgnoreCase(CharSequence text, String word) {
+        int n = word.length();
+        for (int i = 0; i + n <= text.length(); i++) {
+            int j = 0;
+            while (j < n && Character.toLowerCase(text.charAt(i + j)) == word.charAt(j)) j++;
+            if (j == n) return true;
+        }
+        return false;
+    }
+
+    /** Five groups of four random letters/digits, about 100 bits. A char[]: wiped after use. */
+    private static char[] generatePassphrase() {
         final String alphabet = "abcdefghijkmnopqrstuvwxyz23456789";
         SecureRandom random = new SecureRandom();
         StringBuilder sb = new StringBuilder();
@@ -853,7 +869,10 @@ public class HanakoBackupActivity extends UniversalFragment {
                 sb.append(alphabet.charAt(random.nextInt(alphabet.length())));
             }
         }
-        return sb.toString();
+        char[] out = new char[sb.length()];
+        sb.getChars(0, sb.length(), out, 0);
+        sb.setLength(0);
+        return out;
     }
 
     private void askPassword(boolean create, PasswordCallback callback) {
@@ -891,6 +910,8 @@ public class HanakoBackupActivity extends UniversalFragment {
         final boolean[] shown = new boolean[1];
         final TextView toggle = dialogText(activity, LocaleController.getString(R.string.HanakoPasswordShow), 14, Theme.key_dialogTextBlue2);
         toggle.setPadding(0, AndroidUtilities.dp(10), 0, AndroidUtilities.dp(10));
+        toggle.setMinHeight(AndroidUtilities.dp(48)); // touch target
+        toggle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         toggle.setOnClickListener(v -> {
             shown[0] = !shown[0];
             int type = InputType.TYPE_CLASS_TEXT | (shown[0] ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD : InputType.TYPE_TEXT_VARIATION_PASSWORD);
@@ -904,20 +925,23 @@ public class HanakoBackupActivity extends UniversalFragment {
         });
         LinearLayout actions = new LinearLayout(activity);
         actions.setOrientation(LinearLayout.HORIZONTAL);
-        actions.addView(toggle, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.CENTER_VERTICAL, 0, 0, 24, 0));
+        actions.addView(toggle, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.START | Gravity.CENTER_VERTICAL, 0, 0, 24, 0));
         if (create) {
             final TextView generate = dialogText(activity, LocaleController.getString(R.string.HanakoPasswordGenerate), 14, Theme.key_dialogTextBlue2);
             generate.setPadding(0, AndroidUtilities.dp(10), 0, AndroidUtilities.dp(10));
+            generate.setMinHeight(AndroidUtilities.dp(48));
+            generate.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
             generate.setOnClickListener(v -> {
-                String phrase = generatePassphrase();
-                first.setText(phrase);
-                if (second != null) second.setText(phrase);
+                char[] phrase = generatePassphrase();
+                first.setText(phrase, 0, phrase.length);
+                if (second != null) second.setText(phrase, 0, phrase.length);
+                Arrays.fill(phrase, '\0');
                 if (!shown[0]) toggle.performClick();
                 error.setText(LocaleController.getString(R.string.HanakoPasswordGeneratedNote));
                 error.setTextColor(Theme.getColor(Theme.key_dialogTextGray3, rp));
                 error.setVisibility(View.VISIBLE);
             });
-            actions.addView(generate, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.CENTER_VERTICAL));
+            actions.addView(generate, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.START | Gravity.CENTER_VERTICAL));
         }
         layout.addView(actions, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 0, 24, 0));
 
@@ -990,6 +1014,10 @@ public class HanakoBackupActivity extends UniversalFragment {
         });
         AlertDialog dialog = b.create();
         dialog.setDismissDialogByButtons(false);
+        if (dialog.getWindow() != null) {
+            // no screenshots, recents thumbnail or screen recording of the password
+            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+        }
         showDialog(dialog, d -> {
             clear(first);
             clear(second);

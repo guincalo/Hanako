@@ -24,10 +24,14 @@ import org.telegram.ui.Components.LayoutHelper;
  * (full backup, settings import / restore, export of per-chat lists, chat export).
  *
  * <p>Uses the same biometric prompt as Chat lock, but always allows the device screen lock.
- * When the device has neither, Telegram's own passcode is asked instead if one is set. With no
- * way to verify anything it fails open, the same rule Chat lock follows (the person holding the
- * phone could set a screen lock themselves). A success is remembered for two minutes so one
- * flow (for example Export a chat, then a locked chat in the picker) asks only once.
+ * When the device has neither, Telegram's own passcode is asked instead if one is set, with the
+ * same growing wait after wrong tries as Telegram's passcode screen. With no way to verify
+ * anything, most actions go ahead after a one-time warning (the person holding the phone could
+ * set a screen lock themselves), but a full backup is refused: it copies the login sessions.
+ *
+ * <p>A success is remembered for two minutes so one flow (for example Create backup, then the
+ * file picker) asks only once. It never stands in for Chat lock: a locked chat always asks
+ * Chat lock itself, with Chat lock's own biometrics-only setting.
  */
 public final class HanakoAuthGate {
 
@@ -37,8 +41,15 @@ public final class HanakoAuthGate {
     private HanakoAuthGate() {
     }
 
+    private static final String NO_LOCK_SEEN_KEY = "hanako_auth_no_lock_seen";
+
     public static boolean recentlyVerified() {
         return lastVerified != 0 && SystemClock.elapsedRealtime() - lastVerified < RECENT_MS;
+    }
+
+    /** Drops the two-minute grace (the backup screen calls this when it closes). */
+    public static void forget() {
+        lastVerified = 0;
     }
 
     private static void markVerified() {
@@ -47,6 +58,14 @@ public final class HanakoAuthGate {
 
     /** Runs {@code onSuccess} on the UI thread once the user is confirmed; does nothing on cancel. */
     public static void require(BaseFragment fragment, CharSequence subtitle, Runnable onSuccess) {
+        require(fragment, subtitle, false, onSuccess);
+    }
+
+    /**
+     * @param failClosed refuse when the phone has no screen lock and no Telegram passcode
+     *                   (full backup), instead of going ahead after a warning
+     */
+    public static void require(BaseFragment fragment, CharSequence subtitle, boolean failClosed, Runnable onSuccess) {
         if (onSuccess == null) {
             return;
         }
@@ -67,7 +86,51 @@ public final class HanakoAuthGate {
             askPasscode(fragment, subtitle, onSuccess);
             return;
         }
-        onSuccess.run();
+        noLock(fragment, failClosed, onSuccess);
+    }
+
+    /* Nothing on this phone can confirm the user: refuse, or warn once and go ahead. */
+    private static void noLock(BaseFragment fragment, boolean failClosed, Runnable onSuccess) {
+        Activity activity = fragment != null ? fragment.getParentActivity() : null;
+        android.content.SharedPreferences p = org.telegram.messenger.MessagesController.getGlobalMainSettings();
+        if (activity == null) {
+            if (!failClosed) onSuccess.run();
+            return;
+        }
+        if (!failClosed && p.getBoolean(NO_LOCK_SEEN_KEY, false)) {
+            onSuccess.run();
+            return;
+        }
+        AlertDialog.Builder b = new AlertDialog.Builder(activity, fragment.getResourceProvider());
+        b.setTitle(LocaleController.getString(R.string.HanakoAuthNoLockTitle));
+        if (failClosed) {
+            b.setMessage(LocaleController.getString(R.string.HanakoAuthNoLockRefused));
+            b.setPositiveButton(LocaleController.getString(R.string.OK), null);
+        } else {
+            b.setMessage(LocaleController.getString(R.string.HanakoAuthNoLockNotice));
+            b.setPositiveButton(LocaleController.getString(R.string.OK), (d, w) -> {
+                p.edit().putBoolean(NO_LOCK_SEEN_KEY, true).apply();
+                onSuccess.run();
+            });
+            b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        }
+        fragment.showDialog(b.create());
+    }
+
+    /* Telegram's passcode back-off (PasscodeView): count down the wait since the last bad try. */
+    private static boolean passcodeWaiting() {
+        long now = SystemClock.elapsedRealtime();
+        if (now > SharedConfig.lastUptimeMillis) {
+            SharedConfig.passcodeRetryInMs -= now - SharedConfig.lastUptimeMillis;
+            if (SharedConfig.passcodeRetryInMs < 0) SharedConfig.passcodeRetryInMs = 0;
+        }
+        SharedConfig.lastUptimeMillis = now;
+        return SharedConfig.passcodeRetryInMs > 0;
+    }
+
+    private static String passcodeWaitText() {
+        int seconds = Math.max(1, (int) Math.ceil(SharedConfig.passcodeRetryInMs / 1000.0));
+        return LocaleController.formatString(R.string.TooManyTries, LocaleController.formatPluralString("Seconds", seconds));
     }
 
     private static void askPasscode(BaseFragment fragment, CharSequence subtitle, Runnable onSuccess) {
@@ -103,15 +166,24 @@ public final class HanakoAuthGate {
         b.setTitle(LocaleController.getString(R.string.HanakoAuthTitle));
         b.setView(layout);
         b.setPositiveButton(LocaleController.getString(R.string.OK), (d, w) -> {
-            String code = field.getText() != null ? field.getText().toString() : "";
-            if (!code.isEmpty() && SharedConfig.checkPasscode(code)) {
+            if (passcodeWaiting()) {
                 field.setText("");
+                error.setText(passcodeWaitText());
+                error.setVisibility(View.VISIBLE);
+                return;
+            }
+            String code = field.getText() != null ? field.getText().toString() : "";
+            field.setText("");
+            if (!code.isEmpty() && SharedConfig.checkPasscode(code)) {
+                SharedConfig.badPasscodeTries = 0;
+                SharedConfig.saveConfig();
                 d.dismiss();
                 markVerified();
                 onSuccess.run();
             } else {
-                field.setText("");
-                error.setText(LocaleController.getString(R.string.HanakoAuthPasscodeWrong));
+                SharedConfig.increaseBadPasscodeTries();
+                error.setText(SharedConfig.passcodeRetryInMs > 0 ? passcodeWaitText()
+                        : LocaleController.getString(R.string.HanakoAuthPasscodeWrong));
                 error.setVisibility(View.VISIBLE);
             }
         });

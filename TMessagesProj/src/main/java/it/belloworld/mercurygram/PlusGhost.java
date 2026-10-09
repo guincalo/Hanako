@@ -109,22 +109,27 @@ public final class PlusGhost {
     }
 
     // Defaults are intentionally unchanged (everything on for every account); see 0004/0005.
+    // Keys follow the Telegram user id, not the slot (PlusUtil.accountKey).
     public static boolean isEnabled(int account) {
-        return prefs().getBoolean("on_" + account, true);
+        SharedPreferences p = prefs();
+        return p.getBoolean(PlusUtil.accountKey(p, "on", account), true);
     }
 
     public static void setEnabled(int account, boolean value) {
-        prefs().edit().putBoolean("on_" + account, value).apply();
+        SharedPreferences p = prefs();
+        p.edit().putBoolean(PlusUtil.accountKey(p, "on", account), value).apply();
         onSettingsChanged(account);
     }
 
     /** true = this kind of packet is hidden (not sent) while ghost mode is on. */
     public static boolean isHidden(int account, int opt) {
-        return prefs().getBoolean(OPT_KEYS[opt] + "_" + account, OPT_DEFAULTS[opt]);
+        SharedPreferences p = prefs();
+        return p.getBoolean(PlusUtil.accountKey(p, OPT_KEYS[opt], account), OPT_DEFAULTS[opt]);
     }
 
     public static void setHidden(int account, int opt, boolean value) {
-        prefs().edit().putBoolean(OPT_KEYS[opt] + "_" + account, value).apply();
+        SharedPreferences p = prefs();
+        p.edit().putBoolean(PlusUtil.accountKey(p, OPT_KEYS[opt], account), value).apply();
         if (opt == OPT_ONLINE) {
             onSettingsChanged(account);
         }

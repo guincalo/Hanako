@@ -88,8 +88,13 @@ import javax.crypto.spec.SecretKeySpec;
  * app is restarted. Restored slots get a fresh message cache (cache4.db is removed), so dialogs
  * re-sync from the server; secret chats are not carried over.
  *
- * <p>The password is only ever held in a char[] / byte[] that is wiped after the key derivation;
- * it is never logged or stored.
+ * <p>The password is kept in a char[] / byte[] and wiped after the key derivation where this
+ * code controls the copy; it is never logged or stored. Copies made by the platform (the text
+ * field, SecretKeySpec, a staged session file in the app's private storage until the next start)
+ * are outside that promise.
+ *
+ * <p>Per-account feature settings (ghost mode, activity log) are keyed by Telegram user id
+ * ("on_u12345", see PlusUtil.accountKey), so they follow the account to any slot.
  */
 public final class HanakoBackup {
 
@@ -107,14 +112,22 @@ public final class HanakoBackup {
     private static final int KDF_PBKDF2_HMAC_SHA256 = 1;
     public static final int PBKDF2_ITERATIONS = 400_000;
     private static final int MIN_ITERATIONS = 310_000;
-    private static final int MAX_ITERATIONS = 20_000_000;
+    /** Upper bound of a file's iteration count: more would freeze the restore for minutes. */
+    private static final int MAX_ITERATIONS = 2_000_000;
     private static final int SALT_LEN = 32;
     private static final int NONCE_LEN = 12;
     private static final int GCM_TAG_BITS = 128;
-    private static final int MAX_BACKUP_BYTES = 64 * 1024 * 1024;
-    private static final int MAX_ENTRY_BYTES = 16 * 1024 * 1024;
+    // The whole file is held in memory a few times over (zip, ciphertext, plaintext), so the
+    // limit is kept low: sessions are a few KB and settings at most MAX_SETTINGS_BYTES.
+    private static final int MAX_BACKUP_BYTES = 16 * 1024 * 1024;
+    private static final int MAX_ENTRY_BYTES = 8 * 1024 * 1024;
+    /** All zip entries together, so a crafted file can't inflate to a gigabyte. */
+    private static final int MAX_INFLATED_BYTES = MAX_BACKUP_BYTES;
     private static final int MAX_SETTINGS_BYTES = 4 * 1024 * 1024;
-    public static final int MIN_PASSWORD_LENGTH = 8;
+    /** Same rule as the UI text: 12 or more characters (or a generated passphrase). */
+    public static final int MIN_PASSWORD_LENGTH = 12;
+    /** A staged restore older than this is dropped at start instead of applied without the user. */
+    private static final long PLAN_MAX_AGE_MS = 30L * 60 * 1000;
 
     // ---- error codes (see describeError) ----
     public static final int ERR_DAMAGED = 0;
@@ -160,6 +173,15 @@ public final class HanakoBackup {
             "mg_updateApkPath", "mg_dismissedPendingTag", "mg_dismissedPluginPromptTag", "mg_lastPreReleaseTag"
     ));
 
+    /**
+     * Text-valued global settings a shareable file may carry: names of modes, nothing typed in
+     * by the user. Every other mg_* string (Tor bridges, custom instance URLs, push gateway and
+     * keys, update paths, and any key added later) only goes into files with per-chat lists.
+     */
+    private static final Set<String> SHAREABLE_GLOBAL_STRINGS = new HashSet<>(Arrays.asList(
+            "mg_translateMode", "mg_translateAltEngine", "mg_translateAltInstanceMode", "mg_transcribeModel"
+    ));
+
     /** Per-account Mercurygram keys (MgAccountConfig) that are user settings. */
     private static final Set<String> MG_ACCOUNT_KEYS = new HashSet<>(Arrays.asList(
             "rearRoundCamera", "hideChatKeyboard", "hideAllTab", "defaultFolderId", "messageDetailsMenu",
@@ -173,6 +195,15 @@ public final class HanakoBackup {
     private static final Set<String> ACCOUNT_SESSION_KEYS = new HashSet<>(Arrays.asList(
             "user", "loginTime", "syncContacts", "suggestContacts", "showCallsTab"
     ));
+
+    /**
+     * The only keys a restore writes into a slot's userconfig file. That file is "userconfing"
+     * for slot 0, which also holds SharedConfig's global keys (passcode, proxy, update path), so
+     * a crafted backup must not be able to set anything else.
+     */
+    private static boolean isRestorableAccountKey(String key) {
+        return ACCOUNT_SESSION_KEYS.contains(key) || MG_ACCOUNT_KEYS.contains(key) || "registeredForPush".equals(key);
+    }
 
     /** Keys UserConfig writes per account; removed from slot 0's file (which also holds global keys) before a restore. */
     private static final Set<String> USERCONFIG_ACCOUNT_KEYS = new HashSet<>(Arrays.asList(
@@ -221,6 +252,12 @@ public final class HanakoBackup {
 
     /** Maps a failure to a short localized message that says what to do. */
     public static String describeError(Throwable t) {
+        if (t instanceof HanakoChatExport.FloodWaitTooLongException) {
+            int sec = ((HanakoChatExport.FloodWaitTooLongException) t).seconds;
+            String wait = sec >= 3600 ? LocaleController.formatPluralString("Hours", (sec + 3599) / 3600)
+                    : LocaleController.formatPluralString("Minutes", (sec + 59) / 60);
+            return LocaleController.formatString(R.string.HanakoErrFloodWaitLong, wait);
+        }
         if (t instanceof InvalidBackupException) {
             switch (((InvalidBackupException) t).code) {
                 case ERR_NOT_SETTINGS:
@@ -289,15 +326,20 @@ public final class HanakoBackup {
             return slots.isEmpty() && userIds.isEmpty();
         }
 
-        /** Whether a preference key belongs to one of these accounts (by user id, or by slot suffix "_N" / "_N_"). */
+        /**
+         * Whether a preference key belongs to one of these accounts: a "_"-separated part of the
+         * key is one of their user ids (also as "u&lt;id&gt;"), or, after the first part, one of
+         * their slot numbers. Whole parts only, so "-100&lt;id…&gt;" channel keys never match.
+         */
         boolean touches(String key) {
             if (key == null || isEmpty()) return false;
-            for (String id : userIds) {
-                if (key.contains(id)) return true;
-            }
-            for (Integer slot : slots) {
-                String sfx = "_" + slot;
-                if (key.endsWith(sfx) || key.contains(sfx + "_")) return true;
+            String[] parts = key.split("_");
+            for (int i = 0; i < parts.length; i++) {
+                String part = parts[i];
+                String id = part.startsWith("u") ? part.substring(1) : part;
+                if (userIds.contains(part) || userIds.contains(id)) return true;
+                if (i > 0 && !part.isEmpty() && part.length() <= 2 && TextUtils.isDigitsOnly(part)
+                        && slots.contains(Integer.parseInt(part))) return true;
             }
             return false;
         }
@@ -358,6 +400,8 @@ public final class HanakoBackup {
     static boolean isListKey(String file, String key) {
         if (file == null || key == null) return false;
         switch (file) {
+            case "plus_ghost":
+                return PlusUtil.isUserKey(key); // per-account ("on_u12345"): names a user id
             case "plus_ghost_exceptions":
                 return true;
             case "plus_f04_filters":
@@ -528,6 +572,19 @@ public final class HanakoBackup {
         return key != null && key.startsWith("mg_") && !GLOBAL_DENY.contains(key) && !key.toLowerCase().contains("migrat");
     }
 
+    private static boolean isShareableGlobal(String key, Object value) {
+        if (value instanceof Boolean || value instanceof Integer || value instanceof Float) return true;
+        return value instanceof String && SHAREABLE_GLOBAL_STRINGS.contains(key) && isShareableValue(value);
+    }
+
+    /** A feature setting that is a switch, a number or a short word: no URL, no long digit run. */
+    private static boolean isShareableValue(Object value) {
+        if (value instanceof Boolean || value instanceof Integer || value instanceof Float) return true;
+        if (!(value instanceof String)) return false;
+        String v = (String) value;
+        return v.length() <= 40 && !v.contains("://") && !v.matches(".*\\d{6,}.*");
+    }
+
     private static boolean isSettingsFile(String name) {
         for (String f : SETTINGS_PREF_FILES) {
             if (f.equals(name)) {
@@ -645,14 +702,19 @@ public final class HanakoBackup {
         root.put("app_version", appVersion());
         root.put("created", System.currentTimeMillis() / 1000L);
 
-        root.put("global", encodeMap(prefs("userconfing").getAll(), HanakoBackup::isGlobalSettingKey));
+        // A file without lists is meant to be shared: it is an allow-list of switches and numbers,
+        // plus the few mode names above; nothing that could be a URL, a key or an id.
+        final Map<String, ?> global = prefs("userconfing").getAll();
+        root.put("global", encodeMap(global, key -> isGlobalSettingKey(key)
+                && (includeLists || isShareableGlobal(key, global.get(key)))));
 
         JSONObject files = new JSONObject();
         JSONObject listFiles = new JSONObject();
         for (String name : SETTINGS_PREF_FILES) {
             Map<String, ?> all = prefs(name).getAll();
             if (all.isEmpty()) continue;
-            JSONObject p = encodeMap(all, key -> !isListKey(name, key) && !hidden.touches(key));
+            JSONObject p = encodeMap(all, key -> !isListKey(name, key) && !hidden.touches(key)
+                    && (includeLists || isShareableValue(all.get(key))));
             if (p.length() > 0) files.put(name, p);
             if (includeLists) {
                 JSONObject l = encodeMap(all, key -> isListKey(name, key) && !hidden.touches(key));
@@ -664,7 +726,24 @@ public final class HanakoBackup {
         // the options of the account in use, without any id: applied to the account in use on import
         int sel = UserConfig.selectedAccount;
         if (sel >= 0 && sel < UserConfig.MAX_ACCOUNT_COUNT && UserConfig.getInstance(sel).isClientActivated() && !hidden.slots.contains(sel)) {
-            root.put("current_account", accountPrefs(UserConfig.getInstance(sel)));
+            UserConfig uc = UserConfig.getInstance(sel);
+            root.put("current_account", accountPrefs(uc));
+            // its per-account feature settings with the "_u<id>" suffix taken off
+            String sfx = "_u" + uc.getClientUserId();
+            JSONObject currentFiles = new JSONObject();
+            for (String name : SETTINGS_PREF_FILES) {
+                JSONObject f = new JSONObject();
+                for (Map.Entry<String, ?> e : prefs(name).getAll().entrySet()) {
+                    String key = e.getKey();
+                    if (!key.endsWith(sfx) || !PlusUtil.isUserKey(key)) continue;
+                    JSONObject enc = encodeValue(e.getValue());
+                    if (enc != null) f.put(key.substring(0, key.length() - sfx.length()), enc);
+                }
+                if (f.length() > 0) currentFiles.put(name, f);
+            }
+            if (currentFiles.length() > 0) root.put("current_files", currentFiles);
+            // which account that was: only in files that may name accounts (lists)
+            if (includeLists) root.put("current_user_id", Long.toString(uc.getClientUserId()));
         }
 
         if (includeLists) {
@@ -687,7 +766,7 @@ public final class HanakoBackup {
 
     public static void writeSettings(Context context, Uri uri, boolean includeLists, boolean includeHidden) throws Exception {
         byte[] data = buildSettingsJson(includeLists, includeHidden).toString(2).getBytes(StandardCharsets.UTF_8);
-        try (OutputStream os = context.getContentResolver().openOutputStream(uri, "w")) {
+        try (OutputStream os = openTruncated(context, uri)) {
             if (os == null) {
                 throw new IOException("cannot open output");
             }
@@ -765,6 +844,10 @@ public final class HanakoBackup {
         JSONObject current = root.optJSONObject("current_account");
         if (current != null) {
             validateTyped(current, MG_ACCOUNT_KEYS::contains);
+        }
+        validateFiles(root.optJSONObject("current_files"));
+        if (root.has("current_user_id") && !isLong(root.optString("current_user_id"))) {
+            throw new InvalidBackupException("bad current_user_id");
         }
         JSONObject lists = root.optJSONObject("lists");
         if (lists != null) {
@@ -862,10 +945,29 @@ public final class HanakoBackup {
         out.put("replace_prefs", true);
         out.put("replace_lists", lists);
 
+        dropForeignUserKeys(files, userToSlot);
+
+        // The "account in use" section goes to the same account it came from when the document
+        // says which one (full backups and files with lists); if that account is not on this
+        // phone it is skipped. A shareable file has no id and goes to the account in use here.
+        int targetSlot = currentSlot;
+        String sourceUser = root.optString("current_user_id", "");
+        if (isLong(sourceUser)) {
+            Integer s = userToSlot.get(Long.parseLong(sourceUser));
+            targetSlot = s != null ? s : -1;
+        }
+        long targetUser = 0;
+        if (targetSlot >= 0) {
+            targetUser = isLong(sourceUser) ? Long.parseLong(sourceUser) : UserConfig.getInstance(targetSlot).getClientUserId();
+        }
         JSONArray slots = new JSONArray();
         JSONObject current = root.optJSONObject("current_account");
-        if (current != null && currentSlot >= 0 && !preserve.slots.contains(currentSlot)) {
-            slots.put(new JSONObject().put("slot", currentSlot).put("prefs", current));
+        if (current != null && targetSlot >= 0 && !preserve.slots.contains(targetSlot)) {
+            slots.put(new JSONObject().put("slot", targetSlot).put("prefs", current));
+        }
+        JSONObject currentFiles = root.optJSONObject("current_files");
+        if (currentFiles != null && targetUser != 0 && !preserve.slots.contains(targetSlot)) {
+            out.put("account_files", userKeyed(currentFiles, "_u" + targetUser));
         }
         if (accounts != null) {
             for (int i = 0; i < accounts.length(); i++) {
@@ -888,13 +990,57 @@ public final class HanakoBackup {
     }
 
     /**
+     * Per-account keys of the settings files: "_u<id>" keys of users that are not on this phone
+     * are dropped, and so are the old slot-numbered keys ("on_3") of documents made before the
+     * keys followed the user id, because a slot number from another phone (or from before a
+     * restore) can name a different account here. Those settings fall back to their defaults
+     * (ghost mode on, everything hidden), the private side.
+     */
+    private static void dropForeignUserKeys(JSONObject files, Map<Long, Integer> userToSlot) throws JSONException {
+        Iterator<String> names = files.keys();
+        while (names.hasNext()) {
+            String name = names.next();
+            JSONObject f = files.optJSONObject(name);
+            if (f == null || !PlusUtil.isPerAccountFile(name)) continue;
+            ArrayList<String> drop = new ArrayList<>();
+            Iterator<String> keys = f.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                long uid = PlusUtil.userOfKey(key);
+                if (uid != 0 ? !userToSlot.containsKey(uid) : PlusUtil.isSlotKey(key)) drop.add(key);
+            }
+            for (String key : drop) f.remove(key);
+        }
+    }
+
+    /** Copy of {@code files} with {@code suffix} appended to every key. */
+    private static JSONObject userKeyed(JSONObject files, String suffix) throws JSONException {
+        JSONObject out = new JSONObject();
+        Iterator<String> names = files.keys();
+        while (names.hasNext()) {
+            String name = names.next();
+            JSONObject f = files.optJSONObject(name);
+            if (f == null || !isSettingsFile(name)) continue;
+            JSONObject t = new JSONObject();
+            Iterator<String> keys = f.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                t.put(key + suffix, f.get(key));
+            }
+            out.put(name, t);
+        }
+        return out;
+    }
+
+    /**
      * Stages a settings import; it is applied on the next start (see {@link #restartApp(Activity)}).
      * The current settings are saved first, so the import can be undone for 24 hours.
      */
     public static void stageSettingsImport(JSONObject root, boolean withLists) throws Exception {
-        saveUndoSnapshot();
+        saveUndoSnapshot(); // throws: no import without the promised undo
         JSONObject plan = new JSONObject();
         plan.put("version", 1);
+        plan.put("created_ms", System.currentTimeMillis());
         plan.put("settings", resolveSettings(root, currentAccountsByUser(), UserConfig.selectedAccount, withLists, hiddenAccounts()));
         writePlan(plan, null);
     }
@@ -905,20 +1051,17 @@ public final class HanakoBackup {
         return new File(files, UNDO_FILE);
     }
 
-    private static void saveUndoSnapshot() {
-        try {
-            byte[] data = buildSettingsJson(true, false).toString().getBytes(StandardCharsets.UTF_8);
-            File f = undoFile();
-            File tmp = new File(f.getParentFile(), UNDO_FILE + ".tmp");
-            try (FileOutputStream fos = new FileOutputStream(tmp)) {
-                fos.write(data);
-                fos.getFD().sync();
-            }
-            if (!tmp.renameTo(f)) {
-                tmp.delete();
-            }
-        } catch (Throwable t) {
-            FileLog.e(t);
+    private static void saveUndoSnapshot() throws Exception {
+        byte[] data = buildSettingsJson(true, false).toString().getBytes(StandardCharsets.UTF_8);
+        File f = undoFile();
+        File tmp = new File(f.getParentFile(), UNDO_FILE + ".tmp");
+        try (FileOutputStream fos = new FileOutputStream(tmp)) {
+            fos.write(data);
+            fos.getFD().sync();
+        }
+        if (!tmp.renameTo(f)) {
+            tmp.delete();
+            throw new IOException("cannot save undo snapshot");
         }
     }
 
@@ -944,6 +1087,7 @@ public final class HanakoBackup {
         validateSettings(root);
         JSONObject plan = new JSONObject();
         plan.put("version", 1);
+        plan.put("created_ms", System.currentTimeMillis());
         plan.put("settings", resolveSettings(root, currentAccountsByUser(), UserConfig.selectedAccount, true, hiddenAccounts()));
         writePlan(plan, null);
         f.delete();
@@ -1010,7 +1154,12 @@ public final class HanakoBackup {
         return sb.toString();
     }
 
-    /** Plain (unencrypted) zip of the full backup. Wipe the returned array after use. */
+    /**
+     * Plain (unencrypted) zip of the full backup. Wipe the returned array after use.
+     *
+     * @param outAccountCount [visible, hidden, skipped]; skipped = signed in, but its session
+     *                        file could not be read
+     */
     private static byte[] buildFullPlain(boolean includeSettings, boolean includeHidden, int[] outAccountCount) throws Exception {
         Context ctx = ApplicationLoader.applicationContext;
         JSONObject manifest = new JSONObject();
@@ -1024,6 +1173,7 @@ public final class HanakoBackup {
         SharedPreferences hiddenPrefs = ctx.getSharedPreferences(HIDDEN_PREFS, Context.MODE_PRIVATE);
         int visibleCount = 0;
         int hiddenCount = 0;
+        int skippedCount = 0;
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             UserConfig uc = UserConfig.getInstance(a);
             if (!uc.isClientActivated()) continue;
@@ -1032,6 +1182,7 @@ public final class HanakoBackup {
             byte[] session = readSessionFile(ctx, a);
             if (session == null) {
                 FileLog.d("hanako backup: no session file for slot " + a);
+                if (!hidden) skippedCount++;
                 continue;
             }
             TLRPC.User user = uc.getCurrentUser();
@@ -1048,6 +1199,7 @@ public final class HanakoBackup {
                 data.cleanup();
             }
             if (!(keep.get("user") instanceof String)) {
+                if (!hidden) skippedCount++;
                 continue;
             }
             CaptureEditor cap = new CaptureEditor();
@@ -1083,9 +1235,10 @@ public final class HanakoBackup {
         if (outAccountCount != null) {
             outAccountCount[0] = visibleCount;
             if (outAccountCount.length > 1) outAccountCount[1] = hiddenCount;
+            if (outAccountCount.length > 2) outAccountCount[2] = skippedCount;
         }
 
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        WipeableBytes bos = new WipeableBytes();
         try (ZipOutputStream zos = new ZipOutputStream(bos)) {
             zos.putNextEntry(new ZipEntry("manifest.json"));
             zos.write(manifest.toString().getBytes(StandardCharsets.UTF_8));
@@ -1102,19 +1255,31 @@ public final class HanakoBackup {
                 Arrays.fill(sessions.get(i), (byte) 0);
             }
         }
-        return bos.toByteArray();
+        byte[] out = bos.toByteArray();
+        bos.wipe(); // the stream's own buffer holds the sessions too
+        return out;
+    }
+
+    /** ByteArrayOutputStream whose internal buffer can be zeroed. */
+    private static final class WipeableBytes extends ByteArrayOutputStream {
+        void wipe() {
+            Arrays.fill(buf, (byte) 0);
+        }
     }
 
     /**
-     * Writes an encrypted full backup to {@code uri}. Wipes {@code password}. Returns the number of
-     * visible accounts written (hidden ones are never counted in the UI). Call off the UI thread
-     * (the key derivation takes a second or two).
+     * Writes an encrypted full backup to {@code uri}. Wipes {@code password}. Returns
+     * [visible accounts written, visible accounts that could not be included] (hidden ones are
+     * never counted in the UI). Call off the UI thread (the key derivation takes a second or two).
      */
-    public static int writeFullBackup(Context context, Uri uri, char[] password, boolean includeSettings, boolean includeHidden) throws Exception {
+    public static int[] writeFullBackup(Context context, Uri uri, char[] password, boolean includeSettings, boolean includeHidden) throws Exception {
         byte[] plain = null;
         byte[] key = null;
         try {
-            int[] count = new int[2];
+            if (password == null || password.length < MIN_PASSWORD_LENGTH) {
+                throw new IllegalArgumentException("password too short");
+            }
+            int[] count = new int[3];
             plain = buildFullPlain(includeSettings, includeHidden, count);
             if (count[0] + count[1] == 0) {
                 throw new InvalidBackupException(ERR_NO_ACCOUNTS, "no accounts");
@@ -1130,12 +1295,12 @@ public final class HanakoBackup {
             cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(GCM_TAG_BITS, nonce));
             cipher.updateAAD(header);
             byte[] ct = cipher.doFinal(plain);
-            try (OutputStream os = context.getContentResolver().openOutputStream(uri, "w")) {
+            try (OutputStream os = openTruncated(context, uri)) {
                 if (os == null) throw new IOException("cannot open output");
                 os.write(header);
                 os.write(ct);
             }
-            return count[0];
+            return new int[]{count[0], count[2]};
         } finally {
             if (plain != null) Arrays.fill(plain, (byte) 0);
             if (key != null) Arrays.fill(key, (byte) 0);
@@ -1226,11 +1391,15 @@ public final class HanakoBackup {
         try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(plain))) {
             ZipEntry e;
             int n = 0;
+            long inflated = 0;
             while ((e = zis.getNextEntry()) != null) {
                 if (++n > 64) throw new InvalidBackupException("too many entries");
                 String name = e.getName();
                 if (e.isDirectory() || name.contains("..") || name.startsWith("/")) continue;
-                entries.put(name, readStream(zis, MAX_ENTRY_BYTES));
+                byte[] data = readStream(zis, MAX_ENTRY_BYTES);
+                inflated += data.length;
+                if (inflated > MAX_INFLATED_BYTES) throw new InvalidBackupException("backup too large");
+                entries.put(name, data);
             }
         }
         byte[] m = entries.get("manifest.json");
@@ -1274,7 +1443,7 @@ public final class HanakoBackup {
                 if (TextUtils.isEmpty(e.hiddenHash) || TextUtils.isEmpty(e.hiddenSalt)) e.hidden = false;
             }
             if (e.prefs == null || !e.prefs.has("user")) throw new InvalidBackupException("bad account entry");
-            validateTyped(e.prefs, null);
+            validateTyped(e.prefs, HanakoBackup::isRestorableAccountKey);
             e.tgnet = entries.get("accounts/" + acc.optInt("index", -1) + "/" + TGNET);
             if (e.tgnet == null || e.tgnet.length == 0) throw new InvalidBackupException("session file missing");
             b.accounts.add(e);
@@ -1324,6 +1493,7 @@ public final class HanakoBackup {
         if (!dir.mkdirs() && !dir.isDirectory()) throw new IOException("cannot create staging dir");
         JSONObject plan = new JSONObject();
         plan.put("version", 1);
+        plan.put("created_ms", System.currentTimeMillis());
         JSONArray accs = new JSONArray();
         HashMap<Long, Integer> userToSlot = currentAccountsByUser();
         HashSet<Integer> used = new HashSet<>();
@@ -1419,11 +1589,9 @@ public final class HanakoBackup {
             return;
         }
         try {
-            if (Build.VERSION.SDK_INT >= 28) {
-                String proc = Application.getProcessName();
-                if (proc != null && !proc.equals(ctx.getPackageName())) {
-                    return; // only the main process applies (and deletes) the staging
-                }
+            String proc = processName();
+            if (proc != null && !proc.equals(ctx.getPackageName())) {
+                return; // only the main process applies (and deletes) the staging
             }
         } catch (Throwable t) {
             return;
@@ -1438,9 +1606,18 @@ public final class HanakoBackup {
                 data = readStream(in, MAX_BACKUP_BYTES);
             }
             JSONObject plan = new JSONObject(new String(data, StandardCharsets.UTF_8));
+            // A restore the user started but never restarted into (app swiped away) must not
+            // change sessions much later, e.g. at a background push start.
+            long created = plan.optLong("created_ms", 0);
+            if (created > 0 && Math.abs(System.currentTimeMillis() - created) > PLAN_MAX_AGE_MS) {
+                error = "expired";
+                return;
+            }
             JSONArray accs = plan.optJSONArray("accounts");
             planned = accs != null ? accs.length() : 0;
-            restored = applyAccounts(ctx, dir, accs);
+            String[] firstError = new String[1];
+            restored = applyAccounts(ctx, dir, accs, firstError);
+            if (firstError[0] != null) error = firstError[0];
             JSONObject settings = plan.optJSONObject("settings");
             settingsPlanned = settings != null;
             if (settings != null) {
@@ -1450,10 +1627,24 @@ public final class HanakoBackup {
             Log.i(TAG, "applied staged restore: accounts=" + restored + "/" + planned + " settings=" + settingsApplied);
         } catch (Throwable t) {
             Log.e(TAG, "staged restore failed", t);
-            error = t.getClass().getSimpleName();
+            error = rawError(t);
         } finally {
             writeResult(ctx, planned, restored, settingsPlanned, settingsApplied, error);
             deleteRecursive(dir);
+        }
+    }
+
+    /** Name of this process (only the main one applies a staging). */
+    private static String processName() {
+        if (Build.VERSION.SDK_INT >= 28) return Application.getProcessName();
+        try (InputStream in = new FileInputStream("/proc/self/cmdline")) {
+            byte[] buf = new byte[256];
+            int n = in.read(buf);
+            int len = 0;
+            while (len < n && buf[len] != 0) len++;
+            return len > 0 ? new String(buf, 0, len, StandardCharsets.UTF_8) : null;
+        } catch (IOException e) {
+            return null;
         }
     }
 
@@ -1461,6 +1652,7 @@ public final class HanakoBackup {
     private static void writeResult(Context ctx, int planned, int restored, boolean settingsPlanned, boolean settingsApplied, String error) {
         try {
             if (planned == 0 && !settingsPlanned && error == null) return; // incomplete staging, nothing was tried
+            if (error != null && error.length() > 500) error = error.substring(0, 500);
             JSONObject r = new JSONObject();
             r.put("planned", planned);
             r.put("restored", restored);
@@ -1499,9 +1691,13 @@ public final class HanakoBackup {
         boolean settingsPlanned = r.optBoolean("settings_planned", false);
         boolean settings = r.optBoolean("settings", false);
         boolean failed = r.has("error");
+        final String errorText = r.optString("error", "");
         StringBuilder msg = new StringBuilder();
         String title;
-        if (planned > 0) {
+        if ("expired".equals(errorText)) {
+            title = LocaleController.getString(R.string.HanakoBackupRestoreTitle);
+            msg.append(LocaleController.getString(R.string.HanakoResultExpired));
+        } else if (planned > 0) {
             title = LocaleController.getString(R.string.HanakoBackupRestoreTitle);
             String accounts = LocaleController.formatPluralString("HanakoAccounts", restored);
             if (restored == 0) {
@@ -1528,13 +1724,28 @@ public final class HanakoBackup {
             b.setTitle(title);
             b.setMessage(msg.toString());
             b.setPositiveButton(LocaleController.getString(R.string.OK), null);
+            if (failed && !"expired".equals(errorText)) {
+                b.setNeutralButton(LocaleController.getString(R.string.HanakoErrDetails), (d, w) -> {
+                    org.telegram.ui.ActionBar.AlertDialog.Builder details = new org.telegram.ui.ActionBar.AlertDialog.Builder(fragment.getParentActivity(), fragment.getResourceProvider());
+                    details.setTitle(LocaleController.getString(R.string.HanakoErrDetails));
+                    details.setMessage(errorText);
+                    details.setPositiveButton(LocaleController.getString(R.string.OK), null);
+                    fragment.showDialog(details.create());
+                });
+            }
             fragment.showDialog(b.create());
         } catch (Throwable t) {
             FileLog.e(t);
         }
     }
 
-    private static int applyAccounts(Context ctx, File dir, JSONArray accs) throws Exception {
+    /**
+     * Restores each staged slot on its own. Per slot, the new session is first copied next to the
+     * live one; only when that worked are the old session and cache dropped and the copy renamed
+     * in, so a failed copy (no space, I/O error) leaves that slot exactly as it was. The first
+     * error is returned in {@code firstError}; the other slots still go ahead.
+     */
+    private static int applyAccounts(Context ctx, File dir, JSONArray accs, String[] firstError) {
         if (accs == null) return 0;
         int done = 0;
         int firstSlot = -1;
@@ -1543,49 +1754,15 @@ public final class HanakoBackup {
             if (acc == null) continue;
             int slot = acc.optInt("slot", -1);
             if (slot < 0 || slot >= UserConfig.MAX_ACCOUNT_COUNT) continue;
-            File session = new File(dir, "slot" + slot + ".tgnet");
-            JSONObject prefs = acc.optJSONObject("prefs");
-            if (!session.isFile() || prefs == null) continue;
-
-            File target = slotDir(ctx, slot);
-            if (!target.isDirectory() && !target.mkdirs()) continue;
-            for (String name : SLOT_FILES_TO_DROP) {
-                File f = new File(target, name);
-                if (f.exists() && !f.delete()) Log.w(TAG, "cannot delete " + name);
-            }
-            copyFile(session, new File(target, TGNET));
-
-            SharedPreferences sp = ctx.getSharedPreferences(userConfigPrefsName(slot), Context.MODE_PRIVATE);
-            SharedPreferences.Editor editor = sp.edit();
-            if (slot != 0) {
-                editor.clear();
-            } else {
-                // slot 0 shares its file with SharedConfig's global keys: only drop the per-account ones
-                for (String key : sp.getAll().keySet()) {
-                    if (isPerAccountKey(key)) editor.remove(key);
+            try {
+                if (applyAccount(ctx, dir, slot, acc)) {
+                    done++;
+                    if (firstSlot < 0) firstSlot = slot;
                 }
+            } catch (Throwable t) {
+                Log.e(TAG, "restore of one account failed", t);
+                if (firstError[0] == null) firstError[0] = rawError(t);
             }
-            putTyped(editor, prefs, null);
-            editor.commit();
-
-            // hidden-account state of the slot (Mercurygram HiddenAccountHelper keys in mainconfig)
-            SharedPreferences hiddenPrefs = ctx.getSharedPreferences(HIDDEN_PREFS, Context.MODE_PRIVATE);
-            String hash = acc.optString("hidden_hash", "");
-            String salt = acc.optString("hidden_salt", "");
-            if (!TextUtils.isEmpty(hash) && !TextUtils.isEmpty(salt)) {
-                // stealth mode lets the code be typed into chat search when no passcode is set;
-                // HiddenAccountHelper turns it off again by itself if a passcode exists
-                hiddenPrefs.edit()
-                        .putString(HIDDEN_HASH_PREFIX + slot, hash)
-                        .putString(HIDDEN_SALT_PREFIX + slot, salt)
-                        .putBoolean(HIDDEN_STEALTH_KEY, true)
-                        .commit();
-            } else if (!acc.optBoolean("keep_hidden", false)) {
-                // a stale hidden marker on a reused slot must not hide the restored account
-                hiddenPrefs.edit().remove(HIDDEN_HASH_PREFIX + slot).remove(HIDDEN_SALT_PREFIX + slot).commit();
-            }
-            done++;
-            if (firstSlot < 0) firstSlot = slot;
         }
         if (firstSlot >= 0) {
             // make sure the app opens on an account that exists
@@ -1598,6 +1775,74 @@ public final class HanakoBackup {
             }
         }
         return done;
+    }
+
+    private static boolean applyAccount(Context ctx, File dir, int slot, JSONObject acc) throws IOException {
+        File session = new File(dir, "slot" + slot + ".tgnet");
+        JSONObject prefs = acc.optJSONObject("prefs");
+        if (!session.isFile() || prefs == null) return false;
+
+        File target = slotDir(ctx, slot);
+        if (!target.isDirectory() && !target.mkdirs()) throw new IOException("cannot create account dir");
+        File live = new File(target, TGNET);
+        File tmp = copyToTemp(session, live); // throws before anything is touched
+        for (String name : SLOT_FILES_TO_DROP) {
+            File f = new File(target, name);
+            if (f.exists() && !f.delete()) Log.w(TAG, "cannot delete " + name);
+        }
+        if (!tmp.renameTo(live)) {
+            tmp.delete();
+            throw new IOException("cannot move " + TGNET);
+        }
+
+        SharedPreferences sp = ctx.getSharedPreferences(userConfigPrefsName(slot), Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sp.edit();
+        if (slot != 0) {
+            editor.clear();
+        } else {
+            // slot 0 shares its file with SharedConfig's global keys: only drop the per-account ones
+            for (String key : sp.getAll().keySet()) {
+                if (isPerAccountKey(key)) editor.remove(key);
+            }
+        }
+        putTyped(editor, prefs, HanakoBackup::isRestorableAccountKey);
+        editor.commit();
+        dropSlotKeys(ctx, slot);
+
+        // hidden-account state of the slot (Mercurygram HiddenAccountHelper keys in mainconfig)
+        SharedPreferences hiddenPrefs = ctx.getSharedPreferences(HIDDEN_PREFS, Context.MODE_PRIVATE);
+        String hash = acc.optString("hidden_hash", "");
+        String salt = acc.optString("hidden_salt", "");
+        if (!TextUtils.isEmpty(hash) && !TextUtils.isEmpty(salt)) {
+            // stealth mode lets the code be typed into chat search when no passcode is set;
+            // HiddenAccountHelper turns it off again by itself if a passcode exists
+            hiddenPrefs.edit()
+                    .putString(HIDDEN_HASH_PREFIX + slot, hash)
+                    .putString(HIDDEN_SALT_PREFIX + slot, salt)
+                    .putBoolean(HIDDEN_STEALTH_KEY, true)
+                    .commit();
+        } else if (!acc.optBoolean("keep_hidden", false)) {
+            // a stale hidden marker on a reused slot must not hide the restored account
+            hiddenPrefs.edit().remove(HIDDEN_HASH_PREFIX + slot).remove(HIDDEN_SALT_PREFIX + slot).commit();
+        }
+        return true;
+    }
+
+    /*
+     * Old slot-numbered feature keys ("on_3", "u_3_<user>") of a restored slot belonged to the
+     * account that was there before; left alone they would be moved onto the restored account
+     * the first time it reads them (PlusUtil.accountKey).
+     */
+    private static void dropSlotKeys(Context ctx, int slot) {
+        for (String name : new String[]{"plus_ghost", "plus_activity_log"}) {
+            SharedPreferences sp = ctx.getSharedPreferences(name, Context.MODE_PRIVATE);
+            SharedPreferences.Editor e = sp.edit();
+            for (String key : sp.getAll().keySet()) {
+                boolean slotKey = !PlusUtil.isUserKey(key) && PlusUtil.slotOfKey(key) == slot;
+                if (slotKey || key.startsWith("u_" + slot + "_")) e.remove(key);
+            }
+            e.commit();
+        }
     }
 
     private static boolean isPerAccountKey(String key) {
@@ -1634,6 +1879,19 @@ public final class HanakoBackup {
                     if ((list ? replaceLists : replacePrefs) && !preserve.touches(key)) e.remove(key);
                 }
                 putTyped(e, f, key -> (isListKey(name, key) ? replaceLists : replacePrefs) && !preserve.touches(key));
+                e.commit();
+            }
+        }
+        // the account in use's feature settings, already keyed by its user id (resolveSettings)
+        JSONObject accountFiles = settings.optJSONObject("account_files");
+        if (accountFiles != null) {
+            Iterator<String> it = accountFiles.keys();
+            while (it.hasNext()) {
+                final String name = it.next();
+                JSONObject f = accountFiles.optJSONObject(name);
+                if (!isSettingsFile(name) || f == null) continue;
+                SharedPreferences.Editor e = ctx.getSharedPreferences(name, Context.MODE_PRIVATE).edit();
+                putTyped(e, f, key -> PlusUtil.isUserKey(key) && !preserve.touches(key));
                 e.commit();
             }
         }
@@ -1695,6 +1953,18 @@ public final class HanakoBackup {
     // Crypto / IO helpers
     // =====================================================================================
 
+    /**
+     * Opens a picked file for writing from the start. "w" alone does not truncate on some
+     * providers, so overwriting a longer old backup would leave its tail and break the GCM tag.
+     */
+    private static OutputStream openTruncated(Context context, Uri uri) throws IOException {
+        try {
+            return context.getContentResolver().openOutputStream(uri, "wt");
+        } catch (IllegalArgumentException | UnsupportedOperationException | java.io.FileNotFoundException e) {
+            return context.getContentResolver().openOutputStream(uri, "w");
+        }
+    }
+
     /** PBKDF2-HMAC-SHA256 (RFC 8018) over the UTF-8 bytes of the password. Same result on every device. */
     static byte[] pbkdf2(char[] password, byte[] salt, int iterations, int dkLen) throws GeneralSecurityException {
         if (password == null || password.length == 0) throw new GeneralSecurityException("empty password");
@@ -1751,18 +2021,19 @@ public final class HanakoBackup {
         return bos.toByteArray();
     }
 
-    private static void copyFile(File from, File to) throws IOException {
+    /** Copies {@code from} to "&lt;to&gt;.hanako_tmp" next to {@code to} (synced) and returns it. */
+    private static File copyToTemp(File from, File to) throws IOException {
         File tmp = new File(to.getParentFile(), to.getName() + ".hanako_tmp");
         try (InputStream in = new FileInputStream(from); FileOutputStream out = new FileOutputStream(tmp)) {
             byte[] buf = new byte[16384];
             int r;
             while ((r = in.read(buf)) != -1) out.write(buf, 0, r);
             out.getFD().sync();
-        }
-        if (!tmp.renameTo(to)) {
+        } catch (IOException e) {
             tmp.delete();
-            throw new IOException("cannot move " + to.getName());
+            throw e;
         }
+        return tmp;
     }
 
     private static void deleteRecursive(File f) {
