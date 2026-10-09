@@ -538,7 +538,6 @@
     <string name="AddAsAdmin">Make admin</string>
     <string name="ActionGiftInbound">un1 sent you a gift for **un2**. S-someone likes you!</string>
     <string name="HanakoEasterEgg">w-wha—?! who told you about this place?! ugh… fine, you found me. tell anyone and you\'re SO done 🌸</string>
-    <string name="HanakoBackupEntryInfo">Pack up your settings, drag your accounts to a new phone without logging in again, or dump a whole chat. You\'re welcome~</string>
     <string name="HanakoBackupCreate">Make a full backup</string>
     <string name="HanakoBackupRestore">Restore a full backup</string>
     <string name="HanakoBackupFullInfo">Carries your accounts and settings to a new install or phone — no logging in again. Locked with a password you pick, so pick a good one, okay?</string>
@@ -546,22 +545,15 @@
     <string name="HanakoBackupChatInfo">Dumps one chat into HTML and/or JSON, Telegram Desktop style, with whatever media you want. Runs in the background; if it\'s interrupted it can\'t resume.</string>
     <string name="HanakoBackupRestoreLogin">Restore from a Hanako backup</string>
     <string name="HanakoBackupWarningTitle">Keep this file SECRET</string>
-    <string name="HanakoBackupWarning">Whoever gets this file AND its password gets your accounts. All of them. No login code, no 2-step password. So use a strong password and don\'t leave it lying around, dummy.</string>
+    <string name="HanakoBackupWarning">Anyone who has this file and its password gets full access to your accounts: chats, contacts, everything, with no login code or 2-step verification password. Use a strong password and keep the file somewhere safe.</string>
     <string name="HanakoBackupContinue">I understand</string>
     <string name="HanakoBackupPasswordRepeat">Again, to be sure</string>
-    <string name="HanakoBackupPasswordInfo">12+ characters, or a few random words. Forget it and the backup\'s gone for good. No pressure~</string>
+    <string name="HanakoBackupPasswordInfo">12+ characters, or tap Generate passphrase. Forget it and the backup\'s gone for good. No pressure~</string>
     <string name="HanakoBackupPasswordEnter">Type the password you made this backup with. You DO remember it, right?</string>
-    <string name="HanakoBackupPasswordTooShort">Too short! At least 8 characters</string>
     <string name="HanakoBackupPasswordMismatch">They don\'t match. Try again, slowly~</string>
     <string name="HanakoBackupWrongPassword">Wrong password. Or a broken file. Probably the password~</string>
-    <string name="HanakoBackupSaved">Backup saved: %1$d account(s). Hide it well~</string>
-    <string name="HanakoBackupFailed">Ugh, failed: %1$s</string>
-    <string name="HanakoBackupImportSettingsConfirm">Import %1$d settings from this file? I\'ll restart to apply them.</string>
-    <string name="HanakoBackupRestoreIntro">Here\'s what\'s inside:</string>
-    <string name="HanakoBackupRestoreSettingsToo">Your settings come along too.</string>
-    <string name="HanakoBackupRestoreOldDevice">After this, stop using these accounts on the old install. Uninstall it or wipe its data, but DON\'T log out there, or you kill the session here too. Same session on two devices at once and Telegram may end it. Cache gets rebuilt, secret chats stay behind.</string>
+    <string name="HanakoBackupRestoreOldDevice">Don\'t log out on the old phone: uninstall me there or clear my data instead (logging out there kills this session too). Cache gets rebuilt here, secret chats stay behind.</string>
     <string name="HanakoBackupNoSlots">No room left for these accounts. Too popular, huh?</string>
-    <string name="HanakoBackupRestored">%1$d account(s) restored. Restarting now, hold still~</string>
     <string name="HanakoBackupAccountNew">new here</string>
     <string name="HanakoBackupAccountSkipExisting">already here, skipping</string>
     <string name="HanakoBackupAccountNoSlot">no room, skipping</string>
@@ -573,7 +565,6 @@
     <string name="HanakoChatExportNoFormat">Pick at least ONE format, come on</string>
     <string name="HanakoChatExportSecret">Secret chats stay secret. No export.</string>
     <string name="HanakoChatExportBadRange">Start is after the end. Time travel much?</string>
-    <string name="HanakoChatExportDone">Done! %1$d messages, %2$d media files. Impressed?</string>
     <string name="HanakoChatExportCancelled">Cancelled. Whatever I saved so far stays in the folder.</string>
     <string name="HanakoBackupAccountReplace">already here: replaces the session on this phone</string>
     <string name="HanakoAuthTitle">Prove it\'s you</string>
@@ -605,8 +596,8 @@
     <string name="HanakoImportAccountsMatch">Per-account options: %1$d of %2$d accounts from the file are here.</string>
     <string name="HanakoUndoImportConfirm">Go back to the settings from before the import? I\'ll restart to apply them.</string>
     <string name="HanakoBackupWillSave">This backup gets %1$s and your settings.</string>
-    <string name="HanakoBackupSavedDialog">Saved %2$s to %1$s. Keep it offline and delete it after you restore, okay?</string>
-    <string name="HanakoBackupSavedDialogNoName">Saved %1$s. Keep it offline and delete it after you restore, okay?</string>
+    <string name="HanakoBackupSavedDialog">Saved %2$s to %1$s. Keep it offline: anyone with this file and the password gets your accounts.</string>
+    <string name="HanakoBackupSavedDialogNoName">Saved %1$s. Keep it offline: anyone with it and the password gets your accounts.</string>
     <string name="HanakoRestorePick">Pick what you want back:</string>
     <string name="HanakoRestoreSettingsToo">Also restore my settings</string>
     <string name="HanakoRestoreReplaceNote">A replaced account\'s old session stays in Settings → Devices. End it there if you like.</string>
@@ -615,13 +606,13 @@
     <string name="HanakoResultRestored">Restored %1$s. You\'re welcome~</string>
     <string name="HanakoResultRestoredWithSettings">Restored %1$s and your settings. You\'re welcome~</string>
     <string name="HanakoResultRestorePartial">Restored %1$s. %2$d didn\'t make it, so log in to those normally.</string>
-    <string name="HanakoResultRestoreFailed">The restore didn\'t work. Nothing changed here, so log in normally or try again.</string>
+    <string name="HanakoResultRestoreFailed">The restore didn\'t work. Log in normally, or try the backup again.</string>
     <string name="HanakoResultSettingsFailed">Couldn\'t apply the settings.</string>
     <string name="HanakoResultSettingsImported">Settings imported.</string>
     <string name="HanakoResultPasscodeNote">Had a passcode? Set it again in Privacy and Security.</string>
     <string name="HanakoPasswordGenerate">Make one for me</string>
     <string name="HanakoPasswordGeneratedNote">Write this down somewhere safe first. Seriously.</string>
-    <string name="HanakoPasswordWeakError">Way too weak. 12+ characters, or a few random words.</string>
+    <string name="HanakoPasswordWeakError">Way too weak. 12+ characters, or tap Generate passphrase.</string>
     <string name="HanakoPasswordEmpty">Type the password.</string>
     <string name="HanakoChatExportFloodWait">Telegram says slow down. Back in %1$d s</string>
     <string name="HanakoChatExportBackgroundHint">Hide this and keep chatting, the export carries on in the notification. If it gets interrupted it can\'t resume, though.</string>
@@ -631,7 +622,7 @@
     <string name="HanakoChatExportNoFileManager">No app can open that folder. Go find it in your file manager.</string>
     <string name="HanakoChatExportStoppedAsk">Export stopped. Keep the half-done one or delete it?</string>
     <string name="HanakoChatExportDeleted">Deleted it</string>
-    <string name="HanakoHubFooter">Tip: Settings search finds all my options. Try \"ghost\" or \"backup\".</string>
+    <string name="HanakoHubFooter">Tip: Settings search finds my pages. Try \"ghost\" or \"backup\".</string>
     <string name="HanakoStreamerIsOn">Streamer mode\'s on: names, photos and numbers are masked.</string>
     <string name="HanakoIntroTitle">Ghost mode is on~</string>
     <string name="HanakoIntroTitleOff">My privacy defaults</string>
@@ -640,6 +631,6 @@
     <string name="HanakoIntroDeleted">Deleted and edited messages stay on this phone, media too.</string>
     <string name="HanakoIntroPromo">Premium ads are hidden. You\'re welcome.</string>
     <string name="HanakoIntroTurnOff">Turn it off</string>
-    <string name="PlusProxySwitchStockHint">My \"Switch to the fastest working proxy\" is on (Hanako → Network), so I pick the fastest one, not the first that answers.</string>
+    <string name="PlusProxySwitchStockHint">My \"Switch to the fastest working proxy\" is on (Hanako → Device and data → Network), so I pick the fastest one, not the first that answers.</string>
     <string name="PlusProxySwitched">Proxy died, switched to %1$s (%2$d ms)</string>
 </resources>

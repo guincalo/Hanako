@@ -40,8 +40,8 @@
     <string name="HanakoUndoAndRestart">Undo and restart</string>
     <string name="HanakoBackupWillSave">This backup will contain %1$s and your Hanako settings.</string>
     <string name="HanakoBackupSavedTitle">Backup saved</string>
-    <string name="HanakoBackupSavedDialog">Saved %2$s to %1$s. Keep it offline, and delete it once you\'ve restored it.</string>
-    <string name="HanakoBackupSavedDialogNoName">Saved %1$s. Keep the file offline, and delete it once you\'ve restored it.</string>
+    <string name="HanakoBackupSavedDialog">Saved %2$s to %1$s. Store it offline: anyone with this file and the password can open your accounts.</string>
+    <string name="HanakoBackupSavedDialogNoName">Saved %1$s. Store the file offline: anyone with it and the password can open your accounts.</string>
     <string name="HanakoBackupHiddenAccount">Hidden account</string>
     <string name="HanakoRestorePick">Choose what to restore:</string>
     <string name="HanakoRestoreSettingsToo">Also restore Hanako settings</string>
@@ -51,7 +51,7 @@
     <string name="HanakoResultRestored">Restored %1$s.</string>
     <string name="HanakoResultRestoredWithSettings">Restored %1$s and your Hanako settings.</string>
     <string name="HanakoResultRestorePartial">Restored %1$s. %2$d couldn\'t be restored: log in to them normally.</string>
-    <string name="HanakoResultRestoreFailed">The backup couldn\'t be restored. Nothing on this phone was changed; log in normally or try the backup again.</string>
+    <string name="HanakoResultRestoreFailed">The backup couldn\'t be restored. Log in normally, or try the backup again.</string>
     <string name="HanakoResultSettingsFailed">Hanako\'s settings couldn\'t be applied.</string>
     <string name="HanakoResultSettingsImported">Hanako settings imported.</string>
     <string name="HanakoResultPasscodeNote">If you used a passcode, set it again in Privacy and Security.</string>
@@ -62,11 +62,11 @@
     <string name="HanakoPasswordWeak">Strength: weak</string>
     <string name="HanakoPasswordOk">Strength: OK</string>
     <string name="HanakoPasswordStrong">Strength: strong</string>
-    <string name="HanakoPasswordWeakError">Too weak. Use at least 12 characters, or a few random words.</string>
+    <string name="HanakoPasswordWeakError">Too weak. Use 12 or more characters, or tap Generate passphrase.</string>
     <string name="HanakoPasswordEmpty">Enter the password.</string>
     <string name="HanakoChatExportProgressTotal">Exporting %1$s of %2$s messages · %3$s</string>
     <string name="HanakoChatExportProgressCount">Exported %1$s · %2$s</string>
-    <string name="HanakoChatExportFloodWait">Telegram asked to slow down, resuming in %1$d s</string>
+    <string name="HanakoChatExportFloodWait">Telegram asked us to wait. Resuming in %1$d s</string>
     <string name="HanakoChatExportBackgroundHint">You can hide this and keep using Hanako; the export continues in the notification. An interrupted export can\'t be resumed.</string>
     <string name="HanakoChatExportHide">Hide</string>
     <string name="HanakoChatExportBusy">Another chat export is still running.</string>
@@ -82,15 +82,15 @@
     <string name="HanakoChatExportDeleted">Partial export deleted</string>
     <string name="HanakoHubPrivacy">Privacy</string>
     <string name="HanakoHubMessages">Messages and chats</string>
-    <string name="HanakoHubDevice">Network, security and data</string>
-    <string name="HanakoHubFooter">Tip: Settings search finds every Hanako option, like \"ghost\" or \"backup\".</string>
+    <string name="HanakoHubDevice">Device and data</string>
+    <string name="HanakoHubFooter">Tip: Settings search finds Hanako pages, like \"ghost\" or \"backup\".</string>
     <string name="HanakoPageDeleted">Deleted and edited messages</string>
     <string name="HanakoPageActivityLog">Activity log</string>
     <string name="HanakoPageChats">Chats and media</string>
     <string name="HanakoPageSecurity">Security and plugins</string>
     <string name="HanakoNetworkFastestProxy">fastest proxy</string>
     <string name="HanakoNone">None</string>
-    <string name="HanakoScheduledNeedsOffline">Turn on Stay offline first.</string>
+    <string name="HanakoScheduledNeedsOffline">Works only with Stay offline turned on (above).</string>
     <string name="HanakoStreamerIndicator">Streamer mode is on</string>
     <string name="HanakoStreamerIsOn">Streamer mode is on: names, photos and numbers are masked.</string>
     <string name="HanakoStreamerTurnOff">Turn off streamer mode</string>
@@ -102,7 +102,7 @@
     <string name="HanakoIntroPromo">Telegram Premium promos are hidden.</string>
     <string name="HanakoIntroKeep">Keep it on</string>
     <string name="HanakoIntroTurnOff">Turn off</string>
-    <string name="PlusProxySwitchStockHint">Hanako\'s \"Switch to the fastest working proxy\" is on (Hanako → Network): it picks the fastest proxy instead of the first that answers.</string>
+    <string name="PlusProxySwitchStockHint">Hanako\'s \"Switch to the fastest working proxy\" is on (Hanako → Device and data → Network): it picks the fastest proxy instead of the first that answers.</string>
     <string name="PlusProxySwitched">Proxy not responding, switched to %1$s (%2$d ms)</string>
     <string name="HanakoAccounts_one">%1$d account</string>
     <string name="HanakoAccounts_other">%1$d accounts</string>
@@ -116,4 +116,15 @@
     <string name="HanakoHiddenUsers_other">%1$d hidden users</string>
     <string name="HanakoChatExportFailedFiles_one">%1$d file couldn\'t be downloaded (marked in the export).</string>
     <string name="HanakoChatExportFailedFiles_other">%1$d files couldn\'t be downloaded (marked in the export).</string>
+    <string name="HanakoPageTracking">Tracking and AI</string>
+    <string name="HanakoStreamerSettings">Streamer mode settings</string>
+    <string name="HanakoChatExportNotifTitleGeneric">Exporting a chat</string>
+    <string name="HanakoChatExportNoNotifHint">Notifications are off for Hanako, so keep this window open to see and cancel the export. An interrupted export can\'t be resumed.</string>
+    <string name="HanakoAuthNoLockTitle">No screen lock</string>
+    <string name="HanakoAuthNoLockNotice">This phone has no screen lock and Hanako has no passcode, so anyone holding it can do this. Set a screen lock in system settings.</string>
+    <string name="HanakoAuthNoLockRefused">This phone has no screen lock and Hanako has no passcode, so anyone holding it could copy your logins. Set a screen lock or a Telegram passcode first, then try again.</string>
+    <string name="HanakoResultExpired">A restore was prepared but Hanako wasn\'t restarted within 30 minutes, so it was dropped. Nothing was changed; start the restore again.</string>
+    <string name="HanakoErrFloodWaitLong">Telegram asked to wait %1$s before more requests. Try the export again later.</string>
+    <string name="HanakoBackupSkippedAccounts_one">%1$d account couldn\'t be included: its login data couldn\'t be read. Log in to it normally on the new phone.</string>
+    <string name="HanakoBackupSkippedAccounts_other">%1$d accounts couldn\'t be included: their login data couldn\'t be read. Log in to them normally on the new phone.</string>
 </resources>
