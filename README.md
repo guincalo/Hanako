@@ -2,7 +2,7 @@
 
 <img src=".github/assets/hanako.png" alt="Hanako icon" width="160" height="160">
 
-# Hanako
+# 🌸 Hanako
 
 **An unofficial Telegram client for Android, forked from [Mercurygram](https://github.com/Mercurygram/Mercurygram).**
 
@@ -37,10 +37,24 @@ Notes:
   if you no longer need it. Hanako release APKs are signed with the key in this repository
   (`TMessagesProj/config/release.keystore`), not with Mercurygram's.
 - The in-app updater is switched off, so Hanako never offers you an upstream Mercurygram update.
-  Check the Releases page (or point [Obtainium](https://obtainium.imranr.dev/) at this repository)
-  for new versions.
+  Check the Releases page, or let Obtainium track it (below), for new versions.
 - The version shown in the app follows the Telegram base it is built on (for example
   `12.10.6.90.N`); the Hanako release number is the Git tag (`v1.0.0`).
+
+### One-click install via [Obtainium](https://obtainium.imranr.dev/)
+
+Open the link on your Android device and the app source pre-fills with the package ID and the APK
+filename filter. Both entries use the same package ID (`moe.hanako.chan`); pick **one**. They
+track releases published under the new ID; older v1.0.x releases still carry the old
+`it.belloworld.mercurygram` ID.
+
+**Stable**: tagged releases only (`vX.Y.Z`).
+
+[![Add Hanako to Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22moe.hanako.chan%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%22author%22%3A%22guincalo%22%2C%22name%22%3A%22Hanako%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D)
+
+**Stable + Pre-release**: tagged releases plus pre-releases (`vX.Y.Z-rc.1` and similar).
+
+[![Add Hanako (Stable + Pre-release) to Obtainium](https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png)](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22moe.hanako.chan%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%22author%22%3A%22guincalo%22%2C%22name%22%3A%22Hanako%20%28Stable%20%2B%20Pre-release%29%22%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3A%20true%2C%20%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%28-%5B0-9A-Za-z.%5D%2B%29%3F-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D)
 
 ## Features
 
