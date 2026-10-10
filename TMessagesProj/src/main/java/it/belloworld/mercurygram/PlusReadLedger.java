@@ -5,8 +5,13 @@ import android.content.SharedPreferences;
 
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.DialogObject;
+import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.UserConfig;
 import org.telegram.tgnet.TLRPC;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Map;
 
 /**
  * hanako: remembers how far a chat was read locally while ghost mode hid the read receipt.
@@ -17,6 +22,9 @@ import org.telegram.tgnet.TLRPC;
  * away once the server has caught up (read on another device, ghost off, manual mark as read).
  */
 public final class PlusReadLedger {
+
+    private static final int MAX_KEYS = 500;
+    private static boolean pruned;
 
     private PlusReadLedger() {
     }
@@ -37,9 +45,13 @@ public final class PlusReadLedger {
     }
 
     /** Called from markDialogAsRead: remember a read the server will not hear about. */
-    public static void record(int account, long dialogId, long topicId, int maxId) {
+    public static synchronized void record(int account, long dialogId, long topicId, int maxId) {
         if (maxId <= 0 || maxId == Integer.MAX_VALUE || DialogObject.isEncryptedDialog(dialogId)
                 || !PlusGhost.readsHidden(account, dialogId)) {
+            return;
+        }
+        // comment and discussion threads are never clamped (only forum topics are): don't keep them
+        if (topicId != 0 && !MessagesController.getInstance(account).isForum(dialogId)) {
             return;
         }
         String k = key(account, dialogId, topicId);
@@ -50,6 +62,46 @@ public final class PlusReadLedger {
         if (maxId > p.getInt(k, 0)) {
             p.edit().putInt(k, maxId).apply();
         }
+        prune(p);
+    }
+
+    /**
+     * Once per process: drop keys of accounts no longer signed in here, then keep at most
+     * MAX_KEYS entries, dropping the lowest read ids (roughly the oldest) first.
+     */
+    private static void prune(SharedPreferences p) {
+        if (pruned) {
+            return;
+        }
+        pruned = true;
+        HashSet<String> signedIn = new HashSet<>();
+        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            UserConfig uc = UserConfig.getInstance(a);
+            if (uc.isClientActivated()) {
+                signedIn.add("u" + uc.getClientUserId() + "_");
+            }
+        }
+        if (signedIn.isEmpty()) {
+            return;
+        }
+        SharedPreferences.Editor e = p.edit();
+        ArrayList<Map.Entry<String, ?>> kept = new ArrayList<>();
+        for (Map.Entry<String, ?> en : p.getAll().entrySet()) {
+            String k = en.getKey();
+            int cut = k.indexOf('_');
+            if (cut < 0 || !signedIn.contains(k.substring(0, cut + 1)) || !(en.getValue() instanceof Integer)) {
+                e.remove(k);
+            } else {
+                kept.add(en);
+            }
+        }
+        if (kept.size() > MAX_KEYS) {
+            kept.sort((x, y) -> Integer.compare((Integer) x.getValue(), (Integer) y.getValue()));
+            for (int i = 0; i < kept.size() - MAX_KEYS; i++) {
+                e.remove(kept.get(i).getKey());
+            }
+        }
+        e.apply();
     }
 
     /** Highest locally read inbox id that the server does not know about, or 0. */
@@ -82,8 +134,10 @@ public final class PlusReadLedger {
         if (d.top_message <= local) {
             d.unread_count = 0;
             d.unread_mentions_count = 0;
-        } else if (DialogObject.isChannel(d)) {
-            d.unread_count = Math.min(d.unread_count, d.top_message - local); // channel ids are sequential
+            d.unread_reactions_count = 0;
+        } else {
+            // ids are monotonic per channel / per account, so this is an upper bound for every chat type
+            d.unread_count = Math.min(d.unread_count, d.top_message - local);
         }
     }
 
@@ -104,6 +158,7 @@ public final class PlusReadLedger {
         if (t.top_message <= local) {
             t.unread_count = 0;
             t.unread_mentions_count = 0;
+            t.unread_reactions_count = 0;
         } else {
             t.unread_count = Math.min(t.unread_count, t.top_message - local);
         }

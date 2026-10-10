@@ -198,7 +198,7 @@ public final class PlusGhost {
 
     /** Called by SecretChatHelper before it sends decryptedMessageActionReadMessages. */
     public static boolean blockSecretRead(int account, long encryptedDialogId) {
-        return active(account, OPT_READS) && !readsAllowed(account, encryptedDialogId);
+        return readsHidden(account, encryptedDialogId);
     }
 
     static long peerDialogId(TLRPC.InputPeer peer) { // plus f12: also used by PlusPeek

@@ -13910,7 +13910,6 @@ public class MessagesController extends BaseController implements NotificationCe
         TLRPC.TL_messages_getUnreadMentions req = new TLRPC.TL_messages_getUnreadMentions();
         req.peer = peer;
         req.limit = 1;
-        req.min_id = it.belloworld.mercurygram.PlusReadLedger.get(currentAccount, -peer.channel_id, 0); // hanako: only mentions after the local read
         getConnectionsManager().sendRequest(req, (response, error) -> {
             TLRPC.messages_Messages res = (TLRPC.messages_Messages) response;
             if (res != null) {
