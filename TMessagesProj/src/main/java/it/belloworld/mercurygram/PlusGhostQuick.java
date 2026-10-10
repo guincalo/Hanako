@@ -54,12 +54,13 @@ public final class PlusGhostQuick {
     private static final int INDICATOR_ID = 7603;
 
     private static final class Indicator {
-        final ActionBarMenuItem item;
+        // weak: the item's click listener captures the fragment, which is this map entry's key
+        final java.lang.ref.WeakReference<ActionBarMenuItem> item;
         final int account;
         float factor = 1f;
 
         Indicator(ActionBarMenuItem item, int account) {
-            this.item = item;
+            this.item = new java.lang.ref.WeakReference<>(item);
             this.account = account;
         }
     }
@@ -264,7 +265,8 @@ public final class PlusGhostQuick {
 
     private static void apply(Indicator ind) {
         float f = PlusGhost.isEnabled(ind.account) ? ind.factor : 0f;
-        FragmentFloatingButton.setAnimatedVisibility(ind.item, f);
+        ActionBarMenuItem item = ind.item.get();
+        if (item != null) FragmentFloatingButton.setAnimatedVisibility(item, f);
     }
 
     private static void refreshIndicators() {

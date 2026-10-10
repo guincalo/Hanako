@@ -42,11 +42,12 @@ public final class HanakoQuick {
     private static final String KEY_INTRO_PREFIX = "privacy_intro_";
 
     private static final class Indicator {
-        final ActionBarMenuItem item;
+        // weak: the item's click listener captures the fragment, which is this map entry's key
+        final java.lang.ref.WeakReference<ActionBarMenuItem> item;
         float factor = 1f;
 
         Indicator(ActionBarMenuItem item) {
-            this.item = item;
+            this.item = new java.lang.ref.WeakReference<>(item);
         }
     }
 
@@ -95,7 +96,8 @@ public final class HanakoQuick {
     }
 
     private static void apply(Indicator ind) {
-        FragmentFloatingButton.setAnimatedVisibility(ind.item, PlusStreamer.isEnabled() ? ind.factor : 0f);
+        ActionBarMenuItem item = ind.item.get();
+        if (item != null) FragmentFloatingButton.setAnimatedVisibility(item, PlusStreamer.isEnabled() ? ind.factor : 0f);
     }
 
     private static void refreshIndicators() {
