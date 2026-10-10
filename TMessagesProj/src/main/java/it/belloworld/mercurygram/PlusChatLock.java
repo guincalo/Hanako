@@ -462,16 +462,6 @@ public final class PlusChatLock {
         }
     }
 
-    /** hanako: count a chat as unlocked for this session after another verified confirmation (chat export). */
-    public static void markSessionUnlocked(int account, long dialogId) {
-        if (dialogId == 0) {
-            return;
-        }
-        synchronized (sync) {
-            unlockedDialogs.add(account + ":" + dialogId);
-        }
-    }
-
     private static boolean isSessionUnlocked(int account, long dialogId) {
         synchronized (sync) {
             return unlockedDialogs.contains(account + ":" + dialogId);

@@ -17,7 +17,6 @@ import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
-import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLObject;
@@ -1272,10 +1271,5 @@ public final class HanakoChatExport {
 
     private static String escAttr(String s) {
         return esc(s).replace("'", "&#39;");
-    }
-
-    /** Account to export from: the one the user is looking at. */
-    public static int defaultAccount() {
-        return UserConfig.selectedAccount;
     }
 }
