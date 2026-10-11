@@ -33,7 +33,7 @@ import it.belloworld.mercurygram.ui.MercurygramSettingsActivity;
  * <li>One-time "Ghost mode is on" notice per account after login (P1-6), with a quick toggle.</li>
  * <li>The once-only result of a restore / settings import staged before a restart (P2-3).</li>
  * </ul>
- * UI state lives in its own "hanako_ui" preferences file, which settings export never includes.
+ * UI state lives in its own "hanako_ui" preferences file.
  */
 public final class HanakoQuick {
 

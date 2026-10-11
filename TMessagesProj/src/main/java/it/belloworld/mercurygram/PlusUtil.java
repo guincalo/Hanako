@@ -30,11 +30,6 @@ public final class PlusUtil {
     // Telegram user id ("on_u12345"), and an old slot key is moved over the first time it is
     // read while that slot is signed in.
 
-    /** Pref files whose per-account keys follow {@link #accountKey}. */
-    public static boolean isPerAccountFile(String name) {
-        return "plus_ghost".equals(name) || "plus_activity_log".equals(name);
-    }
-
     /**
      * Key of a per-account setting: "base_u&lt;userId&gt;", or "base_&lt;slot&gt;" while the slot
      * is not signed in. Moves an old slot key to the user key on first use.
@@ -75,11 +70,6 @@ public final class PlusUtil {
         } catch (NumberFormatException e) {
             return 0;
         }
-    }
-
-    /** An old slot key ("on_3"): ends in "_" and a slot number. */
-    public static boolean isSlotKey(String key) {
-        return slotOfKey(key) >= 0;
     }
 
     /** The slot at the end of an old "…_&lt;slot&gt;" key, or -1. */

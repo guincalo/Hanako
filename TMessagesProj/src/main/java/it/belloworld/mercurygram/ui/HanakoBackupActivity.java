@@ -1,11 +1,11 @@
 /*
- * hanako: Settings > Hanako > Backup & export.
- * Settings export/import (JSON), encrypted full backup/restore of logged-in accounts, and the
- * entry point of the per-chat export. Also opened in restore-only mode from the login screen.
+ * hanako: Settings > Hanako > Backup & export: encrypted backup and restore of the account
+ * sessions (HanakoBackup), and the entry point of the per-chat export. Also opened in
+ * restore-only mode from the login screen.
  *
- * Everything that copies accounts or rewrites private settings (create backup, restore over
- * existing accounts, import settings, export per-chat lists, export a chat) asks HanakoAuthGate
- * first: biometrics / screen lock, or Telegram's passcode when the phone has neither.
+ * Creating a backup, restoring one while accounts are signed in, and exporting a chat ask
+ * HanakoAuthGate first: biometrics / screen lock, or Telegram's passcode when the phone has
+ * neither.
  */
 package it.belloworld.mercurygram.ui;
 
@@ -28,7 +28,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.json.JSONObject;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
@@ -50,24 +49,19 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Locale;
 
 import it.belloworld.mercurygram.HanakoAuthGate;
 import it.belloworld.mercurygram.HanakoBackup;
+import it.belloworld.mercurygram.HiddenAccountHelper;
 import it.belloworld.mercurygram.PlusChatLock;
 
 public class HanakoBackupActivity extends UniversalFragment {
 
-    private static final int ID_EXPORT_SETTINGS = 1;
-    private static final int ID_IMPORT_SETTINGS = 2;
     private static final int ID_CREATE_BACKUP = 3;
     private static final int ID_RESTORE_BACKUP = 4;
     private static final int ID_EXPORT_CHAT = 5;
-    private static final int ID_UNDO_IMPORT = 6;
 
-    private static final int REQ_EXPORT_SETTINGS = 7301;
-    private static final int REQ_IMPORT_SETTINGS = 7302;
     private static final int REQ_CREATE_BACKUP = 7303;
     private static final int REQ_RESTORE_BACKUP = 7304;
 
@@ -78,16 +72,14 @@ public class HanakoBackupActivity extends UniversalFragment {
 
     private final boolean restoreOnly;
 
-    // state carried across the system file picker (wiped when the picker is cancelled)
+    /** The new backup's password while the system file picker is open (wiped when it closes). */
     private char[] pendingPassword;
-    private boolean pendingIncludeHidden;
-    private boolean pendingExportLists;
 
     public HanakoBackupActivity() {
         this(false);
     }
 
-    /** @param restoreOnly opened from the login screen: only the import actions make sense there. */
+    /** @param restoreOnly opened from the login screen: only Restore makes sense there. */
     public HanakoBackupActivity(boolean restoreOnly) {
         super();
         this.restoreOnly = restoreOnly;
@@ -106,17 +98,6 @@ public class HanakoBackupActivity extends UniversalFragment {
         }
         items.add(UItem.asButton(ID_RESTORE_BACKUP, R.drawable.msg_reset, LocaleController.getString(R.string.HanakoBackupRestore)));
         items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoBackupFullInfo)));
-
-        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoBackupSettingsHeader)));
-        if (!restoreOnly) {
-            items.add(UItem.asButton(ID_EXPORT_SETTINGS, R.drawable.msg_saved, LocaleController.getString(R.string.HanakoBackupExportSettings)));
-        }
-        items.add(UItem.asButton(ID_IMPORT_SETTINGS, R.drawable.msg_openin, LocaleController.getString(R.string.HanakoBackupImportSettings)));
-        if (!restoreOnly && HanakoBackup.hasUndo()) {
-            items.add(UItem.asButton(ID_UNDO_IMPORT, R.drawable.msg_retry, LocaleController.getString(R.string.HanakoUndoImport)));
-        }
-        items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoBackupSettingsInfo)));
-
         if (!restoreOnly) {
             items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoBackupChatHeader)));
             items.add(UItem.asButton(ID_EXPORT_CHAT, R.drawable.msg_share, LocaleController.getString(R.string.HanakoBackupExportChat)));
@@ -127,29 +108,19 @@ public class HanakoBackupActivity extends UniversalFragment {
     @Override
     protected void onClick(UItem item, View view, int position, float x, float y) {
         switch (item.id) {
-            case ID_EXPORT_SETTINGS:
-                showExportSettingsOptions();
-                break;
-            case ID_IMPORT_SETTINGS:
-                gate(R.string.HanakoAuthImport, () -> openDocument(REQ_IMPORT_SETTINGS));
-                break;
-            case ID_UNDO_IMPORT:
-                confirmUndo();
-                break;
             case ID_CREATE_BACKUP:
-                // a full backup copies the login sessions: refused on a phone with no lock at all
+                // copies the logins: refused on a phone with no lock at all
                 HanakoAuthGate.require(this, LocaleController.getString(R.string.HanakoAuthBackup), true, this::showBackupWarning);
                 break;
             case ID_RESTORE_BACKUP:
                 if (UserConfig.getActivatedAccountsCount() > 0) {
-                    // restoring can replace sessions and settings of this phone
-                    gate(R.string.HanakoAuthRestore, () -> openDocument(REQ_RESTORE_BACKUP));
+                    HanakoAuthGate.require(this, LocaleController.getString(R.string.HanakoAuthRestore), this::openBackupFile);
                 } else {
-                    openDocument(REQ_RESTORE_BACKUP);
+                    openBackupFile(); // login screen: nothing here to protect yet
                 }
                 break;
             case ID_EXPORT_CHAT:
-                gate(R.string.HanakoAuthExportChat, this::openChatPicker);
+                HanakoAuthGate.require(this, LocaleController.getString(R.string.HanakoAuthExportChat), this::openChatPicker);
                 break;
         }
     }
@@ -160,26 +131,10 @@ public class HanakoBackupActivity extends UniversalFragment {
     }
 
     @Override
-    public void onResume() {
-        super.onResume();
-        refresh();
-    }
-
-    @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
         wipePending();
         HanakoAuthGate.forget();
-    }
-
-    private void gate(int subtitleRes, Runnable action) {
-        HanakoAuthGate.require(this, LocaleController.getString(subtitleRes), action);
-    }
-
-    private void refresh() {
-        if (listView != null && listView.adapter != null) {
-            listView.adapter.update(true);
-        }
     }
 
     private void wipePending() {
@@ -192,31 +147,12 @@ public class HanakoBackupActivity extends UniversalFragment {
     // ---------------------------------------------------------------------------------
     // pickers
 
-    private static String stamp() {
-        return new SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.US).format(new Date());
-    }
-
-    private boolean createDocument(int request, String mime, String name) {
-        try {
-            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType(mime);
-            intent.putExtra(Intent.EXTRA_TITLE, name);
-            startActivityForResult(intent, request);
-            return true;
-        } catch (Exception e) {
-            FileLog.e(e);
-            showError(e);
-            return false;
-        }
-    }
-
-    private void openDocument(int request) {
+    private void openBackupFile() {
         try {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.setType("*/*");
-            startActivityForResult(intent, request);
+            startActivityForResult(intent, REQ_RESTORE_BACKUP);
         } catch (Exception e) {
             FileLog.e(e);
             showError(e);
@@ -255,33 +191,17 @@ public class HanakoBackupActivity extends UniversalFragment {
 
     @Override
     public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
-        if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
-            if (requestCode == REQ_CREATE_BACKUP) {
-                wipePending();
+        Uri uri = resultCode == Activity.RESULT_OK && data != null ? data.getData() : null;
+        if (requestCode == REQ_CREATE_BACKUP) {
+            char[] pw = pendingPassword;
+            pendingPassword = null;
+            if (uri != null && pw != null) {
+                createBackup(uri, pw);
+            } else if (pw != null) {
+                Arrays.fill(pw, '\0');
             }
-            return;
-        }
-        Uri uri = data.getData();
-        switch (requestCode) {
-            case REQ_EXPORT_SETTINGS:
-                exportSettings(uri, pendingExportLists, pendingIncludeHidden);
-                break;
-            case REQ_IMPORT_SETTINGS:
-                importSettings(uri);
-                break;
-            case REQ_CREATE_BACKUP: {
-                char[] pw = pendingPassword;
-                pendingPassword = null;
-                if (pw == null) {
-                    deleteQuietly(uri);
-                    return;
-                }
-                createBackup(uri, pw, pendingIncludeHidden);
-                break;
-            }
-            case REQ_RESTORE_BACKUP:
-                askRestorePassword(uri);
-                break;
+        } else if (requestCode == REQ_RESTORE_BACKUP && uri != null) {
+            askRestorePassword(uri, false);
         }
     }
 
@@ -310,228 +230,48 @@ public class HanakoBackupActivity extends UniversalFragment {
     }
 
     // ---------------------------------------------------------------------------------
-    // settings
-
-    private void showExportSettingsOptions() {
-        Activity activity = getParentActivity();
-        if (activity == null) return;
-        LinearLayout layout = new LinearLayout(activity);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.addView(dialogText(activity, LocaleController.getString(R.string.HanakoExportSettingsInfo), 15, Theme.key_dialogTextBlack),
-                LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 0, 24, 8));
-        final CheckBoxCell lists = checkRow(activity, LocaleController.getString(R.string.HanakoExportSettingsLists), false);
-        layout.addView(lists, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        layout.addView(dialogText(activity, LocaleController.getString(R.string.HanakoExportSettingsListsInfo), 13, Theme.key_dialogTextGray3),
-                LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 0, 24, 4));
-        final CheckBoxCell hidden = HanakoBackup.canOfferHiddenAccounts()
-                ? checkRow(activity, LocaleController.getString(R.string.HanakoIncludeHiddenAccounts), false) : null;
-        if (hidden != null) {
-            layout.addView(hidden, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        }
-        AlertDialog.Builder b = new AlertDialog.Builder(activity, getResourceProvider());
-        b.setTitle(LocaleController.getString(R.string.HanakoBackupExportSettings));
-        b.setView(layout);
-        b.setPositiveButton(LocaleController.getString(R.string.HanakoExportAction), (d, w) -> {
-            final boolean withLists = lists.isChecked();
-            final boolean withHidden = hidden != null && hidden.isChecked();
-            Runnable pick = () -> {
-                pendingExportLists = withLists;
-                pendingIncludeHidden = withHidden;
-                createDocument(REQ_EXPORT_SETTINGS, "application/json", "hanako-settings-" + stamp() + ".json");
-            };
-            if (withLists || withHidden) {
-                gate(R.string.HanakoAuthExportLists, pick);
-            } else {
-                pick.run();
-            }
-        });
-        b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-        showDialog(b.create());
-    }
-
-    private void exportSettings(Uri uri, boolean withLists, boolean withHidden) {
-        final Context ctx = ApplicationLoader.applicationContext;
-        Utilities.globalQueue.postRunnable(() -> {
-            Throwable error = null;
-            try {
-                HanakoBackup.writeSettings(ctx, uri, withLists, withHidden);
-            } catch (Throwable t) {
-                FileLog.e(t);
-                error = t;
-            }
-            final Throwable err = error;
-            AndroidUtilities.runOnUIThread(() -> {
-                if (err != null) {
-                    deleteQuietly(uri);
-                    showError(err);
-                } else {
-                    toast(LocaleController.getString(withLists ? R.string.HanakoSettingsSavedLists : R.string.HanakoBackupSettingsSaved));
-                }
-            });
-        });
-    }
-
-    private void importSettings(Uri uri) {
-        final Context ctx = ApplicationLoader.applicationContext;
-        Utilities.globalQueue.postRunnable(() -> {
-            JSONObject root = null;
-            Throwable error = null;
-            try {
-                root = HanakoBackup.readSettings(ctx, uri);
-            } catch (Throwable t) {
-                FileLog.e(t);
-                error = t;
-            }
-            final JSONObject doc = root;
-            final Throwable err = error;
-            AndroidUtilities.runOnUIThread(() -> {
-                if (doc == null) {
-                    showError(err);
-                    return;
-                }
-                confirmSettingsImport(doc);
-            });
-        });
-    }
-
-    private void confirmSettingsImport(JSONObject doc) {
-        Activity activity = getParentActivity();
-        if (activity == null) return;
-        String version = doc.optString("app_version", "");
-        StringBuilder msg = new StringBuilder(TextUtils.isEmpty(version)
-                ? LocaleController.getString(R.string.HanakoImportConfirm)
-                : LocaleController.formatString(R.string.HanakoImportConfirmVersion, version));
-        final boolean hasLists = HanakoBackup.hasLists(doc);
-        if (hasLists) {
-            int[] match = HanakoBackup.matchingAccounts(doc);
-            if (match[1] > 0) {
-                msg.append("\n\n").append(LocaleController.formatString(R.string.HanakoImportAccountsMatch, match[0], match[1]));
-            }
-        }
-        LinearLayout layout = new LinearLayout(activity);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.addView(dialogText(activity, msg, 15, Theme.key_dialogTextBlack),
-                LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 0, 24, 8));
-        final CheckBoxCell lists = hasLists ? checkRow(activity, LocaleController.getString(R.string.HanakoImportLists), true) : null;
-        if (lists != null) {
-            layout.addView(lists, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        }
-        AlertDialog.Builder b = new AlertDialog.Builder(activity, getResourceProvider());
-        b.setTitle(LocaleController.getString(R.string.HanakoBackupImportSettings));
-        b.setView(layout);
-        b.setPositiveButton(LocaleController.getString(R.string.HanakoImportAndRestart), (d, w) -> {
-            final boolean withLists = lists != null && lists.isChecked();
-            Utilities.globalQueue.postRunnable(() -> {
-                Throwable error = null;
-                try {
-                    HanakoBackup.stageSettingsImport(doc, withLists);
-                } catch (Throwable t) {
-                    FileLog.e(t);
-                    HanakoBackup.discardStaged();
-                    error = t;
-                }
-                final Throwable err = error;
-                AndroidUtilities.runOnUIThread(() -> {
-                    if (err != null) {
-                        showError(err);
-                    } else {
-                        HanakoBackup.restartApp(getParentActivity());
-                    }
-                });
-            });
-        });
-        b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-        showDialog(b.create());
-    }
-
-    private void confirmUndo() {
-        Activity activity = getParentActivity();
-        if (activity == null) return;
-        AlertDialog.Builder b = new AlertDialog.Builder(activity, getResourceProvider());
-        b.setTitle(LocaleController.getString(R.string.HanakoUndoImport));
-        b.setMessage(LocaleController.getString(R.string.HanakoUndoImportConfirm));
-        b.setPositiveButton(LocaleController.getString(R.string.HanakoUndoAndRestart), (d, w) -> gate(R.string.HanakoAuthImport, () ->
-                Utilities.globalQueue.postRunnable(() -> {
-                    Throwable error = null;
-                    try {
-                        HanakoBackup.stageUndo();
-                    } catch (Throwable t) {
-                        FileLog.e(t);
-                        HanakoBackup.discardStaged();
-                        error = t;
-                    }
-                    final Throwable err = error;
-                    AndroidUtilities.runOnUIThread(() -> {
-                        if (err != null) {
-                            showError(err);
-                            refresh();
-                        } else {
-                            HanakoBackup.restartApp(getParentActivity());
-                        }
-                    });
-                })));
-        b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-        showDialog(b.create());
-    }
-
-    // ---------------------------------------------------------------------------------
-    // full backup
+    // backup
 
     private void showBackupWarning() {
         Activity activity = getParentActivity();
         if (activity == null) return;
-        LinearLayout layout = new LinearLayout(activity);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        int visible = HanakoBackup.visibleAccountCount();
-        String summary = LocaleController.formatString(R.string.HanakoBackupWillSave, LocaleController.formatPluralString("HanakoAccounts", visible));
-        layout.addView(dialogText(activity, summary + "\n\n" + LocaleController.getString(R.string.HanakoBackupWarning), 15, Theme.key_dialogTextBlack),
-                LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 0, 24, 8));
-        final CheckBoxCell hidden = HanakoBackup.canOfferHiddenAccounts()
-                ? checkRow(activity, LocaleController.getString(R.string.HanakoIncludeHiddenAccounts), false) : null;
-        if (hidden != null) {
-            layout.addView(hidden, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-            layout.addView(dialogText(activity, LocaleController.getString(R.string.HanakoIncludeHiddenAccountsInfo), 13, Theme.key_dialogTextGray3),
-                    LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 0, 24, 4));
-        }
+        String summary = LocaleController.formatString(R.string.HanakoBackupWillSave,
+                LocaleController.formatPluralString("HanakoAccounts", HiddenAccountHelper.getVisibleAccountsCount()));
         AlertDialog.Builder b = new AlertDialog.Builder(activity, getResourceProvider());
         b.setTitle(LocaleController.getString(R.string.HanakoBackupWarningTitle));
-        b.setView(layout);
-        b.setPositiveButton(LocaleController.getString(R.string.HanakoBackupContinue), (d, w) -> {
-            final boolean withHidden = hidden != null && hidden.isChecked();
-            // ask for the password first, then where to save: cancelling never leaves an empty file
-            askPassword(true, new PasswordCallback() {
-                @Override
-                public void onPassword(char[] password) {
-                    wipePending();
-                    pendingPassword = password;
-                    pendingIncludeHidden = withHidden;
-                    if (!createDocument(REQ_CREATE_BACKUP, "application/octet-stream", "hanako-backup-" + stamp() + ".hnkbak")) {
-                        wipePending();
-                    }
-                }
-
-                @Override
-                public void onCancel() {
-                }
-            });
-        });
+        b.setMessage(summary + "\n\n" + LocaleController.getString(R.string.HanakoBackupWarning));
+        // the password first, then where to save: cancelling never leaves an empty file
+        b.setPositiveButton(LocaleController.getString(R.string.HanakoBackupContinue), (d, w) -> askPassword(true, false, password -> {
+            wipePending();
+            pendingPassword = password;
+            String name = "hanako-sessions-" + new SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.US).format(new Date()) + ".hnkbak";
+            try {
+                Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("application/octet-stream");
+                intent.putExtra(Intent.EXTRA_TITLE, name);
+                startActivityForResult(intent, REQ_CREATE_BACKUP);
+            } catch (Exception e) {
+                FileLog.e(e);
+                wipePending();
+                showError(e);
+            }
+        }));
         b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
         showDialog(b.create());
     }
 
-    private void createBackup(Uri uri, char[] password, boolean withHidden) {
+    private void createBackup(Uri uri, char[] password) {
         final Context ctx = ApplicationLoader.applicationContext;
         final AlertDialog progress = showProgress();
         Utilities.globalQueue.postRunnable(() -> {
             int[] count = {0, 0};
             Throwable error = null;
             try {
-                count = HanakoBackup.writeFullBackup(ctx, uri, password, true, withHidden);
+                count = HanakoBackup.write(ctx, uri, password);
             } catch (Throwable t) {
                 FileLog.e(t);
                 error = t;
-            } finally {
-                Arrays.fill(password, '\0');
             }
             final int n = count[0];
             final int skipped = count[1];
@@ -549,7 +289,6 @@ public class HanakoBackupActivity extends UniversalFragment {
                         ? LocaleController.formatString(R.string.HanakoBackupSavedDialogNoName, accounts)
                         : LocaleController.formatString(R.string.HanakoBackupSavedDialog, name, accounts);
                 if (skipped > 0) {
-                    // an account whose session file could not be read is not in the file
                     text += "\n\n" + LocaleController.formatPluralString("HanakoBackupSkippedAccounts", skipped);
                 }
                 if (getParentActivity() == null) {
@@ -576,46 +315,30 @@ public class HanakoBackupActivity extends UniversalFragment {
         return null;
     }
 
-    private void askRestorePassword(Uri uri) {
-        askRestorePassword(uri, false);
-    }
+    // ---------------------------------------------------------------------------------
+    // restore
 
     private void askRestorePassword(Uri uri, boolean wrongBefore) {
-        askPassword(false, wrongBefore, new PasswordCallback() {
-            @Override
-            public void onPassword(char[] password) {
-                readBackup(uri, password);
-            }
-
-            @Override
-            public void onCancel() {
-            }
-        });
+        askPassword(false, wrongBefore, password -> readBackup(uri, password));
     }
 
     private void readBackup(Uri uri, char[] password) {
         final Context ctx = ApplicationLoader.applicationContext;
         final AlertDialog progress = showProgress();
         Utilities.globalQueue.postRunnable(() -> {
-            HanakoBackup.FullBackup backup = null;
+            HanakoBackup.Backup backup = null;
             Throwable error = null;
-            boolean wrongPassword = false;
             try {
-                backup = HanakoBackup.readFullBackup(ctx, uri, password);
-            } catch (HanakoBackup.WrongPasswordException e) {
-                wrongPassword = true;
+                backup = HanakoBackup.read(ctx, uri, password);
             } catch (Throwable t) {
-                FileLog.e(t);
+                if (!(t instanceof HanakoBackup.WrongPasswordException)) FileLog.e(t);
                 error = t;
-            } finally {
-                Arrays.fill(password, '\0');
             }
-            final HanakoBackup.FullBackup b = backup;
+            final HanakoBackup.Backup b = backup;
             final Throwable err = error;
-            final boolean wrong = wrongPassword;
             AndroidUtilities.runOnUIThread(() -> {
                 dismiss(progress);
-                if (wrong) {
+                if (err instanceof HanakoBackup.WrongPasswordException) {
                     askRestorePassword(uri, true);
                 } else if (b == null) {
                     showError(err);
@@ -626,100 +349,72 @@ public class HanakoBackupActivity extends UniversalFragment {
         });
     }
 
-    /** One checkbox per account (new / replaces the session here / no free slot), plus "also restore settings". */
-    private void showRestorePlan(HanakoBackup.FullBackup b) {
+    /**
+     * One checkbox per account of the backup: new ones are ticked while free slots last; one
+     * signed in here is shown as skipped, or not at all when it is hidden here.
+     */
+    private void showRestorePlan(HanakoBackup.Backup b) {
         Activity activity = getParentActivity();
         if (activity == null) {
             b.wipe();
             return;
         }
-        final HashMap<Long, Integer> current = HanakoBackup.currentAccountsByUser();
         final int freeSlots = HanakoBackup.freeSlots().size();
         final int n = b.accounts.size();
         final CheckBoxCell[] cells = new CheckBoxCell[n];
-        final boolean[] existing = new boolean[n];
-
         LinearLayout layout = new LinearLayout(activity);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.addView(dialogText(activity, LocaleController.getString(R.string.HanakoRestorePick), 15, Theme.key_dialogTextBlack),
                 LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 0, 24, 8));
-        int newChecked = 0;
-        final boolean hiddenUnlocked = HanakoBackup.canOfferHiddenAccounts();
+        int ticked = 0;
         for (int i = 0; i < n; i++) {
-            HanakoBackup.AccountEntry e = b.accounts.get(i);
-            existing[i] = current.containsKey(e.userId);
-            if (existing[i] && !hiddenUnlocked && it.belloworld.mercurygram.HiddenAccountHelper.isAccountHidden(current.get(e.userId))) {
-                // hidden on this phone: never listed (or replaced) unless signed in to a hidden account
-                continue;
-            }
+            HanakoBackup.Account e = b.accounts.get(i);
+            int here = HanakoBackup.slotOf(e.user.id);
+            if (here >= 0 && HiddenAccountHelper.isAccountHidden(here)) continue;
             String state;
-            boolean checked;
-            if (existing[i]) {
-                state = LocaleController.getString(R.string.HanakoBackupAccountReplace);
-                checked = false; // replacing a working session is opt-in
-            } else if (newChecked < freeSlots) {
+            if (here >= 0) {
+                state = LocaleController.getString(R.string.HanakoBackupAccountSkipExisting);
+            } else if (ticked < freeSlots) {
                 state = LocaleController.getString(R.string.HanakoBackupAccountNew);
-                checked = true;
-                newChecked++;
             } else {
                 state = LocaleController.getString(R.string.HanakoBackupAccountNoSlot);
-                checked = false;
             }
-            final CheckBoxCell cell = checkRow(activity, HanakoBackup.accountLabel(e) + "\n" + state, checked);
-            final int index = i;
-            cell.setOnClickListener(v -> {
-                boolean want = !cell.isChecked();
-                if (want && !existing[index]) {
-                    int used = 0;
-                    for (int k = 0; k < n; k++) {
-                        if (k != index && !existing[k] && cells[k] != null && cells[k].isChecked()) used++;
-                    }
-                    if (used >= freeSlots) {
-                        toast(LocaleController.getString(R.string.HanakoBackupNoSlots));
-                        return;
-                    }
-                }
-                cell.setChecked(want, true);
-            });
-            cells[i] = cell;
+            CheckBoxCell cell = checkRow(activity, HanakoBackup.label(e) + "\n" + state, here < 0 && ticked < freeSlots);
+            if (here >= 0) {
+                cell.setEnabled(false);
+                cell.setOnClickListener(null);
+            } else {
+                cells[i] = cell;
+                if (ticked < freeSlots) ticked++;
+            }
             layout.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         }
-        final CheckBoxCell settings = b.settings != null ? checkRow(activity, LocaleController.getString(R.string.HanakoRestoreSettingsToo), true) : null;
-        if (settings != null) {
-            layout.addView(settings, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 8, 0, 0));
-        }
-        layout.addView(dialogText(activity, LocaleController.getString(R.string.HanakoBackupRestoreOldDevice) + "\n\n"
-                        + LocaleController.getString(R.string.HanakoRestoreReplaceNote), 13, Theme.key_dialogTextGray3),
+        layout.addView(dialogText(activity, LocaleController.getString(R.string.HanakoBackupRestoreOldDevice), 13, Theme.key_dialogTextGray3),
                 LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 24, 8, 24, 0));
         ScrollView scroll = new ScrollView(activity);
         scroll.addView(layout);
-
         final boolean[] handled = new boolean[1];
         AlertDialog.Builder builder = new AlertDialog.Builder(activity, getResourceProvider());
         builder.setTitle(LocaleController.getString(R.string.HanakoBackupRestoreTitle));
         builder.setView(scroll);
         builder.setPositiveButton(LocaleController.getString(R.string.HanakoBackupRestoreAction), (d, w) -> {
-            int[] slots = new int[n];
-            ArrayList<Integer> free = HanakoBackup.freeSlots();
-            int picked = 0;
+            boolean[] picked = new boolean[n];
+            int count = 0;
             for (int i = 0; i < n; i++) {
-                slots[i] = -1;
-                if (cells[i] == null || !cells[i].isChecked()) continue;
-                Integer slot = current.get(b.accounts.get(i).userId);
-                if (slot != null) {
-                    slots[i] = slot;
-                } else if (!free.isEmpty()) {
-                    slots[i] = free.remove(0);
-                }
-                if (slots[i] >= 0) picked++;
+                picked[i] = cells[i] != null && cells[i].isChecked();
+                if (picked[i]) count++;
             }
-            if (picked == 0) {
+            if (count == 0) {
                 toast(LocaleController.getString(R.string.HanakoRestoreNothingSelected));
+                return;
+            }
+            if (count > freeSlots) {
+                toast(LocaleController.getString(R.string.HanakoBackupNoSlots));
                 return;
             }
             handled[0] = true;
             d.dismiss();
-            stageRestore(b, slots, settings != null && settings.isChecked());
+            stageRestore(b, picked);
         });
         builder.setNegativeButton(LocaleController.getString(R.string.Cancel), (d, w) -> d.dismiss());
         AlertDialog dialog = builder.create();
@@ -732,13 +427,13 @@ public class HanakoBackupActivity extends UniversalFragment {
         dialog.setCanceledOnTouchOutside(false);
     }
 
-    private void stageRestore(HanakoBackup.FullBackup b, int[] slots, boolean restoreSettings) {
+    private void stageRestore(HanakoBackup.Backup b, boolean[] picked) {
         final AlertDialog progress = showProgress();
         Utilities.globalQueue.postRunnable(() -> {
             int staged = 0;
             Throwable error = null;
             try {
-                staged = HanakoBackup.stageFullRestore(b, slots, restoreSettings);
+                staged = HanakoBackup.stage(b, picked);
             } catch (Throwable t) {
                 FileLog.e(t);
                 HanakoBackup.discardStaged();
@@ -777,12 +472,6 @@ public class HanakoBackupActivity extends UniversalFragment {
 
     // ---------------------------------------------------------------------------------
     // password dialog
-
-    private interface PasswordCallback {
-        void onPassword(char[] password);
-
-        void onCancel();
-    }
 
     private EditText passwordField(Context ctx, int hintRes) {
         EditText field = new EditText(ctx);
@@ -875,16 +564,10 @@ public class HanakoBackupActivity extends UniversalFragment {
         return out;
     }
 
-    private void askPassword(boolean create, PasswordCallback callback) {
-        askPassword(create, false, callback);
-    }
-
-    private void askPassword(boolean create, boolean wrongBefore, PasswordCallback callback) {
+    /** Asks for the backup password: twice, with a strength check, when {@code create}. Nothing happens on cancel. */
+    private void askPassword(boolean create, boolean wrongBefore, Utilities.Callback<char[]> callback) {
         Activity activity = getParentActivity();
-        if (activity == null) {
-            callback.onCancel();
-            return;
-        }
+        if (activity == null) return;
         final Theme.ResourcesProvider rp = getResourceProvider();
         LinearLayout layout = new LinearLayout(activity);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -975,7 +658,6 @@ public class HanakoBackupActivity extends UniversalFragment {
             });
         }
 
-        final boolean[] handled = new boolean[1];
         AlertDialog.Builder b = new AlertDialog.Builder(activity, rp);
         b.setTitle(LocaleController.getString(R.string.HanakoBackupPasswordTitle));
         b.setView(layout);
@@ -993,25 +675,18 @@ public class HanakoBackupActivity extends UniversalFragment {
                 }
             }
             if (problem != null) {
-                // keep what was typed; only the repeat field is cleared on a mismatch
+                // keep what was typed
                 error.setTextColor(Theme.getColor(Theme.key_text_RedRegular, rp));
                 error.setText(problem);
                 error.setVisibility(View.VISIBLE);
                 return;
             }
-            handled[0] = true;
             char[] pw = take(first);
             clear(second);
             d.dismiss();
-            callback.onPassword(pw);
+            callback.run(pw);
         });
-        b.setNegativeButton(LocaleController.getString(R.string.Cancel), (d, w) -> {
-            handled[0] = true;
-            clear(first);
-            clear(second);
-            d.dismiss();
-            callback.onCancel();
-        });
+        b.setNegativeButton(LocaleController.getString(R.string.Cancel), (d, w) -> d.dismiss());
         AlertDialog dialog = b.create();
         dialog.setDismissDialogByButtons(false);
         if (dialog.getWindow() != null) {
@@ -1021,10 +696,6 @@ public class HanakoBackupActivity extends UniversalFragment {
         showDialog(dialog, d -> {
             clear(first);
             clear(second);
-            if (!handled[0]) {
-                handled[0] = true;
-                callback.onCancel();
-            }
         });
         dialog.setCanceledOnTouchOutside(false);
         first.requestFocus();

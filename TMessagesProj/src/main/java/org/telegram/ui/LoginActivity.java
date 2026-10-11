@@ -2498,7 +2498,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             }
 
             if (activityMode == MODE_LOGIN) bottomMargin -= it.belloworld.mercurygram.MgQrLogin.addButton(this, LoginActivity.this, currentAccount);
-            if (activityMode == MODE_LOGIN) bottomMargin -= it.belloworld.mercurygram.HanakoBackup.addLoginButton(this, LoginActivity.this); // hanako: restore a full backup
+            if (activityMode == MODE_LOGIN) bottomMargin -= it.belloworld.mercurygram.HanakoBackup.addLoginButton(this, LoginActivity.this); // hanako: restore a session backup
 
             if (bottomMargin > 0 && !AndroidUtilities.isSmallScreen()) {
                 Space bottomSpacer = new Space(context);

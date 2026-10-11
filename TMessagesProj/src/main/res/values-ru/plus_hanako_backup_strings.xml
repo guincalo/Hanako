@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- hanako: Backup &amp; export (settings, encrypted account backup, chat export) -->
+<!-- hanako: Backup &amp; export (encrypted session backup, chat export) -->
 <resources>
     <string name="HanakoBackupTitle">Резервная копия и экспорт</string>
-    <string name="HanakoBackupFullHeader">Полная резервная копия</string>
-    <string name="HanakoBackupCreate">Создать полную копию</string>
-    <string name="HanakoBackupRestore">Восстановить из копии</string>
-    <string name="HanakoBackupFullInfo">Переносит вошедшие аккаунты и настройки Hanako на новую установку, другой пакет или телефон без повторного входа. Файл шифруется выбранным вами паролем.</string>
-    <string name="HanakoBackupSettingsHeader">Настройки</string>
-    <string name="HanakoBackupExportSettings">Экспортировать настройки</string>
-    <string name="HanakoBackupImportSettings">Импортировать настройки</string>
-    <string name="HanakoBackupSettingsInfo">Параметры Hanako в виде JSON-файла. Без сообщений и данных входа. Списки чатов (блокировки, исключения, фильтры) добавляются, только если отметить их.</string>
+    <string name="HanakoBackupFullHeader">Сеансы</string>
+    <string name="HanakoBackupCreate">Сохранить сеансы</string>
+    <string name="HanakoBackupRestore">Восстановить сеансы</string>
+    <string name="HanakoBackupFullInfo">Переносит входы в аккаунты на новую установку, другой пакет или телефон без повторного входа. Только входы: без настроек и сообщений, скрытые аккаунты не сохраняются никогда. Файл шифруется выбранным вами паролем.</string>
     <string name="HanakoBackupChatHeader">Экспорт чата</string>
     <string name="HanakoBackupExportChat">Экспортировать чат</string>
     <string name="HanakoBackupChatInfo">Сохраняет историю одного чата в HTML и/или JSON (формат Telegram Desktop) вместе с выбранными медиа. Работает в фоне с уведомлением; прерванный экспорт продолжить нельзя.</string>
@@ -24,14 +20,12 @@
     <string name="HanakoBackupPasswordEnter">Введите пароль, с которым была создана копия.</string>
     <string name="HanakoBackupPasswordMismatch">Пароли не совпадают</string>
     <string name="HanakoBackupWrongPassword">Неверный пароль или файл повреждён</string>
-    <string name="HanakoBackupSettingsSaved">Настройки экспортированы</string>
     <string name="HanakoBackupRestartNow">Перезапустить</string>
     <string name="HanakoBackupRestoreTitle">Восстановление аккаунтов</string>
     <string name="HanakoBackupRestoreOldDevice">Не выходите из аккаунта на старом телефоне: удалите там Hanako или очистите данные (выход там завершит и этот сеанс). Кэш здесь создаётся заново, секретные чаты не переносятся.</string>
     <string name="HanakoBackupRestoreAction">Восстановить выбранное</string>
     <string name="HanakoBackupNoSlots">Нет свободных мест для этих аккаунтов.</string>
     <string name="HanakoBackupAccountNew">новый на этом телефоне</string>
-    <string name="HanakoBackupAccountReplace">уже здесь: заменит сеанс на этом телефоне</string>
     <string name="HanakoBackupAccountSkipExisting">уже вошли здесь, пропуск</string>
     <string name="HanakoBackupAccountNoSlot">нет свободного слота, пропуск</string>
     <string name="HanakoChatExportTitle">Экспорт чата</string>

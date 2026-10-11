@@ -21,13 +21,13 @@ import org.telegram.ui.Components.LayoutHelper;
 
 /**
  * hanako: "confirm it's you" in front of actions that copy or rewrite private data
- * (full backup, settings import / restore, export of per-chat lists, chat export).
+ * (session backup and restore, chat export).
  *
  * <p>Uses the same biometric prompt as Chat lock, but always allows the device screen lock.
  * When the device has neither, Telegram's own passcode is asked instead if one is set, with the
  * same growing wait after wrong tries as Telegram's passcode screen. With no way to verify
  * anything, most actions go ahead after a one-time warning (the person holding the phone could
- * set a screen lock themselves), but a full backup is refused: it copies the login sessions.
+ * set a screen lock themselves), but a session backup is refused: it copies the logins.
  *
  * <p>A success is remembered for two minutes so one flow (for example Create backup, then the
  * file picker) asks only once. It never stands in for Chat lock: a locked chat always asks
@@ -63,7 +63,7 @@ public final class HanakoAuthGate {
 
     /**
      * @param failClosed refuse when the phone has no screen lock and no Telegram passcode
-     *                   (full backup), instead of going ahead after a warning
+     *                   (session backup), instead of going ahead after a warning
      */
     public static void require(BaseFragment fragment, CharSequence subtitle, boolean failClosed, Runnable onSuccess) {
         if (onSuccess == null) {

@@ -10,20 +10,19 @@ Telegram/Mercurygram base it is built on.
 ### Security
 - Release APKs are now signed with a private Hanako key instead of Telegram's public in-repo key,
   so nobody else can build an APK that installs as a Hanako update. **The signing key changed:**
-  uninstall the old Hanako and install the new APK (make a full backup first, restore it after).
+  uninstall the old Hanako and install the new APK (back up your sessions first, restore them after).
 
 ### Added
 - **Backup & export** (Settings → Mercurygram → Backup & export):
-  - Export / import all Hanako and Mercurygram settings as a JSON file. Import validates the file,
-    then restarts the app to apply it.
-  - Encrypted full backup of every logged-in account (session + settings) to move to a new install,
-    package or phone without logging in again. Password-protected (PBKDF2-HMAC-SHA256, AES-256-GCM).
-    Restore from the same screen or from the login screen ("Restore from Hanako backup").
+  - Encrypted backup of the sessions of every logged-in account, to move them to a new install,
+    package or phone without logging in again. Only the logins: no settings or messages. Password-
+    protected (PBKDF2-HMAC-SHA256, AES-256-GCM). Restore from the same screen or from the login
+    screen ("Restore from Hanako backup"); accounts already signed in are left as they are.
   - Chat export like Telegram Desktop: pick a chat (or use the chat's ⋮ menu), a date range, which
     media to include and a size limit, and get messages.html and/or result.json plus media folders
     in a folder you choose. Runs in the background with a progress notification.
-  - Backup, settings import and chat export ask you to confirm it's you first; hidden accounts are
-    left out unless you add them while signed in to one.
+  - Backup, restore and chat export ask you to confirm it's you first; hidden accounts are never
+    backed up.
 - **Hanako settings** are now a short list of sections with their current state, and their pages
   can be found from Settings search (page level).
 - A one-time notice after login explains ghost mode and the other privacy defaults.
@@ -40,10 +39,9 @@ Telegram/Mercurygram base it is built on.
   so they stay with the account after a restore into another slot.
 - Restoring a backup changes each account only once its new session is safely in place; a restore
   that isn't finished within 30 minutes is dropped instead of applied later in the background.
-- A full backup needs a screen lock or a Telegram passcode; the passcode check waits longer after
+- A session backup needs a screen lock or a Telegram passcode; the passcode check waits longer after
   wrong tries, like Telegram's own lock screen. A locked chat always asks Chat lock itself.
 - Backup passwords need at least 12 characters.
-- Shareable settings exports only carry switches and numbers (no Tor bridges, URLs or keys).
 - Chat export: fixes for Android 15's time limit, slow networks and long exports (expired file
   references are refreshed), no chat title in the notification for hidden accounts, locked chats
   or streamer mode, and a notification permission request.

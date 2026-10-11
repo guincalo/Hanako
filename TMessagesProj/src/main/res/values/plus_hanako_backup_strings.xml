@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- hanako: Backup &amp; export (settings, encrypted account backup, chat export) -->
+<!-- hanako: Backup &amp; export (encrypted session backup, chat export) -->
 <resources>
     <string name="HanakoBackupTitle">Backup &amp; export</string>
-    <string name="HanakoBackupFullHeader">Full backup</string>
-    <string name="HanakoBackupCreate">Create full backup</string>
-    <string name="HanakoBackupRestore">Restore full backup</string>
-    <string name="HanakoBackupFullInfo">Moves your logged-in accounts and Hanako settings to a new install, package or phone without logging in again. The file is encrypted with a password you choose.</string>
-    <string name="HanakoBackupSettingsHeader">Settings</string>
-    <string name="HanakoBackupExportSettings">Export settings</string>
-    <string name="HanakoBackupImportSettings">Import settings</string>
-    <string name="HanakoBackupSettingsInfo">Hanako options as a JSON file. Doesn\'t include messages or logins. Per-chat lists (locked chats, exceptions, filters) are only added if you tick them.</string>
+    <string name="HanakoBackupFullHeader">Sessions</string>
+    <string name="HanakoBackupCreate">Back up sessions</string>
+    <string name="HanakoBackupRestore">Restore sessions</string>
+    <string name="HanakoBackupFullInfo">Moves the logins of your accounts to a new install, package or phone without logging in again. Only the logins: no settings or messages, and hidden accounts are never included. The file is encrypted with a password you choose.</string>
     <string name="HanakoBackupChatHeader">Chat export</string>
     <string name="HanakoBackupExportChat">Export a chat</string>
     <string name="HanakoBackupChatInfo">Saves one chat\'s history as HTML and/or JSON (Telegram Desktop format), with the media you choose. It runs in the background with a notification; an interrupted export can\'t be resumed.</string>
@@ -24,14 +20,12 @@
     <string name="HanakoBackupPasswordEnter">Enter the password this backup was created with.</string>
     <string name="HanakoBackupPasswordMismatch">The passwords don\'t match</string>
     <string name="HanakoBackupWrongPassword">Wrong password, or the file is damaged</string>
-    <string name="HanakoBackupSettingsSaved">Settings exported</string>
     <string name="HanakoBackupRestartNow">Restart now</string>
     <string name="HanakoBackupRestoreTitle">Restore accounts</string>
     <string name="HanakoBackupRestoreOldDevice">Don\'t log out on the old phone: uninstall Hanako there or clear its data instead (logging out there ends this session too). The cache is rebuilt here, and secret chats don\'t move.</string>
     <string name="HanakoBackupRestoreAction">Restore selected</string>
     <string name="HanakoBackupNoSlots">No free account slot left for these accounts.</string>
     <string name="HanakoBackupAccountNew">new on this phone</string>
-    <string name="HanakoBackupAccountReplace">logged in here: replaces the session on this phone</string>
     <string name="HanakoBackupAccountSkipExisting">already logged in here, skipped</string>
     <string name="HanakoBackupAccountNoSlot">no free slot, skipped</string>
     <string name="HanakoChatExportTitle">Export chat</string>
