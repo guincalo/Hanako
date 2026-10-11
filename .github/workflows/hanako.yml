@@ -183,8 +183,8 @@ jobs:
           name-infix: '-plus'
           build-tag: ${{ steps.prep.outputs.tag }}
           # Telegram's official public Android keys (DrKLO BuildVars.java)
-          app-id: '4'
-          app-hash: '014b35b6184100b085b0d0572f9b5103'
+          app-id: '105810'
+          app-hash: '3e7a52498eec003c5896a330e5d29397'
           # always the public debug key; the private key is applied by the next step
           release-keystore-b64: ${{ steps.prep.outputs.ks }}
           release-keystore-password: 'android'
