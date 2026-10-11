@@ -148,10 +148,6 @@ public final class HanakoChatExport {
         return cancelled.get();
     }
 
-    public Uri getExportDir() {
-        return exportDir;
-    }
-
     public long getDialogId() {
         return options.dialogId;
     }

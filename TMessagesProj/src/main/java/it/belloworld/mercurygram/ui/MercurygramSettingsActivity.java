@@ -98,7 +98,6 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     private static final int ID_F07_OPEN_LOG = 701;
     private static final int ID_F07_KEEP_REACTIONS = 702;
     private static final int ID_PLUS_PLUGINS = 1100; // plus f11
-    private static final int ID_HANAKO_BACKUP = 7300; // hanako: backup & export
     // plus f20: saved deleted-media browser (ids 2000-2099)
     private static final int ID_F20_OPEN = 2000;
     private static final int ID_F20_CHAT_MENU = 2001;
@@ -702,10 +701,6 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         // plus f08 end
         if (item.id == ID_PLUS_PLUGINS) { // plus f11
             presentFragment(new PlusPluginsActivity());
-            return;
-        }
-        if (item.id == ID_HANAKO_BACKUP) { // hanako: backup & export
-            presentFragment(new HanakoBackupActivity());
             return;
         }
         // plus f12 begin
