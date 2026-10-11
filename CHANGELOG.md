@@ -7,6 +7,8 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-11
+
 ### Security
 - Release APKs are now signed with a private Hanako key instead of Telegram's public in-repo key,
   so nobody else can build an APK that installs as a Hanako update. **The signing key changed:**
@@ -27,6 +29,10 @@ Telegram/Mercurygram base it is built on.
   can be found from Settings search (page level).
 - A one-time notice after login explains ghost mode and the other privacy defaults.
 - A streamer-mode indicator in the chat list.
+- **Rin**, a built-in dark theme next to Day and Night under Color theme, also offered for auto
+  night mode.
+- Translate: offline language detection, so "Do not translate" and same-language hiding work
+  without Google services. The Translate button is now on by default.
 
 - Optional **usage statistics** for whoever runs a build (off by default, Settings → Hanako →
   Device and data → Usage statistics): daily feature counts and scrubbed crash/error reports, sent
@@ -46,6 +52,10 @@ Telegram/Mercurygram base it is built on.
   references are refreshed), no chat title in the notification for hidden accounts, locked chats
   or streamer mode, and a notification permission request.
 - New launcher icon, readable at small sizes.
+- **Deleted media** looks like a stock Telegram media screen: grouped by chat and day under a
+  sticky header, photos and videos as a thumbnail grid with sender, time, duration and view-once
+  badges, files and voice messages as rows with sender, time and size, total size in the title,
+  and a proper empty state. Tap a chat's header to see only that chat.
 - Tor settings are hidden: Mercurygram's Tor plugin only works with apps signed by Mercurygram.
 
 ## [1.1.0] - 2026-10-09
@@ -133,7 +143,8 @@ First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
 ### Other
 - Telegram Premium upsells and promo rows hidden; upstream Mercurygram update checks disabled.
 
-[Unreleased]: https://github.com/guincalo/Hanako/compare/v1.1.0...hanako
+[Unreleased]: https://github.com/guincalo/Hanako/compare/v1.2.0...hanako
+[1.2.0]: https://github.com/guincalo/Hanako/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/guincalo/Hanako/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/guincalo/Hanako/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/guincalo/Hanako/releases/tag/v1.0.0
