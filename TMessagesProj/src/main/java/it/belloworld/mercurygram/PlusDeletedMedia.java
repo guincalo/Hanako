@@ -97,6 +97,8 @@ public final class PlusDeletedMedia {
         public final File thumb;
         public final String displayName;
         public final String mime;
+        /** File size in bytes, read once when the list loads (off the UI thread). */
+        public final long size;
         /** Built off the UI thread; null when the viewer cannot show this item. */
         public MessageObject viewerObject;
 
@@ -110,6 +112,7 @@ public final class PlusDeletedMedia {
             this.thumb = thumb;
             this.displayName = displayName;
             this.mime = mime;
+            this.size = file.length();
         }
 
         public TLRPC.Document document() {

@@ -4,6 +4,11 @@
     <string name="PlusF20Title">Deleted media</string>
     <string name="PlusF20AllChats">All chats</string>
     <string name="PlusF20Empty">No saved media yet. Media from deleted messages shows up here while Saved message history is on.</string>
+    <string name="PlusF20EmptyTitle">Nothing saved yet</string>
+    <string name="PlusF20EmptyFilteredTitle">Nothing here</string>
+    <string name="PlusF20EmptyFiltered">No saved media matches this filter. Pick another type or chat in the ⋮ menu.</string>
+    <string name="PlusF20CountSize">%1$d saved · %2$s</string>
+    <string name="PlusF20DetailFrom">From</string>
     <string name="PlusF20FilterAll">All media</string>
     <string name="PlusF20FilterPhotos">Photos</string>
     <string name="PlusF20FilterVideos">Videos and GIFs</string>

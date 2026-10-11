@@ -310,6 +310,11 @@
     <string name="PlusF20Title">Удалённые медиа</string>
     <string name="PlusF20AllChats">Все чаты</string>
     <string name="PlusF20Empty">Сохранённых медиа пока нет. Медиа из удалённых сообщений появляются здесь, пока включена история сообщений.</string>
+    <string name="PlusF20EmptyTitle">Пока ничего нет</string>
+    <string name="PlusF20EmptyFilteredTitle">Здесь пусто</string>
+    <string name="PlusF20EmptyFiltered">Под этот фильтр ничего не подходит. Выберите другой тип или чат в меню ⋮.</string>
+    <string name="PlusF20CountSize">%1$d шт. · %2$s</string>
+    <string name="PlusF20DetailFrom">От</string>
     <string name="PlusF20FilterAll">Все медиа</string>
     <string name="PlusF20FilterPhotos">Фото</string>
     <string name="PlusF20FilterVideos">Видео и GIF</string>

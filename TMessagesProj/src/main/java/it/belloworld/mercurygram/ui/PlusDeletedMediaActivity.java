@@ -2,13 +2,19 @@ package it.belloworld.mercurygram.ui;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -16,11 +22,17 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.DialogObject;
+import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
+import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
+import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
+import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
@@ -28,23 +40,30 @@ import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Cells.GraySectionCell;
+import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.RadialProgressView;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.PhotoViewer;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 import it.belloworld.mercurygram.PlusDeletedMedia;
 
 /**
- * plus f20: grid of media saved from deleted (and expired view-once) messages,
- * for one chat or for every chat of the account. Tap opens the in-app viewer
- * (photos, videos, GIFs) or another app (files); long-press offers save to
- * gallery / Downloads, share, details and delete. Local only: no request is
- * ever sent to Telegram from this screen.
+ * plus f20: media saved from deleted (and expired view-once) messages, for one chat or for
+ * every chat of the account. Photos and videos are a thumbnail grid, files / voice / music are
+ * rich rows; everything is grouped by chat (all-chats view) and by day, under a sticky header.
+ * Tap opens the in-app viewer (photos, videos, GIFs) or another app (files); long-press offers
+ * save to gallery / Downloads, share, details and delete. Local only: no request is ever sent
+ * to Telegram from this screen.
  */
 public class PlusDeletedMediaActivity extends BaseFragment {
 
@@ -57,19 +76,46 @@ public class PlusDeletedMediaActivity extends BaseFragment {
     private static final int MENU_CHATS = 2015;
     private static final int MENU_DELETE_SHOWN = 2016;
 
+    private static final int ROW_CHAT = 0;
+    private static final int ROW_SECTION = 1;
+    private static final int ROW_TILE = 2;
+    private static final int ROW_FILE = 3;
+
     /** Fixed chat when opened from a chat's menu; 0 = global browser. */
     private final long fixedDialogId;
     private long chatFilter;
     private int typeFilter;
 
     private final ArrayList<PlusDeletedMedia.Item> allItems = new ArrayList<>();
+    /** Shown items in display order (also the viewer's paging order). */
     private final ArrayList<PlusDeletedMedia.Item> shown = new ArrayList<>();
+    private final ArrayList<Row> rows = new ArrayList<>();
     private boolean loading;
+    private long shownSize;
 
     private RecyclerListView listView;
     private GridLayoutManager layoutManager;
-    private GridAdapter adapter;
-    private TextView emptyView;
+    private ListAdapter adapter;
+    private LinearLayout emptyView;
+    private TextView emptyTitle;
+    private TextView emptyText;
+    private ImageView emptyIcon;
+    private RadialProgressView progressView;
+    private GraySectionCell pinnedHeader;
+
+    private static final class Row {
+        final int type;
+        PlusDeletedMedia.Item item;
+        long dialogId;
+        CharSequence title;
+        CharSequence info;
+        /** Text the sticky header shows while this row is the first one on screen. */
+        CharSequence sticky;
+
+        Row(int type) {
+            this.type = type;
+        }
+    }
 
     public PlusDeletedMediaActivity(long dialogId) {
         this.fixedDialogId = dialogId;
@@ -91,7 +137,9 @@ public class PlusDeletedMediaActivity extends BaseFragment {
             @Override
             public void onItemClick(int id) {
                 if (id == -1) {
-                    finishFragment();
+                    if (onBackPressed(true)) {
+                        finishFragment();
+                    }
                 } else if (id == MENU_TYPE_ALL) {
                     setTypeFilter(0);
                 } else if (id == MENU_TYPE_PHOTO) {
@@ -122,27 +170,110 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         frame.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         fragmentView = frame;
 
-        emptyView = new TextView(context);
-        emptyView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-        emptyView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        // ---- empty state: icon in a soft circle, title, explanation ----
+        emptyView = new LinearLayout(context);
+        emptyView.setOrientation(LinearLayout.VERTICAL);
         emptyView.setGravity(Gravity.CENTER);
-        emptyView.setPadding(AndroidUtilities.dp(24), 0, AndroidUtilities.dp(24), 0);
+        emptyView.setPadding(AndroidUtilities.dp(32), 0, AndroidUtilities.dp(32), AndroidUtilities.dp(48));
+
+        emptyIcon = new ImageView(context);
+        emptyIcon.setScaleType(ImageView.ScaleType.CENTER);
+        emptyIcon.setImageResource(R.drawable.msg_media);
+        emptyIcon.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText), PorterDuff.Mode.SRC_IN));
+        emptyIcon.setScaleX(1.5f);
+        emptyIcon.setScaleY(1.5f);
+        FrameLayout iconCircle = new FrameLayout(context);
+        iconCircle.setBackground(Theme.createCircleDrawable(AndroidUtilities.dp(80),
+                Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText), 0.12f)));
+        iconCircle.addView(emptyIcon, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        emptyView.addView(iconCircle, LayoutHelper.createLinear(80, 80, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16));
+
+        emptyTitle = new TextView(context);
+        emptyTitle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        emptyTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 17);
+        emptyTitle.setTypeface(AndroidUtilities.bold());
+        emptyTitle.setGravity(Gravity.CENTER);
+        emptyView.addView(emptyTitle, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 8));
+
+        emptyText = new TextView(context);
+        emptyText.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        emptyText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        emptyText.setGravity(Gravity.CENTER);
+        emptyText.setLineSpacing(AndroidUtilities.dp(2), 1f);
+        emptyView.addView(emptyText, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 0));
         frame.addView(emptyView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
+        progressView = new RadialProgressView(context);
+        progressView.setProgressColor(Theme.getColor(Theme.key_featuredStickers_addButton));
+        frame.addView(progressView, LayoutHelper.createFrame(48, 48, Gravity.CENTER));
+
+        // ---- list: grid tiles for photos/videos, full-width rows for the rest ----
         listView = new RecyclerListView(context);
         layoutManager = new GridLayoutManager(context, spanCount());
+        layoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+            @Override
+            public int getSpanSize(int position) {
+                if (position >= 0 && position < rows.size() && rows.get(position).type == ROW_TILE) {
+                    return 1;
+                }
+                return layoutManager.getSpanCount();
+            }
+        });
         listView.setLayoutManager(layoutManager);
-        listView.setAdapter(adapter = new GridAdapter(context));
-        listView.setEmptyView(emptyView);
-        listView.setOnItemClickListener((view, position) -> openItem(position));
+        listView.setVerticalScrollBarEnabled(true);
+        listView.setAdapter(adapter = new ListAdapter(context));
+        listView.setOnItemClickListener((view, position) -> {
+            Row row = rowAt(position);
+            if (row == null) {
+                return;
+            }
+            if (row.type == ROW_CHAT) {
+                chatFilter = row.dialogId;
+                applyFilters();
+                listView.scrollToPosition(0);
+            } else if (row.item != null) {
+                openItem(row.item);
+            }
+        });
         listView.setOnItemLongClickListener((view, position) -> {
-            showItemMenu(position);
+            Row row = rowAt(position);
+            if (row == null || row.item == null) {
+                return false;
+            }
+            showItemMenu(row.item);
             return true;
+        });
+        listView.setOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                updatePinnedHeader();
+            }
         });
         frame.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
+        pinnedHeader = new GraySectionCell(context);
+        pinnedHeader.setVisibility(View.GONE);
+        frame.addView(pinnedHeader, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.LEFT));
+
         updateHeader();
         return fragmentView;
+    }
+
+    @Override
+    public boolean onBackPressed(boolean invoked) {
+        // In the all-chats browser, a chat picked from its header goes back to all chats first.
+        if (fixedDialogId == 0 && chatFilter != 0) {
+            if (invoked) {
+                chatFilter = 0;
+                applyFilters();
+            }
+            return false;
+        }
+        return super.onBackPressed(invoked);
+    }
+
+    private Row rowAt(int position) {
+        return position >= 0 && position < rows.size() ? rows.get(position) : null;
     }
 
     private static int spanCount() {
@@ -181,8 +312,25 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         applyFilters();
     }
 
+    // ---- ordering and grouping ----
+
+    private static long timeOf(PlusDeletedMedia.Item item) {
+        TLRPC.Message m = item.entry.message;
+        return m != null && m.date != 0 ? m.date * 1000L : item.entry.whenMs;
+    }
+
+    private static int dayKey(Calendar calendar, long ms) {
+        calendar.setTimeInMillis(ms);
+        return calendar.get(Calendar.YEAR) * 1000 + calendar.get(Calendar.DAY_OF_YEAR);
+    }
+
+    private String countAndSize(int count, long size) {
+        return LocaleController.formatString(R.string.PlusF20CountSize, count, AndroidUtilities.formatFileSize(size));
+    }
+
     private void applyFilters() {
         shown.clear();
+        shownSize = 0;
         for (int i = 0; i < allItems.size(); i++) {
             PlusDeletedMedia.Item item = allItems.get(i);
             if (chatFilter != 0 && item.entry.dialogId != chatFilter) {
@@ -192,11 +340,131 @@ public class PlusDeletedMediaActivity extends BaseFragment {
                 continue;
             }
             shown.add(item);
+            shownSize += item.size;
+        }
+        final boolean groupByChat = chatFilter == 0;
+        // chats ordered by their newest item, items newest first inside a chat
+        final HashMap<Long, Long> newestOfChat = new HashMap<>();
+        final HashMap<Long, int[]> countOfChat = new HashMap<>();
+        final HashMap<Long, long[]> sizeOfChat = new HashMap<>();
+        for (int i = 0; i < shown.size(); i++) {
+            PlusDeletedMedia.Item item = shown.get(i);
+            long did = item.entry.dialogId;
+            long t = timeOf(item);
+            Long newest = newestOfChat.get(did);
+            if (newest == null || t > newest) {
+                newestOfChat.put(did, t);
+            }
+            int[] c = countOfChat.get(did);
+            if (c == null) {
+                countOfChat.put(did, c = new int[1]);
+            }
+            c[0]++;
+            long[] s = sizeOfChat.get(did);
+            if (s == null) {
+                sizeOfChat.put(did, s = new long[1]);
+            }
+            s[0] += item.size;
+        }
+        Collections.sort(shown, (a, b) -> {
+            if (groupByChat && a.entry.dialogId != b.entry.dialogId) {
+                int byChat = Long.compare(newestOfChat.get(b.entry.dialogId), newestOfChat.get(a.entry.dialogId));
+                return byChat != 0 ? byChat : Long.compare(a.entry.dialogId, b.entry.dialogId);
+            }
+            return Long.compare(timeOf(b), timeOf(a));
+        });
+
+        rows.clear();
+        Calendar calendar = Calendar.getInstance();
+        long lastDialog = Long.MIN_VALUE;
+        int lastDay = -1;
+        String chatName = null;
+        // per-day totals, filled after the section row is added
+        Row section = null;
+        int sectionCount = 0;
+        long sectionSize = 0;
+        for (int i = 0; i < shown.size(); i++) {
+            PlusDeletedMedia.Item item = shown.get(i);
+            long did = item.entry.dialogId;
+            long t = timeOf(item);
+            int day = dayKey(calendar, t);
+            boolean newChat = groupByChat && did != lastDialog;
+            if (newChat) {
+                if (section != null) {
+                    section.info = countAndSize(sectionCount, sectionSize);
+                    section = null;
+                }
+                chatName = PlusDeletedMedia.chatTitle(currentAccount, did);
+                Row chat = new Row(ROW_CHAT);
+                chat.dialogId = did;
+                chat.title = chatName;
+                chat.info = countAndSize(countOfChat.get(did)[0], sizeOfChat.get(did)[0]);
+                chat.sticky = chatName;
+                rows.add(chat);
+                lastDialog = did;
+                lastDay = -1;
+            }
+            if (day != lastDay) {
+                if (section != null) {
+                    section.info = countAndSize(sectionCount, sectionSize);
+                }
+                section = new Row(ROW_SECTION);
+                section.title = LocaleController.formatDateChat(t / 1000L);
+                section.sticky = groupByChat ? chatName + " · " + section.title : section.title;
+                rows.add(section);
+                sectionCount = 0;
+                sectionSize = 0;
+                lastDay = day;
+            }
+            Row row = new Row(item.category == PlusDeletedMedia.CAT_FILE ? ROW_FILE : ROW_TILE);
+            row.item = item;
+            row.sticky = section.sticky;
+            rows.add(row);
+            sectionCount++;
+            sectionSize += item.size;
+        }
+        if (section != null) {
+            section.info = countAndSize(sectionCount, sectionSize);
         }
         if (adapter != null) {
             adapter.notifyDataSetChanged();
         }
         updateHeader();
+        if (listView != null) {
+            listView.post(this::updatePinnedHeader);
+        }
+    }
+
+    /** Sticky header: the current chat / day stays on top, pushed up by the next one. */
+    private void updatePinnedHeader() {
+        if (pinnedHeader == null || listView == null || layoutManager == null) {
+            return;
+        }
+        int first = layoutManager.findFirstVisibleItemPosition();
+        Row row = rowAt(first);
+        View firstView = first >= 0 ? layoutManager.findViewByPosition(first) : null;
+        if (row == null || firstView == null || (first == 0 && firstView.getTop() >= 0) || row.sticky == null) {
+            pinnedHeader.setVisibility(View.GONE);
+            return;
+        }
+        if (!TextUtils.equals(pinnedHeader.getText(), row.sticky)) {
+            pinnedHeader.setText(row.sticky);
+        }
+        pinnedHeader.setVisibility(View.VISIBLE);
+        int height = pinnedHeader.getMeasuredHeight() > 0 ? pinnedHeader.getMeasuredHeight() : AndroidUtilities.dp(32);
+        float offset = 0;
+        for (int i = 0; i < listView.getChildCount(); i++) {
+            View child = listView.getChildAt(i);
+            int pos = listView.getChildAdapterPosition(child);
+            Row r = rowAt(pos);
+            if (pos > first && r != null && (r.type == ROW_SECTION || r.type == ROW_CHAT)) {
+                int top = child.getTop();
+                if (top < height && top > 0) {
+                    offset = Math.min(offset, top - height);
+                }
+            }
+        }
+        pinnedHeader.setTranslationY(offset);
     }
 
     private void updateHeader() {
@@ -221,21 +489,27 @@ public class PlusDeletedMediaActivity extends BaseFragment {
                 type = null;
         }
         String subtitle = loading ? LocaleController.getString(R.string.Loading)
-                : scope + (type != null ? " · " + type : "") + " · " + shown.size();
+                : scope + (type != null ? " · " + type : "") + " · " + countAndSize(shown.size(), shownSize);
         actionBar.setSubtitle(subtitle);
         if (emptyView != null) {
-            emptyView.setText(loading ? LocaleController.getString(R.string.Loading)
-                    : LocaleController.getString(R.string.PlusF20Empty));
+            boolean filtered = typeFilter != 0 || (chatFilter != 0 && fixedDialogId == 0);
+            emptyTitle.setText(LocaleController.getString(filtered ? R.string.PlusF20EmptyFilteredTitle : R.string.PlusF20EmptyTitle));
+            emptyText.setText(LocaleController.getString(filtered ? R.string.PlusF20EmptyFiltered : R.string.PlusF20Empty));
+            emptyView.setVisibility(!loading && shown.isEmpty() ? View.VISIBLE : View.GONE);
+            progressView.setVisibility(loading ? View.VISIBLE : View.GONE);
+            listView.setVisibility(!loading && !shown.isEmpty() ? View.VISIBLE : View.GONE);
+            if (shown.isEmpty() && pinnedHeader != null) {
+                pinnedHeader.setVisibility(View.GONE);
+            }
         }
     }
 
     // ---- actions ----
 
-    private void openItem(int position) {
-        if (position < 0 || position >= shown.size() || getParentActivity() == null) {
+    private void openItem(PlusDeletedMedia.Item item) {
+        if (item == null || getParentActivity() == null) {
             return;
         }
-        PlusDeletedMedia.Item item = shown.get(position);
         if (!item.opensInViewer()) {
             PlusDeletedMedia.openExternal(getParentActivity(), item);
             return;
@@ -256,11 +530,10 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         PhotoViewer.getInstance().openPhoto(objects, index, 0, 0, 0, new PhotoViewer.EmptyPhotoViewerProvider());
     }
 
-    private void showItemMenu(int position) {
-        if (position < 0 || position >= shown.size() || getParentActivity() == null) {
+    private void showItemMenu(final PlusDeletedMedia.Item item) {
+        if (item == null || getParentActivity() == null) {
             return;
         }
-        final PlusDeletedMedia.Item item = shown.get(position);
         CharSequence save = LocaleController.getString(item.category == PlusDeletedMedia.CAT_FILE
                 ? R.string.PlusF20SaveDownloads : R.string.PlusF20SaveGallery);
         CharSequence[] labels = {
@@ -277,7 +550,7 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         builder.setItems(labels, icons, (dialog, which) -> {
             switch (which) {
                 case 0:
-                    openItem(position);
+                    openItem(item);
                     break;
                 case 1:
                     exportItem(item);
@@ -331,6 +604,11 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         StringBuilder sb = new StringBuilder();
         sb.append(LocaleController.getString(R.string.PlusF20DetailChat)).append(": ")
                 .append(PlusDeletedMedia.chatTitle(currentAccount, item.entry.dialogId)).append('\n');
+        String sender = senderName(currentAccount, item);
+        if (sender != null) {
+            sb.append(LocaleController.getString(R.string.PlusF20DetailFrom)).append(": ")
+                    .append(sender).append('\n');
+        }
         sb.append(LocaleController.getString(R.string.PlusF20DetailOrigin)).append(": ")
                 .append(LocaleController.getString(originRes)).append('\n');
         TLRPC.Message m = item.entry.message;
@@ -384,15 +662,9 @@ public class PlusDeletedMediaActivity extends BaseFragment {
     }
 
     private void removeItem(PlusDeletedMedia.Item item) {
-        allItems.remove(item);
-        int idx = shown.indexOf(item);
-        if (idx >= 0) {
-            shown.remove(idx);
-            if (adapter != null) {
-                adapter.notifyItemRemoved(idx);
-            }
+        if (allItems.remove(item)) {
+            applyFilters();
         }
-        updateHeader();
     }
 
     private void showChatPicker() {
@@ -423,45 +695,196 @@ public class PlusDeletedMediaActivity extends BaseFragment {
                 .show();
     }
 
-    // ---- grid ----
+    // ---- labels ----
 
-    private class GridAdapter extends RecyclerListView.SelectionAdapter {
+    /** Who sent the message, from memory only; "You" for own messages, null for channel posts. */
+    static String senderName(int account, PlusDeletedMedia.Item item) {
+        TLRPC.Message m = item.entry.message;
+        if (m == null) {
+            return null;
+        }
+        if (m.out) {
+            return LocaleController.getString(R.string.FromYou);
+        }
+        long from = MessageObject.getFromChatId(m);
+        if (from == 0 && DialogObject.isUserDialog(item.entry.dialogId)) {
+            from = item.entry.dialogId;
+        }
+        if (from == 0) {
+            return null;
+        }
+        if (from == UserConfig.getInstance(account).getClientUserId()) {
+            return LocaleController.getString(R.string.FromYou);
+        }
+        if (from > 0) {
+            TLRPC.User user = MessagesController.getInstance(account).getUser(from);
+            return user != null ? UserObject.getFirstName(user) : null;
+        }
+        if (from == item.entry.dialogId) {
+            return null; // the channel / group itself: its title is already the header
+        }
+        return PlusDeletedMedia.chatTitle(account, from);
+    }
+
+    private static String timeText(PlusDeletedMedia.Item item) {
+        return LocaleController.getInstance().getFormatterDay().format(timeOf(item));
+    }
+
+    // ---- list ----
+
+    private class ListAdapter extends RecyclerListView.SelectionAdapter {
         private final Context context;
 
-        GridAdapter(Context context) {
+        ListAdapter(Context context) {
             this.context = context;
         }
 
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
-            return true;
+            return holder.getItemViewType() != ROW_SECTION;
         }
 
         @Override
         public int getItemCount() {
-            return shown.size();
+            return rows.size();
+        }
+
+        @Override
+        public int getItemViewType(int position) {
+            Row row = rowAt(position);
+            return row != null ? row.type : ROW_SECTION;
         }
 
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            Tile tile = new Tile(context);
-            tile.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            View view;
+            switch (viewType) {
+                case ROW_CHAT:
+                    view = new ChatHeaderCell(context);
+                    break;
+                case ROW_TILE:
+                    view = new Tile(context);
+                    break;
+                case ROW_FILE:
+                    view = new FileCell(context);
+                    break;
+                default:
+                    view = new GraySectionCell(context);
+                    break;
+            }
+            view.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT));
-            return new RecyclerListView.Holder(tile);
+            return new RecyclerListView.Holder(view);
         }
 
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
-            if (position >= 0 && position < shown.size()) {
-                ((Tile) holder.itemView).bind(shown.get(position));
+            Row row = rowAt(position);
+            if (row == null) {
+                return;
+            }
+            switch (row.type) {
+                case ROW_CHAT:
+                    ((ChatHeaderCell) holder.itemView).bind(currentAccount, row);
+                    break;
+                case ROW_TILE:
+                    ((Tile) holder.itemView).bind(currentAccount, row.item);
+                    break;
+                case ROW_FILE: {
+                    Row next = rowAt(position + 1);
+                    ((FileCell) holder.itemView).bind(currentAccount, row.item, next != null && next.type == ROW_FILE);
+                    break;
+                }
+                default:
+                    ((GraySectionCell) holder.itemView).setText(row.title, row.info, null);
+                    break;
             }
         }
     }
 
+    /** Chat group header (all-chats view): avatar, title, "N saved · size". Tap = only this chat. */
+    private static class ChatHeaderCell extends FrameLayout {
+        private final BackupImageView avatar;
+        private final TextView title;
+        private final TextView info;
+        private final ImageView arrow;
+        private final AvatarDrawable avatarDrawable = new AvatarDrawable();
+
+        ChatHeaderCell(Context context) {
+            super(context);
+            setBackground(Theme.getSelectorDrawable(false));
+            boolean rtl = LocaleController.isRTL;
+
+            avatar = new BackupImageView(context);
+            avatar.setRoundRadius(AndroidUtilities.dp(18));
+            addView(avatar, LayoutHelper.createFrame(36, 36, (rtl ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL, rtl ? 0 : 16, 0, rtl ? 16 : 0, 0));
+
+            title = new TextView(context);
+            title.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            title.setTypeface(AndroidUtilities.bold());
+            title.setSingleLine(true);
+            title.setEllipsize(TextUtils.TruncateAt.END);
+            title.setGravity(rtl ? Gravity.RIGHT : Gravity.LEFT);
+            addView(title, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (rtl ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, rtl ? 44 : 64, 9, rtl ? 64 : 44, 0));
+
+            info = new TextView(context);
+            info.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+            info.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            info.setSingleLine(true);
+            info.setEllipsize(TextUtils.TruncateAt.END);
+            info.setGravity(rtl ? Gravity.RIGHT : Gravity.LEFT);
+            addView(info, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (rtl ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, rtl ? 44 : 64, 31, rtl ? 64 : 44, 0));
+
+            arrow = new ImageView(context);
+            arrow.setScaleType(ImageView.ScaleType.CENTER);
+            arrow.setImageResource(R.drawable.msg_arrowright);
+            arrow.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.SRC_IN));
+            if (rtl) {
+                arrow.setScaleX(-1f);
+            }
+            addView(arrow, LayoutHelper.createFrame(24, 24, (rtl ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 16, 0, 16, 0));
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(56), MeasureSpec.EXACTLY));
+        }
+
+        void bind(int account, Row row) {
+            title.setText(row.title);
+            info.setText(row.info);
+            long did = row.dialogId;
+            MessagesController mc = MessagesController.getInstance(account);
+            TLObject peer = null;
+            if (DialogObject.isEncryptedDialog(did)) {
+                TLRPC.EncryptedChat ec = mc.getEncryptedChat(DialogObject.getEncryptedChatId(did));
+                peer = ec != null ? mc.getUser(ec.user_id) : null;
+            } else if (DialogObject.isUserDialog(did)) {
+                peer = mc.getUser(did);
+            } else {
+                peer = mc.getChat(-did);
+            }
+            if (peer != null) {
+                avatarDrawable.setInfo(account, peer);
+                avatar.setForUserOrChat(peer, avatarDrawable);
+            } else {
+                avatarDrawable.setInfo(did, row.title != null ? row.title.toString() : "", null);
+                avatar.setImageDrawable(avatarDrawable);
+            }
+        }
+    }
+
+    /** Square grid tile: thumbnail, duration / GIF / view-once badges, sender and time strip. */
     private static class Tile extends FrameLayout {
         private final BackupImageView image;
         private final TextView name;
-        private final TextView badge;
+        private final TextView duration;
+        private final TextView once;
+        private final View shade;
+        private final TextView sender;
+        private final TextView time;
         private PlusDeletedMedia.Item bound;
 
         Tile(Context context) {
@@ -473,7 +896,7 @@ public class PlusDeletedMediaActivity extends BaseFragment {
             addView(inner, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
             name = new TextView(context);
-            name.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            name.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
             name.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
             name.setGravity(Gravity.CENTER);
             name.setMaxLines(3);
@@ -485,13 +908,47 @@ public class PlusDeletedMediaActivity extends BaseFragment {
             image.getImageReceiver().setAllowStartAnimation(false);
             inner.addView(image, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
-            badge = new TextView(context);
-            badge.setTextColor(0xffffffff);
-            badge.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
-            badge.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(4), 0x99000000));
-            badge.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(1), AndroidUtilities.dp(4), AndroidUtilities.dp(1));
-            inner.addView(badge, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT,
-                    Gravity.RIGHT | Gravity.BOTTOM, 0, 0, 4, 4));
+            // media overlays are white on a dark scrim in stock Telegram, in every theme
+            shade = new View(context);
+            shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
+                    new int[]{0x99000000, 0x00000000}));
+            inner.addView(shade, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 30, Gravity.BOTTOM));
+
+            sender = new TextView(context);
+            sender.setTextColor(0xffffffff);
+            sender.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+            sender.setSingleLine(true);
+            sender.setEllipsize(TextUtils.TruncateAt.END);
+            inner.addView(sender, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT,
+                    Gravity.LEFT | Gravity.BOTTOM, 5, 0, 42, 3));
+
+            time = new TextView(context);
+            time.setTextColor(0xffffffff);
+            time.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+            time.setSingleLine(true);
+            inner.addView(time, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT,
+                    Gravity.RIGHT | Gravity.BOTTOM, 0, 0, 5, 3));
+
+            duration = new TextView(context);
+            duration.setTextColor(0xffffffff);
+            duration.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+            duration.setTypeface(AndroidUtilities.bold());
+            duration.setGravity(Gravity.CENTER_VERTICAL);
+            duration.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(4), 0x66000000));
+            duration.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(1), AndroidUtilities.dp(5), AndroidUtilities.dp(1));
+            duration.setCompoundDrawablePadding(AndroidUtilities.dp(2));
+            inner.addView(duration, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT,
+                    Gravity.RIGHT | Gravity.TOP, 0, 4, 4, 0));
+
+            once = new TextView(context);
+            once.setTextColor(0xffffffff);
+            once.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+            once.setTypeface(AndroidUtilities.bold());
+            once.setText("1×");
+            once.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(9), Theme.getColor(Theme.key_featuredStickers_addButton)));
+            once.setPadding(AndroidUtilities.dp(6), AndroidUtilities.dp(1), AndroidUtilities.dp(6), AndroidUtilities.dp(1));
+            inner.addView(once, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT,
+                    Gravity.LEFT | Gravity.TOP, 4, 4, 0, 0));
         }
 
         @Override
@@ -501,7 +958,7 @@ public class PlusDeletedMediaActivity extends BaseFragment {
                     MeasureSpec.makeMeasureSpec(w, MeasureSpec.EXACTLY));
         }
 
-        void bind(PlusDeletedMedia.Item item) {
+        void bind(int account, PlusDeletedMedia.Item item) {
             bound = item;
             image.setImageDrawable(null);
             String preview = item.previewPath();
@@ -524,23 +981,157 @@ public class PlusDeletedMediaActivity extends BaseFragment {
             } else {
                 name.setText(item.displayName);
             }
-            String badgeText = null;
+
+            String durationText = null;
+            boolean play = false;
             TLRPC.Document doc = item.document();
             if (item.category == PlusDeletedMedia.CAT_VIDEO && doc != null) {
                 if (MessageObject.isGifDocument(doc)) {
-                    badgeText = "GIF";
+                    durationText = LocaleController.getString(R.string.AttachGif);
                 } else {
-                    int duration = (int) Math.round(MessageObject.getDocumentDuration(doc));
-                    badgeText = AndroidUtilities.formatShortDuration(duration);
+                    int seconds = (int) Math.round(MessageObject.getDocumentDuration(doc));
+                    durationText = AndroidUtilities.formatShortDuration(seconds);
+                    play = true;
                 }
-            } else if (item.category == PlusDeletedMedia.CAT_FILE) {
-                badgeText = AndroidUtilities.formatFileSize(item.file.length());
+            }
+            duration.setText(durationText);
+            duration.setCompoundDrawablesWithIntrinsicBounds(play ? R.drawable.play_mini_video : 0, 0, 0, 0);
+            duration.setVisibility(durationText != null ? View.VISIBLE : View.GONE);
+            once.setVisibility(item.origin == PlusDeletedMedia.ORIGIN_VIEW_ONCE ? View.VISIBLE : View.GONE);
+
+            String from = senderName(account, item);
+            sender.setText(from);
+            sender.setVisibility(from != null ? View.VISIBLE : View.GONE);
+            time.setText(timeText(item));
+        }
+    }
+
+    /** Full-width row for files, voice and music: type icon or thumbnail, name, details line. */
+    private static class FileCell extends FrameLayout {
+        private final FrameLayout iconFrame;
+        private final BackupImageView thumb;
+        private final ImageView icon;
+        private final TextView ext;
+        private final TextView title;
+        private final TextView info;
+        private boolean divider;
+
+        FileCell(Context context) {
+            super(context);
+            setWillNotDraw(false);
+            setBackground(Theme.getSelectorDrawable(false));
+            boolean rtl = LocaleController.isRTL;
+
+            iconFrame = new FrameLayout(context);
+            addView(iconFrame, LayoutHelper.createFrame(44, 44, (rtl ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL, rtl ? 0 : 14, 0, rtl ? 14 : 0, 0));
+
+            thumb = new BackupImageView(context);
+            thumb.setRoundRadius(AndroidUtilities.dp(6));
+            iconFrame.addView(thumb, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
+            icon = new ImageView(context);
+            icon.setScaleType(ImageView.ScaleType.CENTER);
+            iconFrame.addView(icon, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
+            ext = new TextView(context);
+            ext.setTextColor(Theme.getColor(Theme.key_files_iconText));
+            ext.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            ext.setTypeface(AndroidUtilities.bold());
+            ext.setSingleLine(true);
+            ext.setEllipsize(TextUtils.TruncateAt.END);
+            ext.setGravity(Gravity.CENTER);
+            iconFrame.addView(ext, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 3, 0, 3, 5));
+
+            title = new TextView(context);
+            title.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            title.setSingleLine(true);
+            title.setEllipsize(TextUtils.TruncateAt.MIDDLE);
+            title.setGravity(rtl ? Gravity.RIGHT : Gravity.LEFT);
+            addView(title, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (rtl ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, rtl ? 16 : 72, 10, rtl ? 72 : 16, 0));
+
+            info = new TextView(context);
+            info.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+            info.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            info.setSingleLine(true);
+            info.setEllipsize(TextUtils.TruncateAt.END);
+            info.setGravity(rtl ? Gravity.RIGHT : Gravity.LEFT);
+            addView(info, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, (rtl ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, rtl ? 16 : 72, 34, rtl ? 72 : 16, 0));
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(60), MeasureSpec.EXACTLY));
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (divider && Theme.dividerPaint != null) {
+                int inset = AndroidUtilities.dp(72);
+                if (LocaleController.isRTL) {
+                    canvas.drawLine(0, getMeasuredHeight() - 1, getMeasuredWidth() - inset, getMeasuredHeight() - 1, Theme.dividerPaint);
+                } else {
+                    canvas.drawLine(inset, getMeasuredHeight() - 1, getMeasuredWidth(), getMeasuredHeight() - 1, Theme.dividerPaint);
+                }
+            }
+        }
+
+        void bind(int account, PlusDeletedMedia.Item item, boolean divider) {
+            this.divider = divider;
+            TLRPC.Document doc = item.document();
+            boolean voice = doc != null && MessageObject.isVoiceDocument(doc);
+            boolean music = doc != null && !voice && MessageObject.isMusicDocument(doc);
+
+            String preview = item.previewPath();
+            thumb.setImageDrawable(null);
+            icon.setImageDrawable(null);
+            icon.setBackground(null);
+            ext.setText(null);
+            if (voice || music) {
+                icon.setBackground(Theme.createCircleDrawable(AndroidUtilities.dp(44), Theme.getColor(Theme.key_featuredStickers_addButton)));
+                icon.setImageResource(voice ? R.drawable.msg_filled_data_voice : R.drawable.msg_filled_data_music);
+                icon.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_featuredStickers_buttonText), PorterDuff.Mode.SRC_IN));
+            } else if (preview != null) {
+                icon.clearColorFilter();
+                thumb.setImage(ImageLocation.getForPath(preview), "88_88", (Drawable) null, null);
+            } else {
+                icon.clearColorFilter();
+                icon.setImageResource(AndroidUtilities.getThumbForNameOrMime(item.displayName, item.mime, false));
+                String e = FileLoader.getFileExtension(item.file);
+                ext.setText(e != null ? e.toLowerCase() : null);
+            }
+
+            String name;
+            if (voice) {
+                name = LocaleController.getString(R.string.AttachAudio);
+            } else if (music) {
+                String t = MessageObject.getMusicTitle(doc, false);
+                String p = MessageObject.getMusicAuthor(doc, false);
+                name = !TextUtils.isEmpty(p) && !TextUtils.isEmpty(t) ? p + " – " + t : item.displayName;
+            } else {
+                name = item.displayName;
+            }
+            title.setText(name);
+
+            StringBuilder sb = new StringBuilder();
+            String from = senderName(account, item);
+            if (from != null) {
+                sb.append(from).append(" · ");
+            }
+            sb.append(timeText(item)).append(" · ").append(AndroidUtilities.formatFileSize(item.size));
+            if ((voice || music) && doc != null) {
+                int seconds = (int) Math.round(MessageObject.getDocumentDuration(doc));
+                if (seconds > 0) {
+                    sb.append(" · ").append(AndroidUtilities.formatShortDuration(seconds));
+                }
             }
             if (item.origin == PlusDeletedMedia.ORIGIN_VIEW_ONCE) {
-                badgeText = badgeText == null ? "1×" : "1× · " + badgeText;
+                sb.append(" · 1×");
             }
-            badge.setText(badgeText);
-            badge.setVisibility(badgeText != null ? View.VISIBLE : View.GONE);
+            info.setText(sb);
+            invalidate();
         }
     }
 }
