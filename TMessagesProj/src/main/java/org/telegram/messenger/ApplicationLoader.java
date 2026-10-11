@@ -339,6 +339,8 @@ public class ApplicationLoader extends Application {
         // hanako: apply a staged session restore before anything reads the
         // account configs or the native ConnectionsManager opens tgnet.dat
         it.belloworld.mercurygram.HanakoBackup.applyPendingAtStartup(applicationContext);
+        // hanako: custom api_id / api_hash, before the native ConnectionsManager reads BuildVars.APP_ID
+        it.belloworld.mercurygram.HanakoApiConfig.applyAtStartup(applicationContext);
         it.belloworld.mercurygram.HanakoTelemetry.init(); // hanako: crash hook + daily upload (off by default)
 
         NativeLoader.initNativeLibs(ApplicationLoader.applicationContext);

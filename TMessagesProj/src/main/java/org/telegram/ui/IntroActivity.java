@@ -389,6 +389,15 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
             destroyed = true;
         });
 
+        // hanako: long-press opens the App API ID screen before any account signs in
+        startMessagingButton.setOnLongClickListener(view -> {
+            if (startPressed) {
+                return false;
+            }
+            presentFragment(new it.belloworld.mercurygram.ui.HanakoApiActivity());
+            return true;
+        });
+
         bottomPages = new BottomPagesView(context, viewPager, 6);
         frameContainerView.addView(bottomPages, LayoutHelper.createFrame(66, 5, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, ICON_HEIGHT_DP + 200, 0, 0));
 
