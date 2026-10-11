@@ -42,8 +42,9 @@ public class HanakoChatExportService extends Service {
     private static final String ACTION_CANCEL = "moe.hanako.chatexport.CANCEL";
     private static final long WAKELOCK_MS = 6L * 60 * 60 * 1000;
 
-    private static HanakoChatExport running;
-    private static HanakoChatExport.Progress lastProgress;
+    // written by the export's worker thread (onProgress / onFinished), read on the UI thread
+    private static volatile HanakoChatExport running;
+    private static volatile HanakoChatExport.Progress lastProgress;
     private static String chatTitle;
     /** The title is never shown for a hidden account or a locked chat (see notifTitle). */
     private static boolean titlePrivate;
