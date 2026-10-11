@@ -128,7 +128,7 @@ jobs:
           HAS_KEY: ${{ secrets.HANAKO_KEYSTORE_B64 != '' }}
           # refs whose builds may carry the private key (A-17): tags plus these branches.
           # Any other branch (a manual run included) gets the public debug key.
-          SIGN_REFS: 'refs/heads/hanako refs/heads/plus refs/heads/feature/backup'
+          SIGN_REFS: 'refs/heads/hanako refs/heads/plus refs/heads/release/1.2.0'
         run: |
           set -euo pipefail
           APP_VN=$(grep '^APP_VERSION_NAME=' gradle.properties | cut -d= -f2)
@@ -182,7 +182,7 @@ jobs:
           artifact-version: ${{ steps.prep.outputs.tag }}
           name-infix: '-plus'
           build-tag: ${{ steps.prep.outputs.tag }}
-          # Telegram's official public Android keys (DrKLO BuildVars.java)
+          # Goregram's public API id/hash (not Telegram's published official id 4)
           app-id: '105810'
           app-hash: '3e7a52498eec003c5896a330e5d29397'
           # always the public debug key; the private key is applied by the next step
