@@ -106,6 +106,28 @@ public final class HanakoApiConfig {
         activeId = id;
     }
 
+    /**
+     * Called by each account's ConnectionsManager right after native init. tgnet re-sends
+     * initConnection (which carries api_id) only when its persisted lastInitVersion is stale (app
+     * version, system language or temp key change), so a new api_id alone would not reach the
+     * server for an account that is already signed in, nor for a session restored from a backup
+     * made under another api_id. When the identity this account last started with differs (or
+     * is unknown), rotate the temp auth keys once: that resets lastInitVersion, so the next
+     * request is wrapped in initConnection with the active api_id. The perm key is untouched.
+     */
+    public static void afterNativeInit(org.telegram.tgnet.ConnectionsManager cm, int account, long userId) {
+        try {
+            String signature = activeId + ":" + BuildVars.APP_HASH + ":" + userId;
+            SharedPreferences p = prefs(null);
+            String key = "inited_" + account;
+            if (signature.equals(p.getString(key, null))) return;
+            p.edit().putString(key, signature).apply();
+            if (userId != 0) cm.rotateTempAuthKeys();
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+    }
+
     public static boolean isValidId(int id) {
         return id > 0;
     }

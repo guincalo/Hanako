@@ -261,6 +261,7 @@ public class ConnectionsManager extends BaseController {
             userPremium = getUserConfig().getCurrentUser().premium;
         }
         init(SharedConfig.buildVersion(), TLRPC.LAYER, BuildVars.APP_ID, deviceModel, systemVersion, appVersion, langCode, systemLangCode, configPath, FileLog.getNetworkLogPath(), pushString, fingerprint, timezoneOffset, getUserConfig().getClientUserId(), userPremium, enablePushConnection);
+        it.belloworld.mercurygram.HanakoApiConfig.afterNativeInit(this, currentAccount, getUserConfig().getClientUserId()); // hanako: push a changed api_id to the server
     }
 
     private String getRegId() {
