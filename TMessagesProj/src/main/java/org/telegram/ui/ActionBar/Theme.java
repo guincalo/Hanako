@@ -1647,7 +1647,7 @@ public class Theme {
             if (isDark != UNKNOWN) {
                 return isDark == DARK;
             }
-            if ("Dark Blue".equals(name) || "Night".equals(name) || "Monet Dark".equals(name) || "Monet AMOLED".equals(name)) {
+            if ("Dark Blue".equals(name) || "Night".equals(name) || "Monet Dark".equals(name) || "Monet AMOLED".equals(name) || "Rin".equals(name)) { // hanako: Rin
                 isDark = DARK;
             } else if ("Blue".equals(name) || "Arctic Blue".equals(name) || "Day".equals(name) || "Monet Light".equals(name)) {
                 isDark = LIGHT;
@@ -4010,6 +4010,17 @@ public class Theme {
         sortAccents(themeInfo);
         themes.add(themeInfo);
         themesDict.put("Night", themeInfo);
+
+        // hanako: built-in dark theme "Rin" (assets/rin.attheme)
+        themeInfo = new ThemeInfo();
+        themeInfo.name = "Rin";
+        themeInfo.assetName = "rin.attheme";
+        themeInfo.previewBackgroundColor = 0xff121011;
+        themeInfo.previewInColor = 0xff242022;
+        themeInfo.previewOutColor = 0xff7a2832;
+        themeInfo.sortIndex = 9;
+        themes.add(themeInfo);
+        themesDict.put("Rin", themeInfo);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             themeInfo = new ThemeInfo();
