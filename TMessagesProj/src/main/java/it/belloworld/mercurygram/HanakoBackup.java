@@ -594,6 +594,11 @@ public final class HanakoBackup {
             File f = new File(target, name);
             if (f.exists() && !f.delete()) Log.w(TAG, "cannot delete " + name);
         }
+        // before the "user" key signs the slot in, so a crash in between can't leave the
+        // restored account hidden by a stale marker or given the old slot owner's settings
+        ctx.getSharedPreferences(HIDDEN_PREFS, Context.MODE_PRIVATE).edit()
+                .remove(HIDDEN_HASH_PREFIX + slot).remove(HIDDEN_SALT_PREFIX + slot).commit();
+        dropSlotKeys(ctx, slot);
         // slot 0's file also holds global keys; logout already cleared its account keys
         SharedPreferences.Editor e = sp.edit();
         if (slot != 0) e.clear();
@@ -601,10 +606,6 @@ public final class HanakoBackup {
             live.delete();
             throw new IOException("cannot write account config");
         }
-        // a stale hidden marker on the slot must not hide the restored account
-        ctx.getSharedPreferences(HIDDEN_PREFS, Context.MODE_PRIVATE).edit()
-                .remove(HIDDEN_HASH_PREFIX + slot).remove(HIDDEN_SALT_PREFIX + slot).commit();
-        dropSlotKeys(ctx, slot);
     }
 
     /*
