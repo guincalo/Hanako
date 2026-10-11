@@ -904,6 +904,8 @@ public class TranslateController extends BaseController {
     private ArrayList<Integer> pendingLanguageChecks = new ArrayList<>();
     private void checkLanguage(MessageObject messageObject) {
         if (!LanguageDetector.hasSupport()) {
+            // Hanako: unreachable now that LanguageDetector is backed by
+            // OfflineLanguageDetector (hasSupport() == true); kept as the fallback.
             // Mercurygram: MLKit removed (LanguageDetector stub returns false). All four
             // dispatch engines (Telegram RPC, Alternative HTTP, offline AIDL) auto-detect
             // the source language internally, so we don't need a per-message language to
@@ -963,6 +965,7 @@ public class TranslateController extends BaseController {
                 messageObject.messageOwner.originalLanguage = UNKNOWN_LANGUAGE;
                 getMessagesStorage().updateMessageCustomParams(dialogId, messageObject.messageOwner);
                 pendingLanguageChecks.remove((Integer) hash);
+                checkDialogTranslatable(messageObject); // hanako: count it as unknown, like a null detection
             }));
         });
     }

@@ -324,7 +324,7 @@ public class TranslateAlert3 extends BottomSheetWithRecyclerListView {
 
         adapter.itemsOffset = 1;
         adapter.whiteSectionStart();
-        items.add(Header.Factory.of(3, "", from_lang != null ? capitalFirst(languageName(from_lang)) : getString(R.string.AIEditorOriginalText), null, null));
+        items.add(Header.Factory.of(3, "", from_lang != null && !TranslateController.UNKNOWN_LANGUAGE.equals(from_lang) ? capitalFirst(languageName(from_lang)) : getString(R.string.AIEditorOriginalText), null, null));
         items.add(Text.Factory.of(4, text, collapsed, noforwards, view -> {
             collapsed = false;
             saveScrollPosition();

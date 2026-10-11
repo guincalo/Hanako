@@ -32119,7 +32119,7 @@ public class ChatActivity extends BaseFragment implements
                             String fromLang = selectedObject.messageOwner.originalLanguage;
                             cell.setVisibility(
                                 fromLang != null && (!fromLang.equals(toLang) || !fromLang.equals(toLangDefault) || fromLang.equals(TranslateController.UNKNOWN_LANGUAGE)) && (
-                                    translateEnabled && !RestrictedLanguagesSelectActivity.getRestrictedLanguages().contains(fromLang) ||
+                                    (translateEnabled || encrypted) && !RestrictedLanguagesSelectActivity.getRestrictedLanguages().contains(fromLang) ||
                                     (currentChat != null && (currentChat.has_link || ChatObject.isPublic(currentChat)) || selectedObject.messageOwner.fwd_from != null) && ("uk".equals(fromLang) || "ru".equals(fromLang))
                                 ) ? View.VISIBLE : View.GONE
                             );
@@ -32162,7 +32162,7 @@ public class ChatActivity extends BaseFragment implements
                                 (String lang) -> {
                                     fromLang[0] = lang;
                                     if (fromLang[0] != null && (!fromLang[0].equals(toLang) || !fromLang[0].equals(toLangDefault) || fromLang[0].equals(TranslateController.UNKNOWN_LANGUAGE)) && (
-                                        translateEnabled && !RestrictedLanguagesSelectActivity.getRestrictedLanguages().contains(fromLang[0]) ||
+                                        (translateEnabled || encrypted) && !RestrictedLanguagesSelectActivity.getRestrictedLanguages().contains(fromLang[0]) ||
                                         (currentChat != null && (currentChat.has_link || ChatObject.isPublic(currentChat)) || selectedObject.messageOwner.fwd_from != null) && ("uk".equals(fromLang[0]) || "ru".equals(fromLang[0]))
                                     )) {
                                         cell.setVisibility(View.VISIBLE);
@@ -32174,7 +32174,13 @@ public class ChatActivity extends BaseFragment implements
                                     }
                                 },
                                 (Exception e) -> {
-                                    FileLog.e("mlkit: failed to detect language in message");
+                                    FileLog.e("hanako: failed to detect language in message");
+                                    // Hanako: detection failing must never hide Translate;
+                                    // fall back to "und" (provider auto-detects the source).
+                                    fromLang[0] = TranslateController.UNKNOWN_LANGUAGE;
+                                    if (translateEnabled || encrypted) {
+                                        cell.setVisibility(View.VISIBLE);
+                                    }
                                     waitForLangDetection.set(false);
                                     if (onLangDetectionDone.get() != null) {
                                         onLangDetectionDone.get().run();
