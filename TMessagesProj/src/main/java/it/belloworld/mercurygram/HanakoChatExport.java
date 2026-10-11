@@ -1008,6 +1008,7 @@ public final class HanakoChatExport {
         }
         try (OutputStream os = resolver.openOutputStream(out, "w")) {
             if (os == null) {
+                DocumentsContract.deleteDocument(resolver, out); // no empty file left in the export
                 failedCount++;
                 return FAILED;
             }
@@ -1060,6 +1061,7 @@ public final class HanakoChatExport {
         boolean ok = false;
         try (OutputStream os = resolver.openOutputStream(out, "w")) {
             if (os == null) {
+                DocumentsContract.deleteDocument(resolver, out); // no empty file left in the export
                 failedCount++;
                 return FAILED;
             }
