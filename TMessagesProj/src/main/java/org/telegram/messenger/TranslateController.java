@@ -119,7 +119,10 @@ public class TranslateController extends BaseController {
             return false;
         }
         if (contextTranslateEnabled == null) {
-            contextTranslateEnabled = messagesController.getMainSettings().getBoolean("translate_button", MessagesController.getGlobalMainSettings().getBoolean("translate_button", false));
+            // Hanako: default ON (stock: false). With it off, OPTION_TRANSLATE is set
+            // GONE in the message menu for every language, so a fresh install never
+            // shows Translate. An explicit user choice (stored value) still wins.
+            contextTranslateEnabled = messagesController.getMainSettings().getBoolean("translate_button", MessagesController.getGlobalMainSettings().getBoolean("translate_button", true));
         }
         return contextTranslateEnabled;
     }
