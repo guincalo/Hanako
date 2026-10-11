@@ -103,7 +103,7 @@
     <string name="HanakoBackupSkippedAccounts_other">%1$d accounts couldn\'t be included: their login data couldn\'t be read. Log in to them normally on the new phone.</string>
     <string name="HanakoTelemetryTitle">Usage statistics</string>
     <string name="HanakoTelemetryEnable">Send usage statistics</string>
-    <string name="HanakoTelemetryInfo">Off by default. When on, Hanako counts per day which of its features are used, and keeps crash and error reports (error type, code location, app and Android version, phone model), to send to the address below once a day. Never message text, names, usernames, phone numbers, chat or user IDs, titles, file names or contacts. Turning it off deletes what wasn\'t sent.</string>
+    <string name="HanakoTelemetryInfo">Off by default. When on, Hanako counts per day which of its features are used, and keeps crash and error reports (error type, code location, app and Android version, phone model), to send once a day. Never message text, names, usernames, phone numbers, chat or user IDs, titles, file names or contacts. Turning it off deletes what wasn\'t sent.</string>
     <string name="HanakoTelemetryEndpoint">Upload address</string>
     <string name="HanakoTelemetryEndpointHint">https://example.org/hanako-telemetry</string>
     <string name="HanakoTelemetryEndpointNone">None</string>
@@ -124,4 +124,7 @@
     <string name="HanakoTelemetryLastResult">Last upload: %1$s</string>
     <string name="HanakoTelemetryResultOk">sent</string>
     <string name="HanakoTelemetryResultProxy">not sent, the proxy can\'t carry it</string>
+    <string name="HanakoTelemetryDevHeader">Developer options</string>
+    <string name="HanakoTelemetryDevShown">Developer options shown</string>
+    <string name="HanakoTelemetryDevHidden">Developer options hidden</string>
 </resources>

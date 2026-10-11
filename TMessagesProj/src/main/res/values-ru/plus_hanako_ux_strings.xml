@@ -117,7 +117,7 @@
     <string name="HanakoBackupSkippedAccounts_other">%1$d аккаунта не вошли в копию: их данные входа не удалось прочитать. Войдите в них на новом телефоне обычным способом.</string>
     <string name="HanakoTelemetryTitle">Статистика использования</string>
     <string name="HanakoTelemetryEnable">Отправлять статистику</string>
-    <string name="HanakoTelemetryInfo">По умолчанию выключено. Если включить, Hanako считает по дням, какие её функции используются, и сохраняет отчёты о сбоях и ошибках (тип ошибки, место в коде, версии приложения и Android, модель телефона), чтобы раз в день отправлять их по адресу ниже. Никогда — текст сообщений, имена, юзернеймы, номера телефонов, ID чатов и пользователей, названия, имена файлов и контакты. При выключении неотправленное удаляется.</string>
+    <string name="HanakoTelemetryInfo">По умолчанию выключено. Если включить, Hanako считает по дням, какие её функции используются, и сохраняет отчёты о сбоях и ошибках (тип ошибки, место в коде, версии приложения и Android, модель телефона), чтобы раз в день отправлять их. Никогда — текст сообщений, имена, юзернеймы, номера телефонов, ID чатов и пользователей, названия, имена файлов и контакты. При выключении неотправленное удаляется.</string>
     <string name="HanakoTelemetryEndpoint">Адрес отправки</string>
     <string name="HanakoTelemetryEndpointHint">https://example.org/hanako-telemetry</string>
     <string name="HanakoTelemetryEndpointNone">Нет</string>
@@ -138,4 +138,7 @@
     <string name="HanakoTelemetryLastResult">Последняя отправка: %1$s</string>
     <string name="HanakoTelemetryResultOk">отправлено</string>
     <string name="HanakoTelemetryResultProxy">не отправлено, прокси не подходит</string>
+    <string name="HanakoTelemetryDevHeader">Для разработчиков</string>
+    <string name="HanakoTelemetryDevShown">Параметры для разработчиков показаны</string>
+    <string name="HanakoTelemetryDevHidden">Параметры для разработчиков скрыты</string>
 </resources>

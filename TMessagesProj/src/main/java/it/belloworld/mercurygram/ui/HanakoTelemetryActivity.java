@@ -1,7 +1,10 @@
 /*
- * hanako: Settings > Hanako > Usage statistics. Off by default. The switch, where uploads go
- * (empty = never), the receiver's key, a preview of exactly what would be sent, send now, and
- * a new random install id. See HanakoTelemetry for what is (and is never) collected.
+ * hanako: Settings > Hanako > Usage statistics. Off by default. Normal users see the switch,
+ * a preview of exactly what would be sent and the last upload result. Long-pressing the switch
+ * shows (or hides) developer options for this app session only: where uploads go (empty =
+ * never; release builds may carry a built-in default), the receiver's key, send now, delete
+ * collected data and a new random install id. See HanakoTelemetry for what is (and is never)
+ * collected.
  */
 package it.belloworld.mercurygram.ui;
 
@@ -41,6 +44,9 @@ public class HanakoTelemetryActivity extends UniversalFragment {
     private static final int ID_RESET_ID = 6;
     private static final int ID_CLEAR = 7;
 
+    /** Developer options visible; kept in memory only, so it resets when the app process ends. */
+    private static boolean devOptions;
+
     @Override
     protected CharSequence getTitle() {
         return LocaleController.getString(R.string.HanakoTelemetryTitle);
@@ -52,22 +58,24 @@ public class HanakoTelemetryActivity extends UniversalFragment {
         items.add(UItem.asCheck(ID_ENABLED, LocaleController.getString(R.string.HanakoTelemetryEnable)).setChecked(on));
         items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoTelemetryInfo)));
 
+        items.add(UItem.asButton(ID_VIEW, LocaleController.getString(R.string.HanakoTelemetryView)));
+        String last = HanakoTelemetry.lastResult;
+        items.add(UItem.asShadow(TextUtils.isEmpty(last) ? null
+                : LocaleController.formatString(R.string.HanakoTelemetryLastResult, resultText(last))));
+
+        if (!devOptions) return;
+        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoTelemetryDevHeader)));
         String endpoint = HanakoTelemetry.getEndpoint();
         items.add(UItem.asButton(ID_ENDPOINT, LocaleController.getString(R.string.HanakoTelemetryEndpoint),
                 TextUtils.isEmpty(endpoint) ? LocaleController.getString(R.string.HanakoTelemetryEndpointNone) : shortHost(endpoint)));
         items.add(UItem.asButton(ID_KEY, LocaleController.getString(R.string.HanakoTelemetryKey),
                 LocaleController.getString(HanakoTelemetry.hasUploadKey() ? R.string.HanakoTelemetryKeySet : R.string.HanakoTelemetryKeyNotSet)));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoTelemetryEndpointInfo)));
-
-        items.add(UItem.asButton(ID_VIEW, LocaleController.getString(R.string.HanakoTelemetryView)));
         if (on && !TextUtils.isEmpty(endpoint)) {
             items.add(UItem.asButton(ID_SEND_NOW, LocaleController.getString(R.string.HanakoTelemetrySendNow)));
         }
         items.add(UItem.asButton(ID_CLEAR, LocaleController.getString(R.string.HanakoTelemetryClear)));
         items.add(UItem.asButton(ID_RESET_ID, LocaleController.getString(R.string.HanakoTelemetryResetId)));
-        String last = HanakoTelemetry.lastResult;
-        items.add(UItem.asShadow(TextUtils.isEmpty(last) ? null
-                : LocaleController.formatString(R.string.HanakoTelemetryLastResult, resultText(last))));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoTelemetryEndpointInfo)));
     }
 
     private static String shortHost(String url) {
@@ -123,7 +131,11 @@ public class HanakoTelemetryActivity extends UniversalFragment {
 
     @Override
     protected boolean onLongClick(UItem item, View view, int position, float x, float y) {
-        return false;
+        if (item.id != ID_ENABLED) return false;
+        devOptions = !devOptions;
+        toast(LocaleController.getString(devOptions ? R.string.HanakoTelemetryDevShown : R.string.HanakoTelemetryDevHidden));
+        refresh();
+        return true;
     }
 
     private void refresh() {

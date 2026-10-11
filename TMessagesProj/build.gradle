@@ -116,6 +116,11 @@ def getAppId() {
     properties.load(new FileInputStream("./API_KEYS"))
     return properties.get("APP_ID")
 }
+// hanako: an environment variable as a Java string literal ("" when unset)
+def hanakoEnvString(String name) {
+    def v = (System.getenv(name) ?: '').trim()
+    return '"' + v.replace('\\', '\\\\').replace('"', '\\"') + '"'
+}
 def getAppHash() {
     Properties properties = new Properties()
     properties.load(new FileInputStream("./API_KEYS"))
@@ -205,6 +210,10 @@ android {
 
         buildConfigField "int", "APP_ID", getAppId()
         buildConfigField "String", "APP_HASH", getAppHash()
+        // hanako: default telemetry upload address/key, only used while the user hasn't set their own.
+        // Fed by CI secrets HANAKO_TELEMETRY_ENDPOINT / HANAKO_TELEMETRY_KEY; empty (= never upload) otherwise.
+        buildConfigField "String", "HANAKO_TELEMETRY_ENDPOINT", hanakoEnvString('HANAKO_TELEMETRY_ENDPOINT')
+        buildConfigField "String", "HANAKO_TELEMETRY_KEY", hanakoEnvString('HANAKO_TELEMETRY_KEY')
     }
 
     buildTypes {

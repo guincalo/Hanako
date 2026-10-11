@@ -9,6 +9,7 @@ import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.BaseFragment;
@@ -135,8 +136,12 @@ public final class HanakoTelemetry {
         if (!value) clearPending();
     }
 
+    /** The address set in developer options; if none was ever set, the build's default (CI secret, may be empty). */
     public static String getEndpoint() {
-        return prefs().getString(KEY_ENDPOINT, "");
+        SharedPreferences p = prefs();
+        if (p.contains(KEY_ENDPOINT)) return p.getString(KEY_ENDPOINT, "");
+        String d = BuildConfig.HANAKO_TELEMETRY_ENDPOINT;
+        return d != null && d.startsWith("https://") && d.length() <= 300 ? d : "";
     }
 
     /** Only https:// URLs are kept; anything else clears the endpoint (= never upload). */
@@ -148,7 +153,15 @@ public final class HanakoTelemetry {
     }
 
     public static boolean hasUploadKey() {
-        return !TextUtils.isEmpty(prefs().getString(KEY_SECRET, ""));
+        return !TextUtils.isEmpty(uploadKey());
+    }
+
+    /** The key set in developer options; if none was ever set, the build's default (CI secret, may be empty). */
+    private static String uploadKey() {
+        SharedPreferences p = prefs();
+        if (p.contains(KEY_SECRET)) return p.getString(KEY_SECRET, "");
+        String d = BuildConfig.HANAKO_TELEMETRY_KEY;
+        return d == null ? "" : d;
     }
 
     /** The receiver's shared secret, sent as the X-Hanako-Key header. Never shown or exported. */
@@ -515,7 +528,7 @@ public final class HanakoTelemetry {
             c.setRequestMethod("POST");
             c.setRequestProperty("Content-Type", "application/json");
             c.setRequestProperty("User-Agent", "Hanako");
-            String key = prefs().getString(KEY_SECRET, "");
+            String key = uploadKey();
             if (!key.isEmpty()) c.setRequestProperty("X-Hanako-Key", key);
             c.setFixedLengthStreamingMode(body.length);
             try (OutputStream out = c.getOutputStream()) {
