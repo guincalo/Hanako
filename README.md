@@ -137,6 +137,23 @@ and live under **Settings → Hanako**.
   messages, change how messages are displayed, or cancel requests by name. Code plugins (dex/jar/apk)
   run Java inside the app with full access and are disabled unless you explicitly allow them.
 
+### Backup & export
+
+- **Session backup**: an encrypted, password-protected backup of the logins of every signed-in
+  account, to move them to a new install or phone without logging in again (no settings or
+  messages). Restore from **Settings → Hanako → Backup & export** or from the login screen.
+- **Chat export** in Telegram Desktop's format (messages.html and/or result.json plus media), with
+  a date range, media types and a size limit.
+
+### App API ID
+
+- **Choose the api_id / api_hash Hanako connects as** (**Settings → Hanako → App API ID**, also
+  reachable from the login screen before you sign in): the build default, a preset (Telegram
+  Android, iOS, macOS, Desktop, Telegram X, Web K and Web legacy; the Goregram, Mercurygram,
+  OctoGram and OwlGram forks), or your own pair from [my.telegram.org](https://my.telegram.org).
+  One choice for all accounts on the device; it takes effect after a restart and signed-in
+  accounts stay signed in. Each preset's public source is cited in `HanakoApiConfig.java`.
+
 ### Network
 
 - **Custom DNS-over-HTTPS** resolver (any RFC 8484 server).
@@ -150,6 +167,21 @@ and live under **Settings → Hanako**.
 - **Smug language**: pick **Smug** in Settings → Language and the app's most visible text (about 500
   strings: chat list, chats, settings, menus, dialogs, errors, Hanako settings) teases you in a bratty,
   smug, tsundere voice. Anything it doesn't cover stays in English.
+
+### Usage statistics
+
+- **Opt-in usage statistics** (off by default, **Settings → Hanako → Usage statistics**): one switch.
+  When on, Hanako counts per day which of its features are used and keeps scrubbed crash and error
+  reports, and sends them once a day over HTTPS through your proxy or Tor. Never message text,
+  names, usernames, phone numbers, chat or user IDs, titles, file names or contacts. **View what
+  would be sent** shows the exact data of the next upload, and turning the switch off deletes what
+  wasn't sent. Builds without a built-in receiver address never send anything. The receiver and a
+  summary script are in `Tools/hanako-telemetry/`.
+
+### Look
+
+- **Hanako launcher icon**, with a monochrome layer for Android 13+ themed icons, and **Rin**, a
+  built-in dark theme next to Day and Night.
 
 ### No upsells
 

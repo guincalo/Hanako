@@ -7,7 +7,7 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
-## [1.2.0] - 2026-10-11
+## [1.2.0] - 2026-10-12
 
 ### Security
 - Release APKs are now signed with a private Hanako key instead of Telegram's public in-repo key,
@@ -15,7 +15,7 @@ Telegram/Mercurygram base it is built on.
   uninstall the old Hanako and install the new APK (back up your sessions first, restore them after).
 
 ### Added
-- **Backup & export** (Settings → Mercurygram → Backup & export):
+- **Backup & export** (Settings → Hanako → Backup & export):
   - Encrypted backup of the sessions of every logged-in account, to move them to a new install,
     package or phone without logging in again. Only the logins: no settings or messages. Password-
     protected (PBKDF2-HMAC-SHA256, AES-256-GCM). Restore from the same screen or from the login
@@ -33,11 +33,15 @@ Telegram/Mercurygram base it is built on.
   night mode.
 - Translate: offline language detection, so "Do not translate" and same-language hiding work
   without Google services. The Translate button is now on by default.
-
-- Optional **usage statistics** for whoever runs a build (off by default, Settings → Hanako →
-  Device and data → Usage statistics): daily feature counts and scrubbed crash/error reports, sent
-  once a day over HTTPS to an address you set, through your proxy or Tor. Shows exactly what would
-  be sent. Receiver and summary script in `Tools/hanako-telemetry/`.
+- **App API ID** (Settings → Hanako → App API ID, also on the login screen): choose the api_id /
+  api_hash Hanako connects as. Presets: the build default, Telegram Android, iOS, macOS, Desktop
+  (Snap), Telegram X, Web K and Web legacy, the Goregram, Mercurygram, OctoGram and OwlGram forks,
+  or a custom pair. Shared by all accounts, applied after a restart; signed-in accounts stay signed in.
+- Optional **usage statistics** (off by default, Settings → Hanako → Usage statistics): one opt-in
+  switch and **View what would be sent**. Daily feature counts and scrubbed crash/error reports,
+  sent once a day over HTTPS through your proxy or Tor. A build can carry a built-in receiver
+  address; without one nothing is sent. Upload address, key and manual send are developer options
+  (long-press the switch). Receiver and summary script in `Tools/hanako-telemetry/`.
 
 ### Changed
 - Hanako's proxy auto-switch is now "Switch to the fastest working proxy" and says when it switches.
@@ -51,7 +55,7 @@ Telegram/Mercurygram base it is built on.
 - Chat export: fixes for Android 15's time limit, slow networks and long exports (expired file
   references are refreshed), no chat title in the notification for hidden accounts, locked chats
   or streamer mode, and a notification permission request.
-- New launcher icon, readable at small sizes.
+- New launcher icon, readable at small sizes, with a monochrome layer for themed icons.
 - **Deleted media** looks like a stock Telegram media screen: grouped by chat and day under a
   sticky header, photos and videos as a thumbnail grid with sender, time, duration and view-once
   badges, files and voice messages as rows with sender, time and size, total size in the title,
