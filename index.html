@@ -112,12 +112,14 @@
       code { font: inherit; }
       button, input, select, textarea { font-family: inherit; }
       .shots {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1.5rem 1.25rem;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.5rem 1rem;
+        align-items: start;
         margin-top: 0.75rem;
       }
-      .shots figure { margin: 0; flex: 1 1 200px; max-width: 260px; }
+      .shots figure { margin: 0; }
+      .shots a { display: block; }
       .shots img {
         display: block;
         width: 100%;
@@ -125,9 +127,9 @@
         border: 1px solid var(--lilac);
         border-radius: 8px;
       }
-      .shots figcaption { margin-top: 0.5rem; font-size: 1rem; line-height: 1.5; color: var(--quiet); }
+      .shots figcaption { margin-top: 0.5rem; font-size: 1rem; line-height: 1.45; color: var(--quiet); }
       @media (max-width: 480px) {
-        .shots figure { flex-basis: 100%; }
+        .shots { grid-template-columns: minmax(0, 18rem); gap: 2rem; }
       }
       footer {
         margin-top: 4.5rem;
@@ -232,12 +234,16 @@
         <h2 class="top">Screenshots</h2>
         <div class="shots">
           <figure>
-            <img src="shot-settings.webp" alt="Telegram settings screen with the Hanako entry in the list" loading="lazy" />
-            <figcaption>Hanako sits right in Telegram's settings</figcaption>
+            <a href="shot-menu.webp"><img src="shot-menu.webp" width="600" height="1353" alt="Hanako settings menu with privacy, messages and chats, and device and data sections" loading="lazy" decoding="async" /></a>
+            <figcaption>Everything Hanako adds, in one menu</figcaption>
           </figure>
           <figure>
-            <img src="shot-ghost.webp" alt="Hanako ghost mode settings with exceptions and quiet sending options" loading="lazy" />
-            <figcaption>Ghost mode, exceptions and quiet sending</figcaption>
+            <a href="shot-deleted.webp"><img src="shot-deleted.webp" width="600" height="1333" alt="Deleted and edited messages settings with vanished chats and deleted media" loading="lazy" decoding="async" /></a>
+            <figcaption>Deleted and edited messages stay</figcaption>
+          </figure>
+          <figure>
+            <a href="shot-ghost.webp"><img src="shot-ghost.webp" width="469" height="1302" alt="Ghost mode settings with story ghost guard and peek options" loading="lazy" decoding="async" /></a>
+            <figcaption>Ghost mode, story guard and peek</figcaption>
           </figure>
         </div>
       </section>
