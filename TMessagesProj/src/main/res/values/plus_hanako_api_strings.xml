@@ -6,7 +6,15 @@
     <string name="HanakoApiPresetBuild">Default (build)</string>
     <string name="HanakoApiPresetGoregram">Goregram</string>
     <string name="HanakoApiPresetMercurygram">Mercurygram</string>
-    <string name="HanakoApiPresetOfficial">Telegram (official)</string>
+    <string name="HanakoApiPresetOfficial">Telegram Android</string>
+    <string name="HanakoApiPresetIos">Telegram iOS</string>
+    <string name="HanakoApiPresetMacos">Telegram macOS</string>
+    <string name="HanakoApiPresetDesktopSnap">Telegram Desktop (Snap)</string>
+    <string name="HanakoApiPresetTelegramX">Telegram X</string>
+    <string name="HanakoApiPresetWebK">Telegram Web K</string>
+    <string name="HanakoApiPresetWebLegacy">Telegram Web (legacy)</string>
+    <string name="HanakoApiPresetOctogram">OctoGram</string>
+    <string name="HanakoApiPresetOwlgram">OwlGram</string>
     <string name="HanakoApiPresetCustom">Custom</string>
     <string name="HanakoApiCustomNotSet">not set</string>
     <string name="HanakoApiActive">Active now: api_id %1$d</string>

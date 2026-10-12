@@ -37,23 +37,67 @@ public final class HanakoApiConfig {
     private static final String KEY_CUSTOM_ID = "custom_id";
     private static final String KEY_CUSTOM_HASH = "custom_hash";
 
+    /*
+     * Preset numbers are what the prefs store, so they never change; new presets get new numbers
+     * at the end. UI_ORDER sets the order on screen.
+     */
     public static final int PRESET_BUILD = 0;
     public static final int PRESET_GOREGRAM = 1;
     public static final int PRESET_MERCURYGRAM = 2;
     public static final int PRESET_OFFICIAL = 3;
     public static final int PRESET_CUSTOM = 4;
+    public static final int PRESET_IOS = 5;
+    public static final int PRESET_MACOS = 6;
+    public static final int PRESET_DESKTOP_SNAP = 7;
+    public static final int PRESET_TELEGRAM_X = 8;
+    public static final int PRESET_WEB_K = 9;
+    public static final int PRESET_WEB_LEGACY = 10;
+    public static final int PRESET_OCTOGRAM = 11;
+    public static final int PRESET_OWLGRAM = 12;
+
+    /** On-screen order: build default, official Telegram clients, forks, custom. */
+    public static final int[] UI_ORDER = {
+            PRESET_BUILD,
+            PRESET_OFFICIAL, PRESET_IOS, PRESET_MACOS, PRESET_DESKTOP_SNAP, PRESET_TELEGRAM_X,
+            PRESET_WEB_K, PRESET_WEB_LEGACY,
+            PRESET_GOREGRAM, PRESET_MERCURYGRAM, PRESET_OCTOGRAM, PRESET_OWLGRAM,
+            PRESET_CUSTOM};
 
     /*
-     * Preset sources:
+     * Preset sources (each pair copied from the public source named here):
      *  Goregram 105810: the pair Hanako's CI builds with (.github/workflows/hanako.yml, build step).
      *  Mercurygram 575730: upstream Mercurygram's F-Droid recipe (.github/fdroid/recipe-overlay.yml).
-     *  Telegram 4: DrKLO/Telegram BuildVars.java (official Telegram for Android).
+     *  Telegram Android 4: https://github.com/DrKLO/Telegram/blob/master/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+     *  Telegram iOS 8: https://github.com/TelegramMessenger/Telegram-iOS/blob/master/build-system/appstore-configuration.json
+     *  Telegram macOS 9: https://github.com/overtake/TelegramSwift/blob/master/packages/ApiCredentials/Sources/ApiCredentials/Config.swift
+     *  Telegram Desktop (Snap) 611335: https://github.com/telegramdesktop/tdesktop/blob/dev/snap/snapcraft.yaml
+     *  Telegram X 21724: TGX_APP_ID/TGX_APP_HASH in https://github.com/NextAlone/Nagram/blob/main/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+     *  Telegram Web K 1025907: https://github.com/morethanwords/tweb/blob/master/.env
+     *  Telegram Web legacy (Webogram) 2496: https://github.com/zhukov/webogram/blob/master/app/js/lib/config.js
+     *  OctoGram 14565251: https://github.com/OctoGramApp/OctoGram/blob/main/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+     *  OwlGram 10029733: https://github.com/OwlGramDev/OwlGram/blob/master/TMessagesProj/src/main/java/org/telegram/messenger/BuildVars.java
+     * Indexed by preset number; build and custom have no fixed pair.
      */
-    private static final int[] PRESET_IDS = {0, 105810, 575730, 4};
+    private static final int[] PRESET_IDS = {0, 105810, 575730, 4, 0,
+            8, 9, 611335, 21724, 1025907, 2496, 14565251, 10029733};
     private static final String[] PRESET_HASHES = {null,
             "3e7a52498eec003c5896a330e5d29397",
             "723c7927097f8487d229438af766e329",
-            "014b35b6184100b085b0d0572f9b5103"};
+            "014b35b6184100b085b0d0572f9b5103",
+            null,
+            "7245de8e747a0d6fbe11f7cc14fcc0bb",
+            "3975f648bb682ee889f35483bc618d1c",
+            "d524b414d21f4d37f08684c1df41ac9c",
+            "3e0cb5efcd52300aec5994fdfc5bdc16",
+            "452b0359b988148995f22ff0f4229750",
+            "8da85b0d5bfe62527e5b244c209159c3",
+            "9952ccf3124c8fa7835d9b8e091dfb4a",
+            "d0d81009d46e774f78c0e0e622f5fa21"};
+
+    /** True for a preset with a fixed id/hash pair (not build default, not custom). */
+    public static boolean isFixedPreset(int preset) {
+        return preset > PRESET_BUILD && preset < PRESET_IDS.length && preset != PRESET_CUSTOM;
+    }
 
     private static final Pattern HASH = Pattern.compile("^[0-9a-fA-F]{32}$");
 
@@ -79,7 +123,7 @@ public final class HanakoApiConfig {
         try {
             SharedPreferences p = prefs(ctx);
             preset = p.getInt(KEY_PRESET, PRESET_BUILD);
-            if (preset >= PRESET_GOREGRAM && preset <= PRESET_OFFICIAL) {
+            if (isFixedPreset(preset)) {
                 id = PRESET_IDS[preset];
                 hash = PRESET_HASHES[preset];
             } else if (preset == PRESET_CUSTOM) {
@@ -161,7 +205,7 @@ public final class HanakoApiConfig {
     public static int getSavedPreset() {
         int preset = prefs(null).getInt(KEY_PRESET, PRESET_BUILD);
         if (preset == PRESET_CUSTOM && !hasCustom()) return PRESET_BUILD;
-        return preset >= PRESET_BUILD && preset <= PRESET_CUSTOM ? preset : PRESET_BUILD;
+        return preset == PRESET_CUSTOM || isFixedPreset(preset) ? preset : PRESET_BUILD;
     }
 
     public static boolean hasCustom() {
@@ -203,7 +247,7 @@ public final class HanakoApiConfig {
 
     /** Saves a preset (not custom). commit(): a restart (System.exit) may follow at once. */
     public static void savePreset(int preset) {
-        if (preset < PRESET_BUILD || preset > PRESET_OFFICIAL) return;
+        if (preset != PRESET_BUILD && !isFixedPreset(preset)) return;
         prefs(null).edit().putInt(KEY_PRESET, preset).commit();
     }
 

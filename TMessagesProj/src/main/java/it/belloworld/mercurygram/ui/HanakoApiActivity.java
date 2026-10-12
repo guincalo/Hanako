@@ -43,11 +43,9 @@ public class HanakoApiActivity extends UniversalFragment {
     protected void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
         int saved = HanakoApiConfig.getSavedPreset();
         items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoApiHeader)));
-        addPreset(items, HanakoApiConfig.PRESET_BUILD, R.string.HanakoApiPresetBuild, saved);
-        addPreset(items, HanakoApiConfig.PRESET_GOREGRAM, R.string.HanakoApiPresetGoregram, saved);
-        addPreset(items, HanakoApiConfig.PRESET_MERCURYGRAM, R.string.HanakoApiPresetMercurygram, saved);
-        addPreset(items, HanakoApiConfig.PRESET_OFFICIAL, R.string.HanakoApiPresetOfficial, saved);
-        addPreset(items, HanakoApiConfig.PRESET_CUSTOM, R.string.HanakoApiPresetCustom, saved);
+        for (int preset : HanakoApiConfig.UI_ORDER) {
+            addPreset(items, preset, presetName(preset), saved);
+        }
 
         StringBuilder info = new StringBuilder();
         info.append(LocaleController.formatString(R.string.HanakoApiActive, HanakoApiConfig.getActiveId()));
@@ -60,6 +58,24 @@ public class HanakoApiActivity extends UniversalFragment {
         if (HanakoApiConfig.restartPending()) {
             items.add(UItem.asButton(ID_RESTART, LocaleController.getString(R.string.HanakoBackupRestartNow)));
             items.add(UItem.asShadow(null));
+        }
+    }
+
+    private static int presetName(int preset) {
+        switch (preset) {
+            case HanakoApiConfig.PRESET_GOREGRAM: return R.string.HanakoApiPresetGoregram;
+            case HanakoApiConfig.PRESET_MERCURYGRAM: return R.string.HanakoApiPresetMercurygram;
+            case HanakoApiConfig.PRESET_OFFICIAL: return R.string.HanakoApiPresetOfficial;
+            case HanakoApiConfig.PRESET_IOS: return R.string.HanakoApiPresetIos;
+            case HanakoApiConfig.PRESET_MACOS: return R.string.HanakoApiPresetMacos;
+            case HanakoApiConfig.PRESET_DESKTOP_SNAP: return R.string.HanakoApiPresetDesktopSnap;
+            case HanakoApiConfig.PRESET_TELEGRAM_X: return R.string.HanakoApiPresetTelegramX;
+            case HanakoApiConfig.PRESET_WEB_K: return R.string.HanakoApiPresetWebK;
+            case HanakoApiConfig.PRESET_WEB_LEGACY: return R.string.HanakoApiPresetWebLegacy;
+            case HanakoApiConfig.PRESET_OCTOGRAM: return R.string.HanakoApiPresetOctogram;
+            case HanakoApiConfig.PRESET_OWLGRAM: return R.string.HanakoApiPresetOwlgram;
+            case HanakoApiConfig.PRESET_CUSTOM: return R.string.HanakoApiPresetCustom;
+            default: return R.string.HanakoApiPresetBuild;
         }
     }
 
@@ -81,7 +97,7 @@ public class HanakoApiActivity extends UniversalFragment {
                     HanakoApiConfig.getCustomHash());
             return;
         }
-        if (preset >= HanakoApiConfig.PRESET_BUILD && preset <= HanakoApiConfig.PRESET_OFFICIAL) {
+        if (preset == HanakoApiConfig.PRESET_BUILD || HanakoApiConfig.isFixedPreset(preset)) {
             if (preset == HanakoApiConfig.getSavedPreset()) return;
             HanakoApiConfig.savePreset(preset);
             afterSave();
