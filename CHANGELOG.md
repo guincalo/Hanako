@@ -7,6 +7,13 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-12
+
+### Fixed
+- Release builds now include Hanako's default address for usage statistics, so the opt-in switch
+  actually reports. It is still off until you turn it on, and the address can be changed in
+  developer options.
+
 ## [1.2.0] - 2026-10-12
 
 ### Security
@@ -147,7 +154,8 @@ First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
 ### Other
 - Telegram Premium upsells and promo rows hidden; upstream Mercurygram update checks disabled.
 
-[Unreleased]: https://github.com/guincalo/Hanako/compare/v1.2.0...hanako
+[Unreleased]: https://github.com/guincalo/Hanako/compare/v1.2.1...hanako
+[1.2.1]: https://github.com/guincalo/Hanako/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/guincalo/Hanako/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/guincalo/Hanako/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/guincalo/Hanako/compare/v1.0.0...v1.0.1
