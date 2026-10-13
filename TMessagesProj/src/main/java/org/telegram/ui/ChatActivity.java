@@ -3989,6 +3989,8 @@ public class ChatActivity extends BaseFragment implements
                     it.belloworld.mercurygram.PlusGhostExceptions.showDialog(ChatActivity.this, dialog_id, null);
                 } else if (id == it.belloworld.mercurygram.PlusGhostQuick.MENU_SEND_READ) { // plus f02
                     it.belloworld.mercurygram.PlusGhostQuick.sendReadReceipt(ChatActivity.this);
+                } else if (id == it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.CHAT_MENU_ID) { // hanako: deleted messages in this chat
+                    it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.showChatMenu(ChatActivity.this, headerItem, currentAccount, dialog_id);
                 } else if (id == it.belloworld.mercurygram.PlusDeletedMedia.MENU_ID) { // plus f20
                     presentFragment(new it.belloworld.mercurygram.ui.PlusDeletedMediaActivity(dialog_id));
                 } else if (id == it.belloworld.mercurygram.ui.HanakoChatExportActivity.CHAT_MENU_ID) { // hanako: chat export
@@ -4457,6 +4459,9 @@ public class ChatActivity extends BaseFragment implements
             }
             if (it.belloworld.mercurygram.PlusGhostQuick.canSendReadReceipt(ChatActivity.this)) { // plus f02
                 headerItem.lazilyAddSubItem(it.belloworld.mercurygram.PlusGhostQuick.MENU_SEND_READ, R.drawable.msg_markread, it.belloworld.mercurygram.PlusGhostQuick.sendReadReceiptLabel());
+            }
+            if (it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.showChatMenuItem(currentAccount, dialog_id, chatMode)) { // hanako: deleted messages in this chat
+                headerItem.lazilyAddSubItem(it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.CHAT_MENU_ID, R.drawable.msg_delete_auto, LocaleController.getString(R.string.HanakoDeletedChatMenu));
             }
             if (it.belloworld.mercurygram.PlusDeletedMedia.showChatMenu(currentAccount, dialog_id)) { // plus f20
                 headerItem.lazilyAddSubItem(it.belloworld.mercurygram.PlusDeletedMedia.MENU_ID, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title));
