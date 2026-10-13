@@ -128,7 +128,7 @@ jobs:
           HAS_KEY: ${{ secrets.HANAKO_KEYSTORE_B64 != '' }}
           # refs whose builds may carry the private key (A-17): tags plus these branches.
           # Any other branch (a manual run included) gets the public debug key.
-          SIGN_REFS: 'refs/heads/hanako refs/heads/plus refs/heads/release/1.2.0'
+          SIGN_REFS: 'refs/heads/hanako refs/heads/plus refs/heads/release/1.2.0 refs/heads/feature/deleted-ux'
         run: |
           set -euo pipefail
           APP_VN=$(grep '^APP_VERSION_NAME=' gradle.properties | cut -d= -f2)
