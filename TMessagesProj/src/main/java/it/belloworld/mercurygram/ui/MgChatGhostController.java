@@ -71,33 +71,100 @@ public final class MgChatGhostController {
             }
             Set<Integer> emids = MgMessageHistory.getInstance()
                     .getMidsForDialog(acc, did, true);
-            AndroidUtilities.runOnUIThread(() -> {
-                deletedMids = dmids;
-                editedMids = emids;
-                ghostEntries = entries;
-                priming = false;
-                if (!host.mgHasAdapter()) {
-                    return;
-                }
-                boolean any = false;
-                if (!dmids.isEmpty() && !host.messages.isEmpty()) {
-                    for (int i = 0; i < host.messages.size(); i++) {
-                        MessageObject mo = host.messages.get(i);
-                        if (mo != null && !mo.mgDeletedGhost && dmids.contains(mo.getId())) {
-                            mo.mgDeletedGhost = true;
-                            it.belloworld.mercurygram.PlusDeletedReactions.onGhost(mo); // plus f07
-                            any = true;
-                        }
+            // hanako: a ghost is rebuilt from its archived blob, so unlike a cached
+            // message its sender was never loaded with it (MessagesStorage.getMessages
+            // loads users/chats next to the rows it reads). Without the sender the
+            // cell has no user to draw, and it never re-resolves one later
+            // (ChatMessageCell.isUserDataChanged bails out while both are null).
+            // Load the missing senders from cache4.db before the ghosts are injected.
+            HashSet<Long> needUsers = new HashSet<>();
+            HashSet<Long> needChats = new HashSet<>();
+            collectPeers(acc, entries, needUsers, needChats);
+            if (needUsers.isEmpty() && needChats.isEmpty()) {
+                AndroidUtilities.runOnUIThread(() -> onPrimed(dmids, emids, entries));
+                return;
+            }
+            final org.telegram.messenger.MessagesStorage storage = org.telegram.messenger.MessagesStorage.getInstance(acc);
+            storage.getStorageQueue().postRunnable(() -> {
+                ArrayList<TLRPC.User> users = new ArrayList<>();
+                ArrayList<TLRPC.Chat> chats = new ArrayList<>();
+                try {
+                    if (!needUsers.isEmpty()) {
+                        storage.getUsersInternal(needUsers, users);
                     }
+                    if (!needChats.isEmpty()) {
+                        storage.getChatsInternal(android.text.TextUtils.join(",", needChats), chats);
+                    }
+                } catch (Exception e) {
+                    org.telegram.messenger.FileLog.e(e);
                 }
-                // mgInjectGhosts already calls notifyDataSetChanged when it inserts anything;
-                // only fire here if the in-memory flag-flip above is the only mutation.
-                int injected = inject();
-                if (any && injected == 0) {
-                    host.mgNotifyAdapter();
-                }
+                AndroidUtilities.runOnUIThread(() -> {
+                    org.telegram.messenger.MessagesController mc = org.telegram.messenger.MessagesController.getInstance(acc);
+                    mc.putUsers(users, true);
+                    mc.putChats(chats, true);
+                    onPrimed(dmids, emids, entries);
+                });
             });
         });
+    }
+
+    /** Peers a ghost cell draws (sender, forward origin, via bot) that are not in memory yet. */
+    private static void collectPeers(int acc, List<MgMessageHistory.Entry> entries, Set<Long> users, Set<Long> chats) {
+        org.telegram.messenger.MessagesController mc = org.telegram.messenger.MessagesController.getInstance(acc);
+        for (int i = 0, n = entries.size(); i < n; i++) {
+            MgMessageHistory.Entry en = entries.get(i);
+            TLRPC.Message m = en == null ? null : en.message;
+            if (m == null) {
+                continue;
+            }
+            addPeer(mc, MessageObject.getPeerId(m.from_id), users, chats);
+            if (m.fwd_from != null) {
+                addPeer(mc, MessageObject.getPeerId(m.fwd_from.from_id), users, chats);
+                addPeer(mc, MessageObject.getPeerId(m.fwd_from.saved_from_peer), users, chats);
+            }
+            if (m.via_bot_id != 0) {
+                addPeer(mc, m.via_bot_id, users, chats);
+            }
+        }
+    }
+
+    private static void addPeer(org.telegram.messenger.MessagesController mc, long peerId, Set<Long> users, Set<Long> chats) {
+        if (peerId > 0) {
+            if (mc.getUser(peerId) == null) {
+                users.add(peerId);
+            }
+        } else if (peerId < 0) {
+            if (mc.getChat(-peerId) == null) {
+                chats.add(-peerId);
+            }
+        }
+    }
+
+    private void onPrimed(HashSet<Integer> dmids, Set<Integer> emids, List<MgMessageHistory.Entry> entries) {
+        deletedMids = dmids;
+        editedMids = emids;
+        ghostEntries = entries;
+        priming = false;
+        if (!host.mgHasAdapter()) {
+            return;
+        }
+        boolean any = false;
+        if (!dmids.isEmpty() && !host.messages.isEmpty()) {
+            for (int i = 0; i < host.messages.size(); i++) {
+                MessageObject mo = host.messages.get(i);
+                if (mo != null && !mo.mgDeletedGhost && dmids.contains(mo.getId())) {
+                    mo.mgDeletedGhost = true;
+                    it.belloworld.mercurygram.PlusDeletedReactions.onGhost(mo); // plus f07
+                    any = true;
+                }
+            }
+        }
+        // mgInjectGhosts already calls notifyDataSetChanged when it inserts anything;
+        // only fire here if the in-memory flag-flip above is the only mutation.
+        int injected = inject();
+        if (any && injected == 0) {
+            host.mgNotifyAdapter();
+        }
     }
 
     public void applyFlags(ArrayList<MessageObject> messArr) {

@@ -6231,7 +6231,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (currentMessageObject != null && (!hasLinkPreview && MessageObject.getMedia(currentMessageObject.messageOwner) != null && MessageObject.getMedia(currentMessageObject.messageOwner).webpage instanceof TLRPC.TL_webPage)) {
             return true;
         }
-        if (currentMessageObject == null || currentUser == null && currentChat == null) {
+        if (currentMessageObject == null) {
+            return false;
+        }
+        if (currentUser == null && currentChat == null) {
+            // hanako: a deleted-message ghost is rebuilt from its archived copy and
+            // its sender can load after the cell was bound; re-resolve then instead
+            // of keeping the blank avatar and missing name for good.
+            if (currentMessageObject.mgDeletedGhost) {
+                updateCurrentUserAndChat();
+                return currentUser != null || currentChat != null;
+            }
             return false;
         }
         if (lastSendState != currentMessageObject.messageOwner.send_state) {
