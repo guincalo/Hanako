@@ -495,35 +495,84 @@ public class MercurygramSettingsActivity extends UniversalFragment {
     }
 
     private void fillDeleted(ArrayList<UItem> items) {
+        // hanako: one screen for the whole feature, in the order you use it:
+        // the switch, how long copies are kept (Telegram's Keep media shape),
+        // what is on the device, how ghosts look in chats, then vanished chats.
         requestDeletedMediaSize();
+        final boolean on = getUserConfig().mg.savedMessagesHistory;
+        final int acc = getCurrentAccount();
         items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoPageDeleted)));
         items.add(UItem.asCheck(ID_SAVED_MESSAGES_HISTORY, LocaleController.getString(R.string.MercurygramSavedMessagesHistory))
-                .setChecked(getUserConfig().mg.savedMessagesHistory));
-        if (getUserConfig().mg.savedMessagesHistory) {
-            items.add(UItem.asButton(ID_CLEAR_SAVED_HISTORY, LocaleController.getString(R.string.MercurygramClearSavedHistory), ""));
-        }
+                .setChecked(on));
         items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramSavedMessagesHistoryAbout)));
 
-        // plus f07 begin: vanished-chat log + deleted-message reactions
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF07Header)));
-        items.add(UItem.asCheck(ID_F07_LOG_DIALOGS, LocaleController.getString(R.string.PlusF07LogDialogs))
-                .setChecked(it.belloworld.mercurygram.PlusDeletedDialogs.isEnabled(getCurrentAccount())));
-        items.add(UItem.asButton(ID_F07_OPEN_LOG, LocaleController.getString(R.string.PlusF07DeletedDialogsTitle),
-                Integer.toString(it.belloworld.mercurygram.PlusDeletedDialogs.count(getCurrentAccount()))));
-        items.add(MgSettingsScope.globalCheck(ID_F07_KEEP_REACTIONS, LocaleController.getString(R.string.PlusF07KeepReactions))
-                .setChecked(it.belloworld.mercurygram.PlusDeletedReactions.isKeepEnabled()));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF07SettingsAbout)));
-        // plus f07 end
+        if (on) {
+            items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoKeepDeletedHeader)));
+            for (int t = 0; t < it.belloworld.mercurygram.MgDeletedRetention.TYPE_COUNT; t++) {
+                items.add(HanakoKeepDeletedActivity.TypeRow.of(ID_KEEP_TYPE + t, t, keepValue(acc, t)));
+            }
+            items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoKeepDeletedInfo)));
 
-        // plus f20 begin: saved deleted-media browser
+            items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoDeletedInChatsHeader)));
+            items.add(MgSettingsScope.globalCheck(ID_F07_KEEP_REACTIONS, LocaleController.getString(R.string.PlusF07KeepReactions))
+                    .setChecked(it.belloworld.mercurygram.PlusDeletedReactions.isKeepEnabled()));
+            items.add(UItem.asCheck(ID_F20_CHAT_MENU, LocaleController.getString(R.string.PlusF20ChatMenu))
+                    .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isChatMenuEnabled()));
+            items.add(UItem.asCheck(ID_F20_INCLUDE_EDITS, LocaleController.getString(R.string.PlusF20IncludeEdits))
+                    .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isIncludeEdits()));
+            items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.HanakoDeletedInChatsInfo))));
+        }
+
+        requestSavedCounts();
+        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoDeletedStorageHeader)));
         items.add(UItem.asButton(ID_F20_OPEN, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title), deletedMediaSize));
-        items.add(UItem.asCheck(ID_F20_CHAT_MENU, LocaleController.getString(R.string.PlusF20ChatMenu))
-                .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isChatMenuEnabled()));
-        items.add(UItem.asCheck(ID_F20_INCLUDE_EDITS, LocaleController.getString(R.string.PlusF20IncludeEdits))
-                .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isIncludeEdits()));
-        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusF20SettingsAbout))));
-        // plus f20 end
+        UItem clear = UItem.asButton(ID_CLEAR_SAVED_HISTORY, R.drawable.msg_clear, LocaleController.getString(R.string.MercurygramClearSavedHistory));
+        clear.red = true;
+        items.add(clear);
+        items.add(UItem.asShadow(savedCounts != null ? savedCountsText(savedCounts)
+                : LocaleController.getString(R.string.HanakoDeletedStorageInfo)));
 
+        // plus f07: vanished-chat log
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF07DeletedDialogsTitle)));
+        items.add(UItem.asCheck(ID_F07_LOG_DIALOGS, LocaleController.getString(R.string.PlusF07LogDialogs))
+                .setChecked(it.belloworld.mercurygram.PlusDeletedDialogs.isEnabled(acc)));
+        items.add(UItem.asButton(ID_F07_OPEN_LOG, LocaleController.getString(R.string.PlusF07DeletedDialogsTitle),
+                Integer.toString(it.belloworld.mercurygram.PlusDeletedDialogs.count(acc))));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF07SettingsAbout)));
+    }
+
+    // hanako: retention rows + saved counts
+    private static final int ID_KEEP_TYPE = 2100; // + MgDeletedRetention.TYPE_*
+    private int[] savedCounts;
+    private boolean countsRequested;
+
+    private static CharSequence keepValue(int acc, int type) {
+        String v = it.belloworld.mercurygram.MgDeletedRetention.periodLabel(
+                it.belloworld.mercurygram.MgDeletedRetention.getTypePeriod(acc, type));
+        int n = it.belloworld.mercurygram.MgDeletedRetention.exceptionsOf(acc, type).size();
+        return n == 0 ? v : v + " · " + LocaleController.formatPluralString("ExceptionShort", n);
+    }
+
+    private static String savedCountsText(int[] c) {
+        if (c[0] == 0 && c[1] == 0) {
+            return LocaleController.getString(R.string.HanakoDeletedStorageEmpty);
+        }
+        return LocaleController.formatString(R.string.HanakoDeletedStorageCounts,
+                LocaleController.formatPluralString("HanakoDeletedCount", c[0]),
+                LocaleController.formatPluralString("HanakoEditedCount", c[1]));
+    }
+
+    private void requestSavedCounts() {
+        if (countsRequested) return;
+        countsRequested = true;
+        final int acc = getCurrentAccount();
+        org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+            int[] c = MgMessageHistory.getInstance().counts(acc, 0);
+            AndroidUtilities.runOnUIThread(() -> {
+                savedCounts = c;
+                refreshList();
+            });
+        });
     }
 
     private void fillChats(ArrayList<UItem> items) {
@@ -788,6 +837,19 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             return;
         }
         // plus f06 end
+        // hanako: retention type rows open Telegram's Keep media style menu
+        if (item.id >= ID_KEEP_TYPE && item.id < ID_KEEP_TYPE + it.belloworld.mercurygram.MgDeletedRetention.TYPE_COUNT) {
+            HanakoKeepDeletedActivity.showTypeMenu(this, view, getCurrentAccount(), item.id - ID_KEEP_TYPE, () -> {
+                refreshList();
+                // a shorter period prunes in the background; re-read the counts once it ran
+                AndroidUtilities.runOnUIThread(() -> {
+                    countsRequested = false;
+                    sizeRequested = false;
+                    refreshList();
+                }, 800);
+            });
+            return;
+        }
         // plus f07 begin
         if (item.id == ID_F07_LOG_DIALOGS) {
             it.belloworld.mercurygram.PlusDeletedDialogs.setEnabled(getCurrentAccount(), !it.belloworld.mercurygram.PlusDeletedDialogs.isEnabled(getCurrentAccount()));
@@ -1051,6 +1113,9 @@ public class MercurygramSettingsActivity extends UniversalFragment {
         // The Translation row's subtitle reflects mg_translateMode, which the
         // user can change in the sub-screen. Refresh on return so the new
         // engine label shows immediately instead of after a full reopen.
+        if (page == PAGE_DELETED) {
+            countsRequested = false; // hanako: exceptions or deleted media may have changed
+        }
         refreshList();
     }
 
@@ -1230,8 +1295,17 @@ public class MercurygramSettingsActivity extends UniversalFragment {
                 .setMessage(LocaleController.getString(R.string.MercurygramClearSavedHistoryConfirm))
                 .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
                 .setPositiveButton(LocaleController.getString(R.string.Delete), (dialog, which) -> {
-                    MgMessageHistory.getInstance().clearAll();
-                    refreshList();
+                    // hanako: off the UI thread, then refresh the counts and the media size
+                    org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+                        MgMessageHistory.getInstance().clearAll();
+                        AndroidUtilities.runOnUIThread(() -> {
+                            savedCounts = null;
+                            countsRequested = false;
+                            sizeRequested = false;
+                            deletedMediaSize = "";
+                            refreshList();
+                        }, 300);
+                    });
                 })
                 .show();
     }

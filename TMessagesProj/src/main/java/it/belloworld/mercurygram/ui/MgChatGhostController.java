@@ -402,6 +402,34 @@ public final class MgChatGhostController {
         return ghostIds.size() == candidates.size() && (single != null || selected[1].size() == 0);
     }
 
+    /**
+     * hanako: chat menu → Clear saved here. Drops every saved copy of this chat
+     * (deleted and pre-edit versions, with media) and removes the ghost cells
+     * now on screen. Nothing is sent to the server.
+     */
+    public void clearChat() {
+        ArrayList<Integer> ghostIds = new ArrayList<>();
+        for (int i = 0; i < host.messages.size(); i++) {
+            MessageObject mo = host.messages.get(i);
+            if (mo != null && mo.mgDeletedGhost) {
+                ghostIds.add(mo.getId());
+            }
+        }
+        if (deletedMids != null) {
+            deletedMids.clear();
+        }
+        if (editedMids != null) {
+            editedMids.clear();
+        }
+        if (ghostEntries != null) {
+            ghostEntries = new ArrayList<>();
+        }
+        MgMessageHistory.getInstance().clearDialog(host.getCurrentAccount(), host.getDialogId(), null);
+        if (!ghostIds.isEmpty()) {
+            host.mgProcessDeletedMessages(ghostIds);
+        }
+    }
+
     public void updateDivertedRows() {
         if (divertedGhosts == null) {
             return;
