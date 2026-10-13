@@ -7,12 +7,21 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-13
+
 ### Added
 - On-device voice transcription with NVIDIA Parakeet TDT 0.6B v3 (int8, via sherpa-onnx 1.13.8), now
   the recommended model: 25 European languages including Russian, Ukrainian and English, with
   punctuation and automatic language detection. The ~670 MB model is downloaded on demand (resumable,
   checksum-verified) and freed from memory after two idle minutes. Languages it doesn't cover fall back
   to an installed Whisper model. arm64 only.
+- **Deleted & edited messages**: a redesigned screen (also in each chat's ⋮ menu), retention like
+  Telegram's Keep media (per message type, with per-chat exceptions; "Don't save" never deletes copies
+  you already have), and an edit history with clear version labels and a word-level diff.
+
+### Fixed
+- Deleted-message ghosts showed a blank or wrong avatar and no name for rare posters or people who
+  left the chat.
 
 ## [1.2.1] - 2026-10-12
 
@@ -161,7 +170,8 @@ First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
 ### Other
 - Telegram Premium upsells and promo rows hidden; upstream Mercurygram update checks disabled.
 
-[Unreleased]: https://github.com/guincalo/Hanako/compare/v1.2.1...hanako
+[Unreleased]: https://github.com/guincalo/Hanako/compare/v1.3.0...hanako
+[1.3.0]: https://github.com/guincalo/Hanako/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/guincalo/Hanako/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/guincalo/Hanako/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/guincalo/Hanako/compare/v1.0.1...v1.1.0
