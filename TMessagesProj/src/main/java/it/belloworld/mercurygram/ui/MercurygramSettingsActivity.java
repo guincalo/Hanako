@@ -1077,6 +1077,8 @@ public class MercurygramSettingsActivity extends UniversalFragment {
             return LocaleController.getString(R.string.MercurygramTranscriptionRowDisabled);
         }
         switch (MgWhisperModel.selected()) {
+            case PARAKEET:
+                return LocaleController.getString(R.string.HanakoTranscriptionModelParakeetShort);
             case BASE:
                 return LocaleController.getString(R.string.MercurygramTranscriptionModelBase);
             case SMALL:

@@ -867,6 +867,9 @@ public class TranscribeButton {
                 case DECODE_FAILED:
                     res = R.string.MercurygramTranscribeOfflineDecodeFailed;
                     break;
+                case LANGUAGE_UNSUPPORTED:
+                    res = R.string.HanakoTranscribeOfflineLanguageUnsupported;
+                    break;
                 default:
                     res = R.string.MercurygramTranscribeOfflineFailed;
                     break;

@@ -33,8 +33,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class MgWhisperModel {
 
-    /** Available model tiers. ids match {@link SharedConfig#mg_transcribeModel}. */
+    /** Which inference engine runs a model. */
+    public enum Engine {
+        /** whisper.cpp (ggml), compiled into libtmessages. */
+        WHISPER,
+        /** sherpa-onnx / onnxruntime (Parakeet TDT 0.6B v3), see {@link MgParakeetEngine}. */
+        PARAKEET,
+    }
+
+    /**
+     * Available models. ids match {@link SharedConfig#mg_transcribeModel}.
+     * Declaration order is the picker order: Parakeet (recommended) first.
+     */
     public enum Model {
+        // [Hanako] NVIDIA Parakeet TDT 0.6B v3 (CC-BY-4.0) via sherpa-onnx: a
+        // five-file bundle (see MgParakeetSpec), so fileName names its directory
+        // and sha256 is empty here — each file carries its own pinned hash.
+        PARAKEET(MgParakeetSpec.MODEL_ID, MgParakeetSpec.DIR_NAME, MgParakeetSpec.totalSize(), "", Engine.PARAKEET),
         // Canonical multilingual ggml models from huggingface.co/ggerganov/whisper.cpp
         // (MIT). Quant policy: q8_0 for the small models (near-lossless vs f16, often
         // a touch FASTER on CPU since whisper is memory-bound, cheap in size), q5_1
@@ -42,23 +57,32 @@ public final class MgWhisperModel {
         // whisper-models GitHub release MUST host these EXACT bytes or the pinned
         // SHA-256 check rejects the download.
         TINY("tiny-q8_0", "ggml-tiny-q8_0.bin", 43_537_433L,
-                "c2085835d3f50733e2ff6e4b41ae8a2b8d8110461e18821b09a15c40c42d1cca"),
+                "c2085835d3f50733e2ff6e4b41ae8a2b8d8110461e18821b09a15c40c42d1cca", Engine.WHISPER),
         BASE("base-q8_0", "ggml-base-q8_0.bin", 81_768_585L,
-                "c577b9a86e7e048a0b7eada054f4dd79a56bbfa911fbdacf900ac5b567cbb7d9"),
+                "c577b9a86e7e048a0b7eada054f4dd79a56bbfa911fbdacf900ac5b567cbb7d9", Engine.WHISPER),
         SMALL("small-q5_1", "ggml-small-q5_1.bin", 190_085_487L,
-                "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb");
+                "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb", Engine.WHISPER);
 
         public final String id;
         public final String fileName;
         public final long approxSize;
         public final String sha256;
+        public final Engine engine;
 
-        Model(String id, String fileName, long approxSize, String sha256) {
+        Model(String id, String fileName, long approxSize, String sha256, Engine engine) {
             this.id = id;
             this.fileName = fileName;
             this.approxSize = approxSize;
             this.sha256 = sha256;
+            this.engine = engine;
         }
+
+        public boolean isParakeet() {
+            return engine == Engine.PARAKEET;
+        }
+
+        /** Whisper models, best first: the fallback order when Parakeet can't take a language. */
+        public static final Model[] WHISPER_BY_QUALITY = {SMALL, BASE, TINY};
 
         public static Model byId(String id) {
             for (Model m : values()) {
@@ -113,9 +137,38 @@ public final class MgWhisperModel {
         void onError(String message);
     }
 
-    /** Currently selected model per config. */
+    /**
+     * Currently selected model per config. Parakeet only runs where the
+     * sherpa-onnx lib is packaged (arm64); elsewhere a Parakeet selection
+     * (e.g. the fresh-install default) reads as Tiny.
+     */
     public static Model selected() {
-        return Model.byId(SharedConfig.mg_transcribeModel);
+        Model m = Model.byId(SharedConfig.mg_transcribeModel);
+        if (m.isParakeet() && !MgParakeetEngine.isSupported()) {
+            return Model.TINY;
+        }
+        return m;
+    }
+
+    /** Models offered in the picker on this device (Parakeet first when supported). */
+    public static java.util.List<Model> available() {
+        java.util.ArrayList<Model> out = new java.util.ArrayList<>();
+        for (Model m : Model.values()) {
+            if (!m.isParakeet() || MgParakeetEngine.isSupported()) {
+                out.add(m);
+            }
+        }
+        return out;
+    }
+
+    /** Best installed whisper.cpp model, or null. Used as Parakeet's language fallback. */
+    public static Model bestInstalledWhisper() {
+        for (Model m : Model.WHISPER_BY_QUALITY) {
+            if (isInstalled(m)) {
+                return m;
+            }
+        }
+        return null;
     }
 
     private static File modelDir() {
@@ -132,6 +185,9 @@ public final class MgWhisperModel {
 
     /** True if the given model file exists and is plausibly complete. */
     public static boolean isInstalled(Model model) {
+        if (model.isParakeet()) {
+            return MgParakeetModel.isInstalled();
+        }
         File f = fileFor(model);
         return f.exists() && f.length() > 1_000_000L;
     }
@@ -145,7 +201,7 @@ public final class MgWhisperModel {
      */
     public static boolean isSelectedInstalled() {
         Model m = selected();
-        int epoch = installEpoch;
+        int epoch = installEpoch * 31 + MgParakeetModel.installEpoch;
         if (epoch == installedCacheEpoch && m.id.equals(installedCacheModelId)) {
             return installedCacheValue;
         }
@@ -175,10 +231,11 @@ public final class MgWhisperModel {
     }
 
     public static boolean isDownloading() {
-        return isDownloading.get();
+        return isDownloading.get() || MgParakeetModel.isDownloading();
     }
 
     public static void cancelDownload() {
+        MgParakeetModel.cancelDownload();
         downloadGeneration++;
         isDownloading.set(false);
         HttpURLConnection c = currentConn;
@@ -197,6 +254,10 @@ public final class MgWhisperModel {
      * (piggyback) so on-by-default VAD works without a separate user action.
      */
     public static void download(Model model, ProgressCallback callback) {
+        if (model.isParakeet()) {
+            MgParakeetModel.download(callback);
+            return;
+        }
         downloadBlob(model.fileName, model.approxSize, model.sha256, isDownloading, true, callback);
     }
 
@@ -333,6 +394,11 @@ public final class MgWhisperModel {
      * dir for {@code model}. Runs off the main thread; callbacks on the UI thread.
      */
     public static void importFromUri(Context context, Model model, Uri uri, ProgressCallback callback) {
+        if (model.isParakeet()) {
+            // A multi-file bundle can't come from one picked file.
+            AndroidUtilities.runOnUIThread(() -> callback.onError("Import is not supported for this model"));
+            return;
+        }
         Utilities.globalQueue.postRunnable(() -> {
             File target = fileFor(model);
             File tmp = new File(target.getAbsolutePath() + ".part");
@@ -380,6 +446,10 @@ public final class MgWhisperModel {
     }
 
     public static void delete(Model model) {
+        if (model.isParakeet()) {
+            MgParakeetModel.delete();
+            return;
+        }
         File f = fileFor(model);
         if (f.exists()) {
             f.delete();
