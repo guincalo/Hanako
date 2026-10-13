@@ -57,6 +57,9 @@ public final class MgChatGhostController {
         final int acc = host.getCurrentAccount();
         final long did = host.getDialogId();
         Utilities.globalQueue.postRunnable(() -> {
+            // hanako: drop copies past this chat's retention period before showing them
+            MgMessageHistory.getInstance().pruneDialog(acc, did);
+            it.belloworld.mercurygram.MgDeletedRetention.requestPrune(acc, false);
             List<MgMessageHistory.Entry> entries =
                     MgMessageHistory.getInstance().getDeletedEntries(acc, did);
             // Derive the dmids set from `entries` — both come from `deleted_messages`; a
@@ -322,7 +325,8 @@ public final class MgChatGhostController {
         divertedGhosts = null;
         ArrayList<MessageObject> mgGhosts = null;
         ArrayList<Integer> mgDeleteList = markAsDeletedMessages;
-        if (host.getUserConfig().mg.savedMessagesHistory && host.getChatMode() == ChatActivity.MODE_DEFAULT && !movedToScheduled) {
+        if (host.getUserConfig().mg.savedMessagesHistory && host.getChatMode() == ChatActivity.MODE_DEFAULT && !movedToScheduled
+                && it.belloworld.mercurygram.MgDeletedRetention.shouldSave(host.getCurrentAccount(), host.getDialogId())) { // hanako: "Don't save" chats delete for real
             Set<Integer> remote = MgMessageHistory.getInstance().takeRemote(-channelId);
             for (int i = 0; i < resolved.size(); i++) {
                 MessageObject mo = resolved.get(i);

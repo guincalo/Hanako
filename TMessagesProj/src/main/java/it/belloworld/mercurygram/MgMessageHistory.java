@@ -300,7 +300,8 @@ public class MgMessageHistory {
                     long uid = cursor.longValue(0);
                     byte[] bytes = cursor.byteArrayValue(1);
                     TLRPC.Message message = deserialize(bytes);
-                    if (message == null || isExcluded(uid, message)) {
+                    if (message == null || isExcluded(uid, message)
+                            || !MgDeletedRetention.shouldSave(account, uid)) { // hanako: retention "Don't save"
                         continue;
                     }
                     MgHistoryMedia.Plan plan = null;
@@ -334,7 +335,8 @@ public class MgMessageHistory {
      */
     public void archiveExpiringSync(int account, long dialogId, TLRPC.Message message) {
         if (!UserConfig.getInstance(account).mg.savedMessagesHistory || message == null
-                || DialogObject.isEncryptedDialog(dialogId) || !MgHistoryMedia.hasSavableMedia(message)) {
+                || DialogObject.isEncryptedDialog(dialogId) || !MgHistoryMedia.hasSavableMedia(message)
+                || !MgDeletedRetention.shouldSave(account, dialogId)) { // hanako: retention "Don't save"
             return;
         }
         try {
@@ -675,6 +677,128 @@ public class MgMessageHistory {
         });
     }
     // plus f20 end
+
+    // hanako begin: retention (MgDeletedRetention), per-chat clear, revision delete, stats
+    /**
+     * Drops this dialog's copies that are past its retention period. Returns
+     * the number of rows removed. Call off the UI thread.
+     */
+    public int pruneDialog(int account, long dialogId) {
+        long cutoff = MgDeletedRetention.cutoffFor(account, dialogId, System.currentTimeMillis());
+        if (cutoff <= 0) {
+            return 0;
+        }
+        return deleteWhere(" WHERE account=? AND dialog_id=? AND when_ms<?",
+                new String[]{Integer.toString(account), Long.toString(dialogId),
+                        Long.toString(cutoff)});
+    }
+
+    /** Applies the retention rules to every saved chat of the account. Off the UI thread. */
+    public void pruneByRetention(int account) {
+        HashSet<Long> dialogs = new HashSet<>();
+        String[] args = {Integer.toString(account)};
+        CursorBody collect = c -> {
+            while (c.moveToNext()) {
+                dialogs.add(c.getLong(0));
+            }
+        };
+        readCursor("SELECT DISTINCT dialog_id FROM " + TBL_DELETED + " WHERE account=?", args, collect);
+        readCursor("SELECT DISTINCT dialog_id FROM " + TBL_EDITED + " WHERE account=?", args, collect);
+        for (Long did : dialogs) {
+            pruneDialog(account, did);
+        }
+    }
+
+    /** Removes every saved copy (deleted and edits) of one chat, with its media. */
+    public void clearDialog(int account, long dialogId, Runnable onDone) {
+        Utilities.globalQueue.postRunnable(() -> {
+            deleteWhere(" WHERE account=? AND dialog_id=?",
+                    new String[]{Integer.toString(account), Long.toString(dialogId)});
+            if (onDone != null) {
+                onDone.run();
+            }
+        });
+    }
+
+    /** Removes one pre-edit version, identified by when it was saved. */
+    public void forgetRevision(int account, long dialogId, int mid, long whenMs, Runnable onDone) {
+        Utilities.globalQueue.postRunnable(() -> {
+            deleteWhereIn(TBL_EDITED, " WHERE account=? AND dialog_id=? AND mid=? AND when_ms=?",
+                    new String[]{Integer.toString(account), Long.toString(dialogId), Integer.toString(mid), Long.toString(whenMs)});
+            if (onDone != null) {
+                onDone.run();
+            }
+        });
+    }
+
+    /** {deleted rows, edited rows} for the account, or for one chat when dialogId != 0. Off the UI thread. */
+    public int[] counts(int account, long dialogId) {
+        int[] out = new int[2];
+        String where = " WHERE account=?" + (dialogId != 0 ? " AND dialog_id=?" : "");
+        String[] args = dialogId != 0
+                ? new String[]{Integer.toString(account), Long.toString(dialogId)}
+                : new String[]{Integer.toString(account)};
+        readCursor("SELECT COUNT(*) FROM " + TBL_DELETED + where, args, c -> {
+            if (c.moveToFirst()) {
+                out[0] = c.getInt(0);
+            }
+        });
+        readCursor("SELECT COUNT(*) FROM " + TBL_EDITED + where, args, c -> {
+            if (c.moveToFirst()) {
+                out[1] = c.getInt(0);
+            }
+        });
+        return out;
+    }
+
+    /** {@link #counts} off the UI thread, result delivered on the UI thread. */
+    public void countsAsync(int account, long dialogId, org.telegram.messenger.Utilities.Callback<int[]> onResult) {
+        Utilities.globalQueue.postRunnable(() -> {
+            int[] c = counts(account, dialogId);
+            org.telegram.messenger.AndroidUtilities.runOnUIThread(() -> onResult.run(c));
+        });
+    }
+
+    /** Deletes matching rows from both tables and their media files. */
+    private int deleteWhere(String where, String[] args) {
+        return deleteWhereIn(TBL_DELETED, where, args) + deleteWhereIn(TBL_EDITED, where, args);
+    }
+
+    private int deleteWhereIn(String table, String where, String[] args) {
+        ArrayList<String> files = new ArrayList<>();
+        int removed = 0;
+        synchronized (writeLock) {
+            Cursor c = null;
+            try {
+                android.database.sqlite.SQLiteDatabase db = dbHelper.getWritableDatabase();
+                c = db.rawQuery("SELECT media_path, thumb_path FROM " + table + where, args);
+                while (c.moveToNext()) {
+                    if (!c.isNull(0)) {
+                        files.add(c.getString(0));
+                    }
+                    if (!c.isNull(1)) {
+                        files.add(c.getString(1));
+                    }
+                }
+                c.close();
+                c = null;
+                removed = db.delete(table, where.replaceFirst("^ WHERE ", ""), args);
+            } catch (Exception e) {
+                FileLog.e(e);
+                files.clear();
+            } finally {
+                if (c != null) {
+                    try {
+                        c.close();
+                    } catch (Exception ignore) {
+                    }
+                }
+            }
+        }
+        MgHistoryMedia.deleteAsync(files);
+        return removed;
+    }
+    // hanako end
 
     public void clearAll() {
         synchronized (writeLock) {
