@@ -36,6 +36,8 @@ public final class MgWhisperTranscriber {
         FILE_UNAVAILABLE,
         DECODE_FAILED,
         ENGINE_FAILED,
+        /** Parakeet is selected, the language isn't one of its 25, and no whisper model is installed. */
+        LANGUAGE_UNSUPPORTED,
     }
 
     public static final class Failure {
@@ -90,7 +92,33 @@ public final class MgWhisperTranscriber {
 
     /** True when offline transcription is enabled, a model is present and the CPU can run the engine. */
     public static boolean isUsable() {
-        return SharedConfig.mg_transcribeOffline && MgWhisperModel.isSelectedInstalled() && deviceSupported();
+        if (!SharedConfig.mg_transcribeOffline || !MgWhisperModel.isSelectedInstalled()) {
+            return false;
+        }
+        // selected() only returns Parakeet where the sherpa-onnx lib is packaged.
+        return MgWhisperModel.selected().isParakeet() || deviceSupported();
+    }
+
+    /**
+     * The model that will actually transcribe for {@code account}: the selected
+     * one, except that a Parakeet selection hands languages outside its 25 to
+     * the best installed whisper model. {@code null} when Parakeet can't take
+     * the language and no whisper model is installed.
+     */
+    public static MgWhisperModel.Model effectiveModel(int account) {
+        return effectiveModel(effectiveLang(UserConfig.getInstance(account).mg.transcribeLang));
+    }
+
+    private static MgWhisperModel.Model effectiveModel(String lang) {
+        MgWhisperModel.Model selected = MgWhisperModel.selected();
+        if (!selected.isParakeet()) {
+            return selected;
+        }
+        // Cheap check first: only stat the whisper model files when Parakeet can't take the language.
+        if (MgParakeetSpec.route(true, MgParakeetEngine.isSupported(), lang, false) == MgParakeetSpec.Route.PARAKEET) {
+            return selected;
+        }
+        return deviceSupported() ? MgWhisperModel.bestInstalledWhisper() : null;
     }
 
     /**
@@ -103,9 +131,14 @@ public final class MgWhisperTranscriber {
      * positive, so the two uses of the field never overlap.
      */
     public static long currentStamp(int account) {
-        String key = MgWhisperModel.selected().id
-                + "|" + effectiveLang(UserConfig.getInstance(account).mg.transcribeLang)
-                + "|" + (SharedConfig.mg_transcribeVad && MgWhisperModel.isVadInstalled());
+        String lang = effectiveLang(UserConfig.getInstance(account).mg.transcribeLang);
+        MgWhisperModel.Model m = effectiveModel(lang);
+        if (m == null) {
+            m = MgWhisperModel.selected();
+        }
+        // Parakeet's VAD ships inside its bundle, so it runs whenever the toggle is on.
+        boolean vad = SharedConfig.mg_transcribeVad && (m.isParakeet() || MgWhisperModel.isVadInstalled());
+        String key = m.id + "|" + lang + "|" + vad;
         return -(1L + (key.hashCode() & 0x7fffffffL));
     }
 
@@ -183,13 +216,21 @@ public final class MgWhisperTranscriber {
             post(done, null, false, Failure.of(Reason.FILE_UNAVAILABLE));
             return;
         }
-        final MgWhisperModel.Model model = MgWhisperModel.selected();
-        if (!MgWhisperModel.isInstalled(model)) {
+        final String lang = effectiveLang(UserConfig.getInstance(messageObject.currentAccount).mg.transcribeLang);
+        if (!MgWhisperModel.isInstalled(MgWhisperModel.selected())) {
             post(done, null, false, Failure.of(Reason.MODEL_NOT_INSTALLED));
             return;
         }
+        final MgWhisperModel.Model model = effectiveModel(lang);
+        if (model == null) {
+            post(done, null, false, Failure.of(Reason.LANGUAGE_UNSUPPORTED));
+            return;
+        }
+        if (model.isParakeet()) {
+            transcribeParakeet(messageObject, done, allowDownload);
+            return;
+        }
         final String modelPath = MgWhisperModel.absolutePathFor(model);
-        final String lang = effectiveLang(UserConfig.getInstance(messageObject.currentAccount).mg.transcribeLang);
         // VAD strips silence so the tiny model can't hallucinate; non-fatal —
         // only when enabled AND the (downloaded) VAD model is present, else null
         // and the JNI shim transcribes without it. deviceSupported() is already
@@ -258,12 +299,88 @@ public final class MgWhisperTranscriber {
         });
     }
 
+    /**
+     * Parakeet path: same decode / download-then-retry / live-partial contract
+     * as the whisper path, on the same serialized worker.
+     */
+    private static void transcribeParakeet(MessageObject messageObject, Result done, boolean allowDownload) {
+        final boolean useVad = SharedConfig.mg_transcribeVad;
+        WORKER.execute(() -> {
+            try {
+                final String audioPath = resolveAudioPath(messageObject);
+                if (audioPath == null) {
+                    if (allowDownload) {
+                        downloadThenTranscribe(messageObject, done);
+                    } else {
+                        post(done, null, false, Failure.of(Reason.FILE_UNAVAILABLE));
+                    }
+                    return;
+                }
+                float[] pcm;
+                try {
+                    pcm = AudioDecoder.decodeTo16kMono(audioPath);
+                } catch (Exception e) {
+                    FileLog.e(e);
+                    post(done, null, false, Failure.of(Reason.DECODE_FAILED));
+                    return;
+                }
+                if (pcm == null || pcm.length == 0) {
+                    post(done, null, false, Failure.of(Reason.DECODE_FAILED));
+                    return;
+                }
+                // Only one big model in RAM at a time.
+                freeWhisper();
+                final MgWhisperNative.SegmentCallback segCb = (partial) -> {
+                    final String t = partial == null ? "" : partial.trim();
+                    if (!t.isEmpty()) {
+                        AndroidUtilities.runOnUIThread(() -> done.onPartial(t));
+                    }
+                };
+                String text = MgParakeetEngine.transcribe(pcm, useVad, segCb);
+                scheduleIdleRelease();
+                if (text == null) {
+                    post(done, null, false, Failure.of(Reason.ENGINE_FAILED));
+                    return;
+                }
+                post(done, text.trim(), true, null);
+            } catch (Throwable t) {
+                FileLog.e(t);
+                post(done, null, false, Failure.of(Reason.ENGINE_FAILED));
+            }
+        });
+    }
+
+    // Bumped on every Parakeet use; an idle-release check only fires if no
+    // transcription happened since it was scheduled.
+    private static volatile int parakeetUseGeneration;
+
+    /** Frees the ~0.7 GB Parakeet model once it has sat unused for IDLE_RELEASE_MS. */
+    private static void scheduleIdleRelease() {
+        final int gen = ++parakeetUseGeneration;
+        AndroidUtilities.runOnUIThread(() -> WORKER.execute(() -> {
+            if (gen == parakeetUseGeneration && MgParakeetEngine.isLoaded()) {
+                MgParakeetEngine.release();
+            }
+        }), MgParakeetSpec.IDLE_RELEASE_MS);
+    }
+
+    private static void freeWhisper() {
+        if (ctx != 0) {
+            MgWhisperNative.nativeFree(ctx);
+            ctx = 0;
+            loadedModelPath = null;
+            loadedModelStamp = 0;
+        }
+    }
+
     /** Loads (or reloads) the engine context for {@code modelPath}. Worker-thread only. */
     private static boolean ensureEngine(String modelPath) {
         long stamp = modelStamp(modelPath);
         if (ctx != 0 && TextUtils.equals(modelPath, loadedModelPath) && stamp == loadedModelStamp) {
             return true;
         }
+        // Language fallback from Parakeet: don't keep both models resident.
+        MgParakeetEngine.release();
         if (ctx != 0) {
             MgWhisperNative.nativeFree(ctx);
             ctx = 0;
@@ -288,12 +405,8 @@ public final class MgWhisperTranscriber {
      */
     public static void releaseEngine() {
         WORKER.execute(() -> {
-            if (ctx != 0) {
-                MgWhisperNative.nativeFree(ctx);
-                ctx = 0;
-                loadedModelPath = null;
-                loadedModelStamp = 0;
-            }
+            freeWhisper();
+            MgParakeetEngine.release();
         });
     }
 

@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 
+import it.belloworld.mercurygram.transcribe.MgParakeetModel;
 import it.belloworld.mercurygram.transcribe.MgWhisperLanguages;
 import it.belloworld.mercurygram.transcribe.MgWhisperModel;
 import it.belloworld.mercurygram.transcribe.MgWhisperTranscriber;
@@ -85,11 +86,18 @@ public class MercurygramTranscriptionSettingsActivity extends UniversalFragment 
             items.add(UItem.asButton(ID_DELETE,
                     LocaleController.getString(R.string.MercurygramTranscriptionDelete), ""));
         } else {
+            String size = AndroidUtilities.formatFileSize(model.approxSize);
+            long partial = model.isParakeet() ? MgParakeetModel.bytesOnDisk() : 0;
             items.add(UItem.asButton(ID_DOWNLOAD,
-                    LocaleController.getString(R.string.MercurygramTranscriptionDownload),
-                    AndroidUtilities.formatFileSize(model.approxSize)));
+                    LocaleController.getString(partial > 0
+                            ? R.string.HanakoTranscriptionDownloadResume
+                            : R.string.MercurygramTranscriptionDownload),
+                    partial > 0 ? AndroidUtilities.formatFileSize(partial) + " / " + size : size));
         }
-        if (!downloading) {
+        if (model.isParakeet()) {
+            items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoTranscriptionParakeetInfo)));
+        }
+        if (!downloading && !model.isParakeet()) {
             // Hidden while a download/import is running: both write the same
             // "<model>.part" file, so a concurrent import would corrupt it.
             items.add(UItem.asButton(ID_IMPORT,
@@ -199,7 +207,9 @@ public class MercurygramTranscriptionSettingsActivity extends UniversalFragment 
                 downloading = false;
                 refreshList();
                 // A cancel is not a failure — the user asked for it.
-                if (!"cancelled".equals(message)) {
+                if ("Not enough storage".equals(message)) {
+                    toast(R.string.HanakoTranscriptionNoSpace);
+                } else if (!"cancelled".equals(message)) {
                     toast(R.string.MercurygramTranscriptionDownloadFailed);
                 }
             }
@@ -266,7 +276,7 @@ public class MercurygramTranscriptionSettingsActivity extends UniversalFragment 
         if (context == null) {
             return;
         }
-        final MgWhisperModel.Model[] values = MgWhisperModel.Model.values();
+        final java.util.List<MgWhisperModel.Model> values = MgWhisperModel.available();
         AtomicReference<Dialog> dialogRef = new AtomicReference<>();
         LinearLayout linearLayout = new LinearLayout(context);
         linearLayout.setOrientation(LinearLayout.VERTICAL);
@@ -412,6 +422,8 @@ public class MercurygramTranscriptionSettingsActivity extends UniversalFragment 
 
     private static String modelLabel(MgWhisperModel.Model model) {
         switch (model) {
+            case PARAKEET:
+                return LocaleController.getString(R.string.HanakoTranscriptionModelParakeet);
             case BASE:
                 return LocaleController.getString(R.string.MercurygramTranscriptionModelBase);
             case SMALL:

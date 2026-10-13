@@ -7,6 +7,13 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+### Added
+- On-device voice transcription with NVIDIA Parakeet TDT 0.6B v3 (int8, via sherpa-onnx 1.13.8), now
+  the recommended model: 25 European languages including Russian, Ukrainian and English, with
+  punctuation and automatic language detection. The ~670 MB model is downloaded on demand (resumable,
+  checksum-verified) and freed from memory after two idle minutes. Languages it doesn't cover fall back
+  to an installed Whisper model. arm64 only.
+
 ## [1.2.1] - 2026-10-12
 
 ### Fixed

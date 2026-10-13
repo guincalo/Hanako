@@ -784,7 +784,7 @@ public class SharedConfig {
     // private (audio never leaves the device) and available to non-premium
     // accounts. The model is downloaded / imported separately, not bundled.
     public static boolean mg_transcribeOffline = false;
-    public static String mg_transcribeModel = "tiny-q8_0";
+    public static String mg_transcribeModel = "parakeet-tdt-0.6b-v3-int8"; // [Hanako] Parakeet v3 is the recommended default
     // Transcription language: "auto" = whisper auto-detect; "device" = device
     // locale (default — the tiny/base models mis-detect short clips); otherwise an
     // ISO-639-1 code. Applies uniformly to every model. Stored per-account in
@@ -1146,7 +1146,7 @@ public class SharedConfig {
         mg_translateAltPinnedInstance = preferences.getString("mg_translateAltPinnedInstance", "");
         mg_translateAltCustomInstance = preferences.getString("mg_translateAltCustomInstance", "");
         mg_transcribeOffline = preferences.getBoolean("mg_transcribeOffline", false);
-        mg_transcribeModel = preferences.getString("mg_transcribeModel", "tiny-q8_0");
+        mg_transcribeModel = preferences.getString("mg_transcribeModel", "parakeet-tdt-0.6b-v3-int8");
         mg_transcribeVad = preferences.getBoolean("mg_transcribeVad", true);
         mg_useCustomEmojiPack = preferences.getBoolean("mg_useCustomEmojiPack", false);
         mg_disableProximitySensor = preferences.getBoolean("mg_disableProximitySensor", false);

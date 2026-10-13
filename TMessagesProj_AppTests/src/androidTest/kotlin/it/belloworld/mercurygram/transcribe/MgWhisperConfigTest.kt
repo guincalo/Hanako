@@ -25,7 +25,7 @@ class MgWhisperConfigTest {
     private lateinit var prefs: android.content.SharedPreferences
 
     private var savedEnabled: Boolean = false
-    private var savedModel: String = "tiny-q8_0"
+    private var savedModel: String = "parakeet-tdt-0.6b-v3-int8"
     private var savedLang: String = SharedConfig.MG_TRANSCRIBE_LANG_DEVICE
     private var savedVad: Boolean = true
 
@@ -77,6 +77,16 @@ class MgWhisperConfigTest {
 
         SharedConfig.setMgTranscribeModel("tiny-q8_0")
         assertSame(MgWhisperModel.Model.TINY, MgWhisperModel.selected())
+    }
+
+    @Test
+    fun parakeetSelectionPersists() {
+        SharedConfig.setMgTranscribeModel(MgParakeetSpec.MODEL_ID)
+        assertEquals(MgParakeetSpec.MODEL_ID, prefs.getString("mg_transcribeModel", null))
+        // selected() reads Parakeet only where the sherpa-onnx lib is packaged.
+        val expected = if (MgParakeetEngine.isSupported()) MgWhisperModel.Model.PARAKEET else MgWhisperModel.Model.TINY
+        assertSame(expected, MgWhisperModel.selected())
+        assertEquals(MgParakeetEngine.isSupported(), MgWhisperModel.available().contains(MgWhisperModel.Model.PARAKEET))
     }
 
     @Test
