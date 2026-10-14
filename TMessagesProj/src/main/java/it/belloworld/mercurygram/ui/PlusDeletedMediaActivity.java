@@ -55,6 +55,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import it.belloworld.mercurygram.MgMessageHistory;
 import it.belloworld.mercurygram.PlusDeletedMedia;
 
 /**
@@ -616,7 +617,9 @@ public class PlusDeletedMediaActivity extends BaseFragment {
             sb.append(LocaleController.getString(R.string.PlusF20DetailSent)).append(": ")
                     .append(LocaleController.getInstance().getFormatterStats().format(m.date * 1000L)).append('\n');
         }
-        sb.append(LocaleController.getString(R.string.PlusF20DetailSaved)).append(": ")
+        int savedLabelRes = item.origin == PlusDeletedMedia.ORIGIN_DELETED
+                ? R.string.PlusF20DetailDeleted : R.string.PlusF20DetailSaved;
+        sb.append(LocaleController.getString(savedLabelRes)).append(": ")
                 .append(LocaleController.getInstance().getFormatterStats().format(item.entry.whenMs)).append('\n');
         sb.append(LocaleController.getString(R.string.PlusF20DetailSize)).append(": ")
                 .append(AndroidUtilities.formatFileSize(item.file.length()));
@@ -727,6 +730,9 @@ public class PlusDeletedMediaActivity extends BaseFragment {
     }
 
     private static String timeText(PlusDeletedMedia.Item item) {
+        if (item.entry.kind == MgMessageHistory.KIND_DELETED) {
+            return LocaleController.formatDateTime(item.entry.whenMs / 1000, true);
+        }
         return LocaleController.getInstance().getFormatterDay().format(timeOf(item));
     }
 

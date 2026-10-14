@@ -243,6 +243,7 @@ public class MessageObject {
     public ArrayList<Integer> pollMediaMapping;
     public boolean shouldRemoveVideoEditedInfo;
     public boolean mgDeletedGhost; // Mercurygram: server-deleted message kept inline as a ghost
+    public long mgDeletedWhenMs; // Mercurygram: local archive time this ghost was saved, for "deleted at" timestamps
     public boolean viewsReloaded;
     public boolean pollVisibleOnScreen;
     public long pollLastCheckTime;

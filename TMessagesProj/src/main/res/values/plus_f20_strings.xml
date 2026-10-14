@@ -31,6 +31,7 @@
     <string name="PlusF20DetailOrigin">Saved because</string>
     <string name="PlusF20DetailSent">Sent</string>
     <string name="PlusF20DetailSaved">Saved</string>
+    <string name="PlusF20DetailDeleted">Deleted</string>
     <string name="PlusF20DetailSize">Size</string>
     <string name="PlusF20OriginDeleted">the message was deleted</string>
     <string name="PlusF20OriginViewOnce">view-once / timed media expired</string>

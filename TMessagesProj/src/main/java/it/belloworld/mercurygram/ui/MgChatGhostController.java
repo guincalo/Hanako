@@ -151,12 +151,21 @@ public final class MgChatGhostController {
         if (!host.mgHasAdapter()) {
             return;
         }
+        // map mid -> when it was archived, so live-in-chat rows can show "deleted at"
+        LongSparseArray<Long> whenMap = new LongSparseArray<>(entries.size());
+        for (MgMessageHistory.Entry e : entries) {
+            whenMap.put(e.mid, e.whenMs);
+        }
         boolean any = false;
         if (!dmids.isEmpty() && !host.messages.isEmpty()) {
             for (int i = 0; i < host.messages.size(); i++) {
                 MessageObject mo = host.messages.get(i);
                 if (mo != null && !mo.mgDeletedGhost && dmids.contains(mo.getId())) {
                     mo.mgDeletedGhost = true;
+                    Long when = whenMap.get(mo.getId());
+                    if (when != null) {
+                        mo.mgDeletedWhenMs = when;
+                    }
                     it.belloworld.mercurygram.PlusDeletedReactions.onGhost(mo); // plus f07
                     any = true;
                 }
@@ -179,6 +188,7 @@ public final class MgChatGhostController {
             MessageObject mo = messArr.get(i);
             if (mo != null && deletedMids.contains(mo.getId())) {
                 mo.mgDeletedGhost = true;
+                mo.mgDeletedWhenMs = System.currentTimeMillis();
                 it.belloworld.mercurygram.PlusDeletedReactions.onGhost(mo); // plus f07
             }
         }
@@ -232,6 +242,7 @@ public final class MgChatGhostController {
                     host.getMessagesController().getChats(),
                     true, true);
             mo.mgDeletedGhost = true;
+            mo.mgDeletedWhenMs = entry.whenMs;
             it.belloworld.mercurygram.PlusDeletedReactions.onGhost(mo); // plus f07
             mo.stableId = ChatActivity.lastStableId++;
 
@@ -332,6 +343,7 @@ public final class MgChatGhostController {
                 MessageObject mo = resolved.get(i);
                 if (!mo.scheduled && remote.contains(mo.getId()) && !MgMessageHistory.isExcluded(host.getDialogId(), mo.messageOwner)) {
                     mo.mgDeletedGhost = true;
+                    mo.mgDeletedWhenMs = System.currentTimeMillis();
                     it.belloworld.mercurygram.PlusDeletedReactions.onGhost(mo); // plus f07
                     if (mgGhosts == null) {
                         mgGhosts = new ArrayList<>();

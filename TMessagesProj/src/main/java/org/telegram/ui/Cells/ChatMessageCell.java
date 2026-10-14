@@ -18516,7 +18516,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             timeString = LocaleController.getInstance().getFormatterDay().format((long) (messageObject.messageOwner.date) * 1000);
         }
         if (currentMessageObject.mgDeletedGhost) {
-            timeString = getString(R.string.MercurygramSavedMessagesDeleted) + " · " + timeString;
+            if (currentMessageObject.mgDeletedWhenMs > 0) {
+                String deletedWhen = LocaleController.formatDateTime(currentMessageObject.mgDeletedWhenMs / 1000, true);
+                timeString = LocaleController.formatString(R.string.HanakoDeletedAtSent, deletedWhen, timeString);
+            } else {
+                timeString = getString(R.string.MercurygramSavedMessagesDeleted) + " · " + timeString;
+            }
         }
         if (currentMessageObject.messageOwner.video_processing_pending) {
             timeString = formatString(R.string.ScheduledTimeApprox, timeString);

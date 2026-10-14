@@ -3,6 +3,7 @@ package it.belloworld.mercurygram.ui;
 import android.content.Context;
 import android.graphics.Color;
 import android.text.SpannableStringBuilder;
+import android.text.TextUtils;
 import android.text.Spanned;
 import android.text.style.BackgroundColorSpan;
 import android.text.style.ForegroundColorSpan;
@@ -19,6 +20,7 @@ import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MessageObject;
+import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.TLRPC;
@@ -52,7 +54,8 @@ import it.belloworld.mercurygram.MgMessageHistory;
  */
 public class MgMessageEditHistoryActivity extends UniversalFragment {
 
-    private final TLRPC.Message currentMessage;
+    private final TLRPC.Message fallbackMessage;
+    private TLRPC.Message currentMessage;
     private final long dialogId;
     private final int messageId;
 
@@ -86,7 +89,8 @@ public class MgMessageEditHistoryActivity extends UniversalFragment {
     }
 
     public MgMessageEditHistoryActivity(MessageObject current) {
-        this.currentMessage = current != null ? current.messageOwner : null;
+        this.fallbackMessage = current != null ? current.messageOwner : null;
+        this.currentMessage = this.fallbackMessage;
         this.dialogId = current != null ? current.getDialogId() : 0;
         this.messageId = current != null ? current.getId() : 0;
     }
@@ -292,17 +296,40 @@ public class MgMessageEditHistoryActivity extends UniversalFragment {
         final int account = currentAccount;
         final long did = dialogId;
         final int mid = messageId;
-        final TLRPC.Message current = currentMessage;
+        final TLRPC.Message fallback = fallbackMessage;
         Utilities.globalQueue.postRunnable(() -> {
-            List<MgMessageHistory.Entry> entries =
+            // Re-read the current message from storage: the MessageObject handed
+            // to us may be stale if the activity opened before the edited update
+            // replaced the in-memory chat row.
+            TLRPC.Message fresh = MessagesStorage.getInstance(account).getMessage(did, mid);
+            TLRPC.Message current = fresh != null ? fresh : fallback;
+            currentMessage = current;
+
+            List<MgMessageHistory.Entry> rawEntries =
                     MgMessageHistory.getInstance().getEditHistoryFor(account, did, mid);
+
+            // Drop archived versions that are identical to the version that
+            // immediately follows them (oldest-first walk). This also drops the
+            // newest archive when it matches the live current message.
+            ArrayList<MgMessageHistory.Entry> entries = new ArrayList<>(rawEntries.size());
+            for (int i = 0; i < rawEntries.size(); i++) {
+                MgMessageHistory.Entry e = rawEntries.get(i);
+                if (!entries.isEmpty() && sameVersion(entries.get(entries.size() - 1).message, e.message)) {
+                    entries.set(entries.size() - 1, e); // keep the newer duplicate
+                } else {
+                    entries.add(e);
+                }
+            }
+            if (!entries.isEmpty() && sameVersion(entries.get(entries.size() - 1).message, current)) {
+                entries.remove(entries.size() - 1);
+            }
+
             ArrayList<Row> built = new ArrayList<>(entries.size() + 1);
 
             // current version on top
             String currentLabel = LocaleController.getString(R.string.MercurygramEditHistoryCurrent);
-            int editDate = current != null ? current.edit_date : 0;
-            String currentMeta = editDate != 0
-                    ? LocaleController.formatString(R.string.HanakoEditHistoryCurrentEdited, fmt(editDate * 1000L))
+            String currentMeta = current != null && current.edit_date != 0
+                    ? LocaleController.formatString(R.string.HanakoEditHistoryCurrentEdited, fmt(current.edit_date * 1000L))
                     : currentLabel;
             String currentBody = textOf(current);
             Row top = new Row(currentBody, currentMeta, currentBody, currentLabel, hasText(current),
@@ -363,10 +390,105 @@ public class MgMessageEditHistoryActivity extends UniversalFragment {
         return LocaleController.getString(R.string.MercurygramSavedMessagesEmpty);
     }
 
-    // ---- word diff ----
+    // ---- version identity / dedup ----
+
+    /** True when two versions are visually identical and only differ in edit metadata. */
+    private static boolean sameVersion(TLRPC.Message a, TLRPC.Message b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+        if (!TextUtils.equals(a.message, b.message)) return false;
+        if (replyToMsgId(a) != replyToMsgId(b)) return false;
+        return sameMediaKey(a, b);
+    }
+
+    private static int replyToMsgId(TLRPC.Message m) {
+        if (m == null || m.reply_to == null) return 0;
+        return m.reply_to.reply_to_msg_id;
+    }
+
+    private static boolean sameMediaKey(TLRPC.Message a, TLRPC.Message b) {
+        if (a == null || b == null) return a == b;
+        TLRPC.MessageMedia ma = MessageObject.getMedia(a);
+        TLRPC.MessageMedia mb = MessageObject.getMedia(b);
+        if (ma == null && mb == null) return true;
+        if (ma == null || mb == null) return false;
+        return mediaId(ma) == mediaId(mb);
+    }
+
+    private static long mediaId(TLRPC.MessageMedia media) {
+        if (media instanceof TLRPC.TL_messageMediaPhoto && media.photo != null) {
+            return media.photo.id;
+        } else if (media instanceof TLRPC.TL_messageMediaDocument && media.document != null) {
+            return media.document.id;
+        }
+        return 0;
+    }
+
+    // ---- diff ----
+
+    /** Differences between an older and newer version: word-level text diff plus
+     *  labels for reply/forward/media changes. */
+    private CharSequence diff(TLRPC.Message older, TLRPC.Message newer) {
+        CharSequence text = diffText(older, newer);
+        CharSequence extras = changesDescription(older, newer);
+        if (text == null) return extras;
+        if (extras == null) return text;
+        SpannableStringBuilder sb = new SpannableStringBuilder();
+        sb.append(text).append("\n").append(extras);
+        return sb;
+    }
+
+    private CharSequence changesDescription(TLRPC.Message older, TLRPC.Message newer) {
+        ArrayList<String> parts = new ArrayList<>();
+        int oldReply = replyToMsgId(older);
+        int newReply = replyToMsgId(newer);
+        if (oldReply == 0 && newReply != 0) {
+            parts.add(LocaleController.getString(R.string.HanakoEditHistoryReplyAdded));
+        } else if (oldReply != 0 && newReply == 0) {
+            parts.add(LocaleController.getString(R.string.HanakoEditHistoryReplyRemoved));
+        } else if (oldReply != 0 && oldReply != newReply) {
+            parts.add(LocaleController.getString(R.string.HanakoEditHistoryReplyChanged));
+        }
+
+        boolean oldFwd = older != null && older.fwd_from != null;
+        boolean newFwd = newer != null && newer.fwd_from != null;
+        if (!oldFwd && newFwd) {
+            parts.add(LocaleController.getString(R.string.HanakoEditHistoryForwardAdded));
+        } else if (oldFwd && !newFwd) {
+            parts.add(LocaleController.getString(R.string.HanakoEditHistoryForwardRemoved));
+        } else if (oldFwd && newFwd && !sameForward(older.fwd_from, newer.fwd_from)) {
+            parts.add(LocaleController.getString(R.string.HanakoEditHistoryForwardChanged));
+        }
+
+        if (!sameMediaKey(older, newer)) {
+            TLRPC.MessageMedia olderMedia = older != null ? MessageObject.getMedia(older) : null;
+            TLRPC.MessageMedia newerMedia = newer != null ? MessageObject.getMedia(newer) : null;
+            if (olderMedia == null) {
+                parts.add(LocaleController.getString(R.string.HanakoEditHistoryMediaAdded));
+            } else if (newerMedia == null) {
+                parts.add(LocaleController.getString(R.string.HanakoEditHistoryMediaRemoved));
+            } else {
+                parts.add(LocaleController.getString(R.string.HanakoEditHistoryMediaChanged));
+            }
+        }
+
+        if (parts.isEmpty()) return null;
+        return TextUtils.join(" · ", parts);
+    }
+
+    private static boolean sameForward(TLRPC.MessageFwdHeader a, TLRPC.MessageFwdHeader b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+        long fromA = a.from_id != null ? MessageObject.getPeerId(a.from_id) : 0;
+        long fromB = b.from_id != null ? MessageObject.getPeerId(b.from_id) : 0;
+        if (fromA != fromB) return false;
+        long savedA = a.saved_from_peer != null ? MessageObject.getPeerId(a.saved_from_peer) : 0;
+        long savedB = b.saved_from_peer != null ? MessageObject.getPeerId(b.saved_from_peer) : 0;
+        return savedA == savedB && a.saved_from_msg_id == b.saved_from_msg_id;
+    }
 
     /** Word-level diff from {@code older} to {@code newer} text, or null when the text did not change. */
-    private CharSequence diff(TLRPC.Message older, TLRPC.Message newer) {
+    private CharSequence diffText(TLRPC.Message older, TLRPC.Message newer) {
         String a = older != null && older.message != null ? older.message : "";
         String b = newer != null && newer.message != null ? newer.message : "";
         if (a.equals(b)) {

@@ -32,4 +32,15 @@
     <string name="HanakoEditHistoryCurrentEdited">Current · edited %1$s</string>
     <string name="HanakoEditHistoryRemove">Remove this version</string>
     <string name="HanakoEditHistoryRemoveConfirm">Remove this saved version from this device? This can\'t be undone.</string>
+    <string name="HanakoEditHistoryReplyAdded">reply added</string>
+    <string name="HanakoEditHistoryReplyRemoved">reply removed</string>
+    <string name="HanakoEditHistoryReplyChanged">reply changed</string>
+    <string name="HanakoEditHistoryForwardAdded">forward added</string>
+    <string name="HanakoEditHistoryForwardRemoved">forward removed</string>
+    <string name="HanakoEditHistoryForwardChanged">forward changed</string>
+    <string name="HanakoEditHistoryMediaAdded">media added</string>
+    <string name="HanakoEditHistoryMediaRemoved">media removed</string>
+    <string name="HanakoEditHistoryMediaChanged">media changed</string>
+    <string name="HanakoDeletedAt">Deleted %1$s</string>
+    <string name="HanakoDeletedAtSent">Deleted %1$s · sent %2$s</string>
 </resources>

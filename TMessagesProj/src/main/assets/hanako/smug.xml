@@ -608,4 +608,15 @@
     <string name="HanakoIntroTurnOff">Turn it off</string>
     <string name="PlusProxySwitchStockHint">My \"Switch to the fastest working proxy\" is on (Hanako → Device and data → Network), so I pick the fastest one, not the first that answers.</string>
     <string name="PlusProxySwitched">Proxy died, switched to %1$s (%2$d ms)</string>
+    <string name="HanakoEditHistoryReplyAdded">reply tacked on</string>
+    <string name="HanakoEditHistoryReplyRemoved">reply gone</string>
+    <string name="HanakoEditHistoryReplyChanged">different reply now</string>
+    <string name="HanakoEditHistoryForwardAdded">forward slapped on</string>
+    <string name="HanakoEditHistoryForwardRemoved">forward removed</string>
+    <string name="HanakoEditHistoryForwardChanged">forward swapped</string>
+    <string name="HanakoEditHistoryMediaAdded">media attached</string>
+    <string name="HanakoEditHistoryMediaRemoved">media yeeted</string>
+    <string name="HanakoEditHistoryMediaChanged">media swapped</string>
+    <string name="HanakoDeletedAt">deleted %1$s</string>
+    <string name="HanakoDeletedAtSent">deleted %1$s, sent %2$s</string>
 </resources>
