@@ -18517,7 +18517,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
         if (currentMessageObject.mgDeletedGhost) {
             if (currentMessageObject.mgDeletedWhenMs > 0) {
-                String deletedWhen = LocaleController.formatDateTime(currentMessageObject.mgDeletedWhenMs / 1000, true);
+                String deletedWhen = LocaleController.getInstance().getFormatterDay().format(currentMessageObject.mgDeletedWhenMs); // short: bubble meta is narrow
                 timeString = LocaleController.formatString(R.string.HanakoDeletedAtSent, deletedWhen, timeString);
             } else {
                 timeString = getString(R.string.MercurygramSavedMessagesDeleted) + " · " + timeString;
