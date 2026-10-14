@@ -228,9 +228,15 @@ public final class HanakoTelemetry {
         from.presentFragment(page);
     }
 
+    /** Answers to downloads we already cancelled (rpc_answer_dropped_running); upstream treats them as harmless. */
+    private static boolean isNoise(Throwable t) {
+        String m = t.getMessage();
+        return t instanceof org.telegram.tgnet.TLParseException && m != null && m.contains("magic cd78e586 ");
+    }
+
     /** A caught error (called from FileLog.e). Same fields as a crash, deduplicated per day. */
     public static void caught(Throwable t) {
-        if (t == null || !isEnabled()) return;
+        if (t == null || !isEnabled() || isNoise(t)) return;
         try {
             JSONObject e = describe(t, "caught");
             synchronized (lock) {
