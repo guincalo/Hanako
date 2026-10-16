@@ -11434,7 +11434,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     if (userInfo != null && userInfo.stars_rating != null && userInfo.stars_rating.stars < 0) {
                         newString2 = getString(R.string.StarRatingLevelNegative).toLowerCase(Locale.ROOT);
                     } else {
-                        newString2 = LocaleController.getString(R.string.Online);
+                        String ghostSelf = it.belloworld.mercurygram.PlusGhost.selfStatus(currentAccount, null); // hanako 1.3.1
+                        newString2 = ghostSelf != null ? ghostSelf : LocaleController.getString(R.string.Online);
                     }
                 }
             } else if (user.id == UserObject.VERIFY) {
@@ -11452,6 +11453,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             } else {
                 isOnline[0] = false;
                 newString2 = LocaleController.formatUserStatus(currentAccount, user, isOnline, shortStatus ? new boolean[1] : null);
+                String savedLastSeen = it.belloworld.mercurygram.PlusActivityLog.savedLastSeenSuffix(currentAccount, user); // hanako 1.3.1
+                if (savedLastSeen != null) {
+                    newString2 = newString2 + " · " + savedLastSeen; // hanako 1.3.1
+                }
                 hiddenStatusButton = user != null && !isOnline[0] && !getUserConfig().isPremium() && user.status != null && (user.status instanceof TLRPC.TL_userStatusRecently || user.status instanceof TLRPC.TL_userStatusLastMonth || user.status instanceof TLRPC.TL_userStatusLastWeek) && user.status.by_me;
                 if (onlineTextView[1] != null && !mediaHeaderVisible) {
                     int key = isOnline[0] && peerColor == null ? Theme.key_profile_status : Theme.key_actionBarDefaultSubtitle;
@@ -11509,6 +11514,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         getMessagesController().reloadUser(getDialogId());
                     }, resourcesProvider);
                 } : null);
+                if (user.id == getUserConfig().getClientUserId() && a == 1 && it.belloworld.mercurygram.PlusGhost.hidesOwnOnline(currentAccount) && onlineTextOverride == null) { // hanako 1.3.1
+                    it.belloworld.mercurygram.PlusGhost.applySelfGhostIcon(this, onlineTextView[a], currentAccount, onlineTextView[a].getTextColor()); // hanako 1.3.1
+                }
                 Drawable leftIcon = currentEncryptedChat != null ? getLockIconDrawable() : null;
                 boolean rightIconIsPremium = false, rightIconIsStatus = false;
                 nameTextView[a].setRightDrawableOutside(a == 0);
@@ -11640,7 +11648,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (userInfo != null && userInfo.stars_rating != null && userInfo.stars_rating.stars < 0) {
                     onlineTextView[3].setText(newString2 = getString(R.string.StarRatingLevelNegative).toLowerCase(Locale.ROOT));
                 } else {
-                    onlineTextView[3].setText(LocaleController.getString(R.string.Online));
+                    String ghostSelf = it.belloworld.mercurygram.PlusGhost.selfStatus(currentAccount, null); // hanako 1.3.1
+                    onlineTextView[3].setText(ghostSelf != null ? ghostSelf : LocaleController.getString(R.string.Online));
                 }
             } else {
                 if (user.photo != null && user.photo.personal && user.photo.has_video) {

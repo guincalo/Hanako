@@ -12,7 +12,10 @@ import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.ContactsController;
 import org.telegram.messenger.DispatchQueue;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
@@ -66,6 +69,8 @@ public final class PlusActivityLog {
 
     /** "acc_uid" -> last logged type/extra, to drop repeated identical states (e.g. online->online). */
     private static final ConcurrentHashMap<String, long[]> lastState = new ConcurrentHashMap<>();
+    /** "acc_uid" -> cached last seen timestamp (seconds); 0 = loading, -1 = none. */
+    private static final ConcurrentHashMap<String, Integer> savedSeen = new ConcurrentHashMap<>();
 
     private PlusActivityLog() {
     }
@@ -202,6 +207,12 @@ public final class PlusActivityLog {
             }
             lastState.put(key, new long[]{type, extra});
             insert(account, userId, ts, type, extra, false);
+            if (type == TYPE_ONLINE || type == TYPE_OFFLINE) {
+                Integer cached = savedSeen.get(key);
+                if (cached != null) {
+                    savedSeen.put(key, ts);
+                }
+            }
         } catch (Throwable e) {
             FileLog.e(e);
         }
@@ -238,6 +249,54 @@ public final class PlusActivityLog {
     /** Whether ProfileActivity should offer the "Activity log" item for this user. */
     public static boolean showInProfile(int account, TLRPC.User user) {
         return user != null && !user.bot && !user.self && isEnabled(account);
+    }
+
+    /** Exact last-seen suffix from the local activity log, for users with a hidden last seen. */
+    public static String savedLastSeenSuffix(int account, TLRPC.User user) {
+        if (!isEnabled(account) || user == null || user.bot || user.self || user.status == null || user.status.expires >= 0) {
+            return null;
+        }
+        int expires = user.status.expires;
+        if (!(expires == -100 || expires == -101 || expires == -102 || expires == -1000 || expires == -1001 || expires == -1002)) {
+            return null;
+        }
+        if (MessagesController.getInstance(account).onlinePrivacy.containsKey(user.id)) {
+            return null;
+        }
+        final String key = account + "_" + user.id;
+        Integer cached = savedSeen.get(key);
+        if (cached == null) {
+            savedSeen.put(key, 0);
+            queue.postRunnable(() -> {
+                int ts = -1;
+                Cursor c = null;
+                try {
+                    c = db().rawQuery("SELECT date, type, extra FROM log WHERE acc = ? AND uid = ? AND type IN (1,2) ORDER BY date DESC, id DESC LIMIT 1",
+                            new String[]{Integer.toString(account), Long.toString(user.id)});
+                    if (c.moveToNext()) {
+                        int date = c.getInt(0);
+                        int type = c.getInt(1);
+                        long extra = c.getLong(2);
+                        ts = type == TYPE_OFFLINE && extra > 0 ? (int) extra : date;
+                    }
+                } catch (Throwable e) {
+                    FileLog.e(e);
+                } finally {
+                    if (c != null) {
+                        c.close();
+                    }
+                }
+                savedSeen.put(key, ts);
+                if (ts > 0) {
+                    AndroidUtilities.runOnUIThread(() -> NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_STATUS));
+                }
+            });
+            return null;
+        }
+        if (cached <= 0) {
+            return null;
+        }
+        return LocaleController.formatString(R.string.HanakoSavedLastSeen, LocaleController.formatDateOnline(cached, null));
     }
 
     // ---------------------------------------------------------------- storage
@@ -307,6 +366,7 @@ public final class PlusActivityLog {
 
     public static void clearUser(int account, long userId, Runnable done) {
         lastState.remove(account + "_" + userId);
+        savedSeen.remove(account + "_" + userId);
         queue.postRunnable(() -> {
             try {
                 db().delete("log", "acc = ? AND uid = ?", new String[]{Integer.toString(account), Long.toString(userId)});
@@ -321,6 +381,7 @@ public final class PlusActivityLog {
 
     public static void clearAll(Runnable done) {
         lastState.clear();
+        savedSeen.clear();
         queue.postRunnable(() -> {
             try {
                 db().delete("log", null, null);

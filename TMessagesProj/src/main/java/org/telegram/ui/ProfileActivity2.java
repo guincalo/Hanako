@@ -728,7 +728,14 @@ public class ProfileActivity2 extends BaseFragment implements
         if (user != null) {
             title.setText(UserObject.getUserName(user));
             if (self) {
-                subtitle.setText(getString(R.string.Online));
+                String ghostSelf = it.belloworld.mercurygram.PlusGhost.selfStatus(currentAccount, null); // hanako 1.3.1
+                subtitle.setText(ghostSelf != null ? ghostSelf : getString(R.string.Online)); // hanako 1.3.1
+                if (it.belloworld.mercurygram.PlusGhost.hidesOwnOnline(currentAccount)) { // hanako 1.3.1
+                    it.belloworld.mercurygram.PlusGhost.applySelfGhostIcon(this, subtitle, currentAccount, subtitle.getTextColor()); // hanako 1.3.1
+                } else {
+                    subtitle.setRightDrawable((android.graphics.drawable.Drawable) null); // hanako 1.3.1
+                    subtitle.setRightDrawableOnClick(null); // hanako 1.3.1
+                }
             } else if (dialogId == UserObject.VERIFY) {
                 subtitle.setText(getString(R.string.VerifyCodesNotifications));
             } else if (dialogId == 333000 || user.id == 777000 || user.id == 42777) {
@@ -742,7 +749,12 @@ public class ProfileActivity2 extends BaseFragment implements
                     subtitle.setText(getString(R.string.Bot));
                 }
             } else {
-                subtitle.setText(LocaleController.formatUserStatus(currentAccount, user, isOnline, null));
+                String savedLastSeen = it.belloworld.mercurygram.PlusActivityLog.savedLastSeenSuffix(currentAccount, user); // hanako 1.3.1
+                if (savedLastSeen != null) {
+                    subtitle.setText(LocaleController.formatUserStatus(currentAccount, user, isOnline, null) + " · " + savedLastSeen); // hanako 1.3.1
+                } else {
+                    subtitle.setText(LocaleController.formatUserStatus(currentAccount, user, isOnline, null));
+                }
             }
         } else if (chat != null) {
             title.setText(chat.title);

@@ -218,7 +218,7 @@ public final class PlusGhostQuick {
     }
 
     private static void openSettings(BaseFragment f) {
-        f.presentFragment(new MercurygramSettingsActivity(MercurygramSettingsActivity.PAGE_GHOST));
+        PlusGhost.openGhostSettings(f);
     }
 
     // ---- chat list: indicator ----

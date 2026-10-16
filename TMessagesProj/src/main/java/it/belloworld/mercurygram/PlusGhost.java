@@ -2,13 +2,19 @@ package it.belloworld.mercurygram;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.ConnectionsManager;
@@ -18,6 +24,8 @@ import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_account;
 import org.telegram.tgnet.tl.TL_phone;
 import org.telegram.tgnet.tl.TL_stories;
+import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.ActionBar.SimpleTextView;
 
 import java.util.Collections;
 import java.util.Set;
@@ -71,6 +79,7 @@ public final class PlusGhost {
     /** Upper bound for how long the server keeps us "online" after an action without a new status. */
     private static final long STALE_ONLINE_MS = 5 * 60 * 1000;
     private static final String MAYBE_ONLINE_KEY = "maybe_online_";
+    private static final String SELF_OFFLINE_KEY = "self_offline_at_";
 
     private static final String[] OPT_KEYS = {"reads", "typing", "online", "stories", "read_on_send", "force_offline"};
     private static final boolean[] OPT_DEFAULTS = {true, true, true, true, true, false};
@@ -88,6 +97,9 @@ public final class PlusGhost {
     private static final Runnable[] offlineRunnables = new Runnable[UserConfig.MAX_ACCOUNT_COUNT];
     private static final long[] lastActivityAt = new long[UserConfig.MAX_ACCOUNT_COUNT];
     private static final long[] lastForcedOfflineAt = new long[UserConfig.MAX_ACCOUNT_COUNT];
+    /** hanako 1.3.1: server-clock seconds when the last own updateUserStatus arrived (0 = none this process). */
+    private static final long[] selfStatusAt = new long[UserConfig.MAX_ACCOUNT_COUNT];
+    private static final boolean[] selfStatusOnline = new boolean[UserConfig.MAX_ACCOUNT_COUNT];
     /** 1 = the start-up stale-online check already ran for this account in this process. */
     private static final AtomicIntegerArray startChecked = new AtomicIntegerArray(UserConfig.MAX_ACCOUNT_COUNT);
 
@@ -446,6 +458,8 @@ public final class PlusGhost {
             peer = ((TLRPC.TL_messages_forwardMessages) o).to_peer;
         } else if (o instanceof TLRPC.TL_messages_sendReaction) {
             peer = ((TLRPC.TL_messages_sendReaction) o).peer;
+        } else if (o instanceof TLRPC.TL_messages_sendPaidReaction) {
+            peer = ((TLRPC.TL_messages_sendPaidReaction) o).peer;
         } else if (o instanceof TLRPC.TL_messages_sendVote) {
             peer = ((TLRPC.TL_messages_sendVote) o).peer;
         }
@@ -487,6 +501,10 @@ public final class PlusGhost {
      * automatically", this fights any other client of the account that is open at the same time.
      */
     public static void onSelfStatus(int account, TLRPC.UserStatus status) {
+        if (validAccount(account)) {
+            selfStatusAt[account] = ConnectionsManager.getInstance(account).getCurrentTime(); // server-clock seconds
+            selfStatusOnline[account] = status instanceof TLRPC.TL_userStatusOnline;
+        }
         if (!validAccount(account) || !(status instanceof TLRPC.TL_userStatusOnline)
                 || !active(account, OPT_ONLINE) || !isHidden(account, OPT_FORCE_OFFLINE)) {
             return;
@@ -568,11 +586,113 @@ public final class PlusGhost {
                 ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
                     if (error == null) {
                         clearMaybeOnline(account, sentAt);
+                        try {
+                            prefs().edit().putInt(SELF_OFFLINE_KEY + account, ConnectionsManager.getInstance(account).getCurrentTime()).apply();
+                            AndroidUtilities.runOnUIThread(() -> NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_STATUS));
+                        } catch (Exception e) {
+                            FileLog.e(e);
+                        }
                     }
                 });
             }
         };
         offlineRunnables[account] = r;
         Utilities.globalQueue.postRunnable(r, delay);
+    }
+
+    // ---- honest own-profile status (hanako 1.3.1) ----
+
+    public static boolean hidesOwnOnline(int account) {
+        return validAccount(account) && active(account, OPT_ONLINE);
+    }
+
+    private static boolean otherDevice(int account) {
+        return selfStatusAt[account] != 0 && selfStatusOnline[account] && SystemClock.elapsedRealtime() - lastActivityAt[account] > 60000 && !PlusGhostExceptions.onlineExceptedNow(account);
+    }
+
+    /**
+     * Own status for your own profile while ghost mode hides online: what the server last said about
+     * this account, or the last offline it acknowledged for this device, never "online" on unknown.
+     * null = ghost doesn't hide online here, keep the stock text. Local reads only, sends nothing.
+     */
+    public static String selfStatus(int account, boolean[] isOnline) {
+        try {
+            if (!hidesOwnOnline(account)) {
+                return null;
+            }
+            TLRPC.User user = MessagesController.getInstance(account).getUser(UserConfig.getInstance(account).getClientUserId());
+            TLRPC.UserStatus status = user != null ? user.status : null;
+            int now = ConnectionsManager.getInstance(account).getCurrentTime();
+            int localOff = prefs().getInt(SELF_OFFLINE_KEY + account, 0);
+            if (status instanceof TLRPC.TL_userStatusOnline && status.expires > now) {
+                long onlineArrivedAt = selfStatusAt[account];
+                boolean offlineNewer = false;
+                if (localOff > 0) {
+                    if (onlineArrivedAt != 0) {
+                        offlineNewer = localOff >= onlineArrivedAt - 2; // our offline was acknowledged after that online arrived
+                    } else {
+                        offlineNewer = localOff >= status.expires - 300;
+                    }
+                }
+                if (!offlineNewer) {
+                    if (isOnline != null) {
+                        isOnline[0] = true;
+                    }
+                    if (otherDevice(account)) {
+                        return LocaleController.getString(R.string.HanakoSelfOnlineOtherDevice);
+                    }
+                    return LocaleController.getString(R.string.Online);
+                }
+            }
+            int lastSeen = 0;
+            if (status instanceof TLRPC.TL_userStatusOffline && status.expires > 0) {
+                lastSeen = Math.max(lastSeen, status.expires);
+            }
+            if (status instanceof TLRPC.TL_userStatusOnline && status.expires > 0) {
+                lastSeen = Math.max(lastSeen, status.expires);
+            }
+            if (localOff > 0) {
+                lastSeen = Math.max(lastSeen, localOff);
+            }
+            if (lastSeen > 0) {
+                return LocaleController.formatDateOnline(lastSeen, null);
+            }
+            return LocaleController.getString(R.string.HanakoSelfOffline);
+        } catch (Exception e) {
+            FileLog.e(e);
+            return LocaleController.getString(R.string.HanakoSelfOffline);
+        }
+    }
+
+    public static android.graphics.drawable.Drawable selfGhostIcon(Context ctx, int color) {
+        try {
+            android.graphics.drawable.Drawable d = ctx.getResources().getDrawable(R.drawable.plus_ghost).mutate();
+            d.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+            int size = AndroidUtilities.dp(14);
+            d.setBounds(0, 0, size, size);
+            return d;
+        } catch (Exception e) {
+            FileLog.e(e);
+            return null;
+        }
+    }
+
+    public static void openGhostSettings(BaseFragment f) {
+        f.presentFragment(new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_GHOST));
+    }
+
+    public static void applySelfGhostIcon(BaseFragment f, SimpleTextView tv, int account, int color) {
+        if (f == null || tv == null || !hidesOwnOnline(account)) {
+            return;
+        }
+        try {
+            android.graphics.drawable.Drawable icon = selfGhostIcon(f.getContext(), color);
+            if (icon != null) {
+                tv.setRightDrawable(icon);
+                tv.setRightDrawableOnClick(v -> openGhostSettings(f));
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
     }
 }

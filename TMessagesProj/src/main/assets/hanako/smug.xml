@@ -619,4 +619,8 @@
     <string name="HanakoEditHistoryMediaChanged">media swapped</string>
     <string name="HanakoDeletedAt">deleted %1$s</string>
     <string name="HanakoDeletedAtSent">deleted %1$s, sent %2$s</string>
+    <string name="HanakoSelfOffline">offline~ nobody saw you</string>
+    <string name="HanakoSelfOnlineOtherDevice">online on another device. caught you~</string>
+    <string name="HanakoSavedLastSeen">%1$s (i saved it~)</string>
+    <string name="HanakoSelfGhostIcon">ghost mode\'s on. tap if you wanna fiddle with it</string>
 </resources>
