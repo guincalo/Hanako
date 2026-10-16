@@ -7,6 +7,23 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-16
+
+### Added
+- **Your own profile tells the truth in ghost mode.** Instead of a hard-coded "online", it shows what
+  Telegram last saw of you: "online" only when the server really shows you online (and "online on
+  another device" when this phone did nothing, e.g. Telegram Desktop is open), otherwise "last seen
+  at …" from the server or from the last offline this phone sent, and "offline" when nothing is known.
+  A small ghost icon next to it opens the ghost mode settings. With ghost mode off it's the usual
+  "online". Nothing extra is sent.
+- **Saved last seen for people who hide theirs**: with the activity log on, a contact whose last seen
+  is "recently" / "within a week" / "within a month" shows the last exact time Hanako saw them on
+  their profile, e.g. "last seen recently · last seen today at 14:02 (saved)".
+
+### Changed
+- Read on send now also reads the chat after a Stars (paid) reaction, like it already did after
+  messages, reactions and poll votes.
+
 ## [1.3.0] - 2026-10-13
 
 ### Added
@@ -170,7 +187,8 @@ First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
 ### Other
 - Telegram Premium upsells and promo rows hidden; upstream Mercurygram update checks disabled.
 
-[Unreleased]: https://github.com/guincalo/Hanako/compare/v1.3.0...hanako
+[Unreleased]: https://github.com/guincalo/Hanako/compare/v1.3.1...hanako
+[1.3.1]: https://github.com/guincalo/Hanako/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/guincalo/Hanako/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/guincalo/Hanako/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/guincalo/Hanako/compare/v1.1.0...v1.2.0

@@ -75,6 +75,9 @@ and live under **Settings → Hanako**.
   typing status and (optionally) online-while-the-chat-is-open are sent normally.
 - **Quick controls**: a ghost-mode toggle in the chat list menu, a ghost indicator in the chat list
   header while it is on, and *Send read receipt* in a chat's menu to mark just that chat as read.
+- **Honest own status**: while ghost mode hides your online status, your own profile shows what Telegram
+  really sees ("last seen at …", "online", "online on another device") instead of a fixed "online",
+  with a ghost icon that opens the ghost settings.
 - **Send as scheduled in ghost mode**: messages go out as server-side scheduled messages a few seconds
   later, so sending never puts you online.
 - **Send without sound in ghost mode**: every message you send while ghost mode is on is silent.
@@ -113,6 +116,8 @@ and live under **Settings → Hanako**.
 - **Local last-seen / read log**: records contacts' online/offline transitions and when they read your
   messages, from updates the app already receives (no extra requests). Per-contact view in the
   profile menu; retention from 7 days to 1 year.
+- **Saved last seen**: for people who hide their last seen, their profile shows the last exact time
+  the log saw them online ("… (saved)").
 
 ### Streamer mode
 
