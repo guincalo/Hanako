@@ -1,11 +1,28 @@
 # Changelog
 
 All notable changes to Hanako are listed here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Hanako is versioned by its Git tags
-(`vX.Y.Z`, [Semantic Versioning](https://semver.org/)); the version shown inside the app follows the
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Hanako is versioned by its Git tags.
+Up to 1.3.1 tags were `vX.Y.Z`; from 1.31 on Hanako uses
+[LRS version numbering](https://git.coom.tech/drummyfish/less_retarded_wiki/src/branch/master/version_numbering.md):
+`MAJOR.MINOR`, the minor sized by how big the change is, and a `d` suffix for development builds
+(published as prereleases, not bumped per change); the version shown inside the app follows the
 Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
+
+## [1.31d] - 2026-10-17
+
+Development build based on 1.3.1, to collect a week of better usage statistics before the cleanup.
+
+### Added
+- **Once a day, a note of what's switched on** (only with Usage statistics on): on/off states, counts and
+  fixed choices like the transcription model. No messages, names, IDs or links.
+- Counters for things that weren't measured: Parakeet/Whisper transcriptions, translations, the deleted
+  media and edit history screens, Hanako items in the chat menu, manual read receipts, and whether
+  DoH or the VPN bypass actually did something that day.
+
+### Removed
+- Three settings export/import/undo counters that were never counted.
 
 ## [1.3.1] - 2026-10-16
 
