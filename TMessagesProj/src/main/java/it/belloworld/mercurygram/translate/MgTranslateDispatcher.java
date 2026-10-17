@@ -57,6 +57,18 @@ public final class MgTranslateDispatcher {
         void done(@Nullable String text, boolean rateLimit, @Nullable MgAidlTranslate.Failure failure);
     }
 
+    // hanako: usage statistics (off by default). Cloud = Telegram's translator (Default/Cloud mode);
+    // local = the offline provider, or the alternative web engine when that isn't usable.
+    private static void countCloud() {
+        it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.TRANSLATE_CLOUD);
+    }
+
+    private static void countLocal() {
+        it.belloworld.mercurygram.HanakoTelemetry.count(isOfflineUsable()
+                ? it.belloworld.mercurygram.HanakoTelemetry.TRANSLATE_OFFLINE
+                : it.belloworld.mercurygram.HanakoTelemetry.TRANSLATE_ALTERNATIVE);
+    }
+
     /**
      * Single source of truth: the offline AIDL engine is selected AND the
      * provider is installed/bindable. Drives every offline-path decision here
@@ -101,11 +113,14 @@ public final class MgTranslateDispatcher {
     public static Outcome dispatch(String text, @Nullable String fromLng, String toLng, Result done) {
         final String mode = SharedConfig.mg_translateMode;
         if (SharedConfig.MG_TRANSLATE_MODE_DEFAULT.equals(mode)) {
+            countCloud();
             return Outcome.PUNT_TO_UPSTREAM;
         }
         if (SharedConfig.MG_TRANSLATE_MODE_CLOUD.equals(mode)) {
+            countCloud();
             return Outcome.FORCE_CLOUD;
         }
+        countLocal();
         if (isOfflineUsable()) {
             MgAidlTranslate.translate(text, toLng, (aidlText, aidlRate, aidlFailure) -> {
                 if (aidlText != null) {
@@ -150,9 +165,11 @@ public final class MgTranslateDispatcher {
     public static Outcome dispatch(TLRPC.TL_textWithEntities src, @Nullable String fromLng, String toLng, ResultWithEntities done) {
         final String mode = SharedConfig.mg_translateMode;
         if (SharedConfig.MG_TRANSLATE_MODE_DEFAULT.equals(mode)) {
+            countCloud();
             return Outcome.PUNT_TO_UPSTREAM;
         }
         if (SharedConfig.MG_TRANSLATE_MODE_CLOUD.equals(mode)) {
+            countCloud();
             return Outcome.FORCE_CLOUD;
         }
         return dispatchProtected(src, fromLng, toLng, done, false);
@@ -203,9 +220,11 @@ public final class MgTranslateDispatcher {
     public static Outcome dispatchTexts(List<String> texts, String toLng, Utilities.Callback<List<String>> done) {
         final String mode = SharedConfig.mg_translateMode;
         if (SharedConfig.MG_TRANSLATE_MODE_DEFAULT.equals(mode)) {
+            countCloud();
             return Outcome.PUNT_TO_UPSTREAM;
         }
         if (SharedConfig.MG_TRANSLATE_MODE_CLOUD.equals(mode)) {
+            countCloud();
             return Outcome.FORCE_CLOUD;
         }
         dispatchTextAt(texts, 0, new String[texts.size()], toLng, done);
@@ -245,6 +264,7 @@ public final class MgTranslateDispatcher {
      * immediately with {@link MgAidlTranslate.Reason#PROVIDER_UNAVAILABLE}.
      */
     public static Outcome dispatchSecret(String text, @Nullable String fromLng, String toLng, Result done) {
+        countLocal();
         if (!isOfflineUsable()) {
             done.done(null, false, MgAidlTranslate.Failure.of(MgAidlTranslate.Reason.PROVIDER_UNAVAILABLE));
             return Outcome.HANDLED;

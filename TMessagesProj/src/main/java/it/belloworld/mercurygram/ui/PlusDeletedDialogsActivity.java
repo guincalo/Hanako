@@ -41,6 +41,7 @@ public class PlusDeletedDialogsActivity extends UniversalFragment {
 
     @Override
     public boolean onFragmentCreate() {
+        it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.VANISHED_CHATS_OPEN); // hanako: usage statistics (off by default)
         load();
         return super.onFragmentCreate();
     }

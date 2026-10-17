@@ -226,6 +226,11 @@ public final class MgWhisperTranscriber {
             post(done, null, false, Failure.of(Reason.LANGUAGE_UNSUPPORTED));
             return;
         }
+        if (allowDownload) {
+            it.belloworld.mercurygram.HanakoTelemetry.count(model.isParakeet()
+                    ? it.belloworld.mercurygram.HanakoTelemetry.TRANSCRIBE_PARAKEET
+                    : it.belloworld.mercurygram.HanakoTelemetry.TRANSCRIBE_WHISPER); // hanako: usage statistics (off by default)
+        }
         if (model.isParakeet()) {
             transcribeParakeet(messageObject, done, allowDownload);
             return;

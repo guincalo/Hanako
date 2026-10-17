@@ -7031,6 +7031,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
     protected void onResume() {
         super.onResume();
         isResumed = true;
+        it.belloworld.mercurygram.HanakoTelemetry.maybeSnapshot(); // hanako: daily feature-state snapshot (usage statistics, off by default)
         pipActivityHandler.onResume();
         if (onResumeStaticCallback != null) {
             onResumeStaticCallback.run();

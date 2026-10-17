@@ -997,7 +997,10 @@ public class ConnectionsManager extends BaseController {
     }
 
     public static void setProxySettings(boolean enabled, ProxySettings settings) {
-        if (enabled && it.belloworld.mercurygram.PlusVpnProxy.shouldBypass()) enabled = false; // plus f17
+        if (enabled && it.belloworld.mercurygram.PlusVpnProxy.shouldBypass()) { // plus f17
+            enabled = false;
+            it.belloworld.mercurygram.HanakoTelemetry.countDaily(it.belloworld.mercurygram.HanakoTelemetry.VPN_BYPASS_USED); // hanako: usage statistics (off by default)
+        }
         String address = "";
         int port = 0;
         String username = "";

@@ -123,6 +123,9 @@ public final class PlusGhostQuick {
         } catch (Exception e) {
             FileLog.e(e);
         }
+        if (sent) {
+            HanakoTelemetry.count(HanakoTelemetry.GHOST_READ_RECEIPT_SENT); // hanako: usage statistics (off by default)
+        }
         BulletinFactory.of(f).createSimpleBulletin(sent ? R.raw.contact_check : R.raw.error,
                 LocaleController.getString(sent ? R.string.PlusGhostReadReceiptSent : R.string.PlusGhostReadReceiptNothing)).show();
     }

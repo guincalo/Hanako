@@ -138,6 +138,20 @@ public final class PlusOpenPgp {
         return prefs().getBoolean("enabled", false);
     }
 
+    /** hanako telemetry: a default signing key is chosen (no key id leaves this class). */
+    public static boolean hasSignKey() {
+        return getDefaultSignKey() != 0;
+    }
+
+    /** hanako telemetry: number of chats with OpenPGP sign/encrypt switched on. */
+    public static int activeChatCount() {
+        int n = 0;
+        for (java.util.Map.Entry<String, ?> e : prefs().getAll().entrySet()) {
+            if (e.getKey().startsWith("mode_") && e.getValue() instanceof Integer && (Integer) e.getValue() != MODE_OFF) n++;
+        }
+        return n;
+    }
+
     public static String getProvider() {
         String p = prefs().getString("provider", null);
         return TextUtils.isEmpty(p) ? DEFAULT_PROVIDER : p;

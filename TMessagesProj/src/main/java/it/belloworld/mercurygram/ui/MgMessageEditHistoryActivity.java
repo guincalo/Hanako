@@ -102,6 +102,7 @@ public class MgMessageEditHistoryActivity extends UniversalFragment {
 
     @Override
     public boolean onFragmentCreate() {
+        it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.EDIT_HISTORY_OPEN); // hanako: usage statistics (off by default)
         loadEntries();
         return super.onFragmentCreate();
     }

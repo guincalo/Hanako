@@ -169,6 +169,22 @@ public final class PlusPlugins {
         return new File(ApplicationLoader.getFilesDirFixed(), DATA_DIR);
     }
 
+    /** hanako telemetry: {plugins in the folder, plugins switched on}; never loads plugin code. */
+    public static int[] stateCounts() {
+        String[] names = pluginDir().list();
+        int files = 0;
+        if (names != null) {
+            for (String s : names) {
+                if (s.endsWith(".json")) files++;
+            }
+        }
+        int on = 0;
+        for (java.util.Map.Entry<String, ?> e : prefs().getAll().entrySet()) {
+            if (e.getKey().startsWith("on_") && Boolean.TRUE.equals(e.getValue())) on++;
+        }
+        return new int[]{files, Math.min(on, files)};
+    }
+
     public static boolean isCodeAllowed() {
         return prefs().getBoolean(KEY_ALLOW_CODE, false);
     }

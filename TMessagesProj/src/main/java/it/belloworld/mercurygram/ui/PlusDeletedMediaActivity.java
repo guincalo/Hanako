@@ -125,6 +125,7 @@ public class PlusDeletedMediaActivity extends BaseFragment {
 
     @Override
     public boolean onFragmentCreate() {
+        it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.DELETED_MEDIA_OPEN); // hanako: usage statistics (off by default)
         reload();
         return super.onFragmentCreate();
     }
@@ -511,6 +512,7 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         if (item == null || getParentActivity() == null) {
             return;
         }
+        it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.DELETED_MEDIA_VIEW); // hanako: usage statistics (off by default)
         if (!item.opensInViewer()) {
             PlusDeletedMedia.openExternal(getParentActivity(), item);
             return;

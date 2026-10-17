@@ -3836,8 +3836,10 @@ public class ChatActivity extends BaseFragment implements
                         }
                     });
                 } else if (id == plus_f08_lock_chat) { // plus f08
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_LOCK); // hanako: usage statistics (off by default)
                     it.belloworld.mercurygram.PlusChatLock.onChatMenuItemClick(headerItem, currentAccount, dialog_id);
                 } else if (id == it.belloworld.mercurygram.PlusOpenPgp.CHAT_MENU_ID) { // plus f18
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_OPENPGP); // hanako: usage statistics (off by default)
                     it.belloworld.mercurygram.PlusOpenPgp.openChatSettings(ChatActivity.this, currentAccount, dialog_id);
                 } else if (id == chat_enc_timer) {
                     if (getParentActivity() == null) {
@@ -3986,14 +3988,19 @@ public class ChatActivity extends BaseFragment implements
                 } else if (id == search) {
                     openSearchWithText(isSupportedTags() ? "" : null);
                 } else if (id == plus_ghost_exceptions) { // plus f01
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_GHOST_EXCEPTIONS); // hanako: usage statistics (off by default)
                     it.belloworld.mercurygram.PlusGhostExceptions.showDialog(ChatActivity.this, dialog_id, null);
                 } else if (id == it.belloworld.mercurygram.PlusGhostQuick.MENU_SEND_READ) { // plus f02
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_SEND_READ); // hanako: usage statistics (off by default)
                     it.belloworld.mercurygram.PlusGhostQuick.sendReadReceipt(ChatActivity.this);
                 } else if (id == it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.CHAT_MENU_ID) { // hanako: deleted messages in this chat
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_DELETED); // hanako: usage statistics (off by default)
                     it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.showChatMenu(ChatActivity.this, headerItem, currentAccount, dialog_id);
                 } else if (id == it.belloworld.mercurygram.PlusDeletedMedia.MENU_ID) { // plus f20
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_DELETED_MEDIA); // hanako: usage statistics (off by default)
                     presentFragment(new it.belloworld.mercurygram.ui.PlusDeletedMediaActivity(dialog_id));
                 } else if (id == it.belloworld.mercurygram.ui.HanakoChatExportActivity.CHAT_MENU_ID) { // hanako: chat export
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_EXPORT); // hanako: usage statistics (off by default)
                     presentFragment(new it.belloworld.mercurygram.ui.HanakoChatExportActivity(dialog_id));
                 } else if (id == mg_go_to_first_message) {
                     // Mercurygram: jump to the oldest message by reusing the calendar
@@ -34440,6 +34447,7 @@ public class ChatActivity extends BaseFragment implements
                 break;
             }
             case it.belloworld.mercurygram.PlusOpenPgp.OPTION_DECRYPT: { // plus f18
+                it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.MSG_MENU_DECRYPT); // hanako: usage statistics (off by default)
                 it.belloworld.mercurygram.PlusOpenPgp.decrypt(this, selectedObject);
                 break;
             }
@@ -34448,6 +34456,7 @@ public class ChatActivity extends BaseFragment implements
                 break;
             }
             case it.belloworld.mercurygram.PlusMessageFilters.OPTION_MESSAGE_FILTERS: { // plus f04
+                it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.MSG_MENU_FILTERS); // hanako: usage statistics (off by default)
                 it.belloworld.mercurygram.PlusMessageFilters.showChatMenu(this, selectedObject, dialog_id, () -> {
                     if (chatAdapter != null) {
                         chatAdapter.notifyDataSetChanged();

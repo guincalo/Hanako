@@ -164,6 +164,7 @@ public final class PlusDoh {
                 return null;
             }
             int date = answer.date > 0 ? answer.date : (int) (System.currentTimeMillis() / 1000);
+            HanakoTelemetry.countDaily(HanakoTelemetry.DOH_USED); // hanako: usage statistics (off by default)
             return new TxtConfig(bytes, date);
         } catch (Throwable e) {
             FileLog.e(e, false);
@@ -185,6 +186,7 @@ public final class PlusDoh {
             if (answer == null || answer.records.isEmpty()) {
                 return null;
             }
+            HanakoTelemetry.countDaily(HanakoTelemetry.DOH_USED); // hanako: usage statistics (off by default)
             return new ArrayList<>(answer.records);
         } catch (Throwable e) {
             FileLog.e(e, false);

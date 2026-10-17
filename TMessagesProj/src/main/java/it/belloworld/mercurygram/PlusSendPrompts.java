@@ -85,6 +85,7 @@ public final class PlusSendPrompts {
         if (context == null) {
             return;
         }
+        HanakoTelemetry.count(HanakoTelemetry.SEND_PROMPT_SHOWN); // hanako: usage statistics (off by default)
         final String title;
         switch (kind) {
             case KIND_VOICE: title = LocaleController.getString(R.string.PlusPromptVoiceTitle); break;

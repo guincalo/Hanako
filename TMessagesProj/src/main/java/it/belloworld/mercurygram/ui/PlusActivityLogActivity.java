@@ -36,6 +36,12 @@ public class PlusActivityLogActivity extends UniversalFragment {
     }
 
     @Override
+    public boolean onFragmentCreate() {
+        it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.ACTIVITY_LOG_OPEN); // hanako: usage statistics (off by default)
+        return super.onFragmentCreate();
+    }
+
+    @Override
     public View createView(Context context) {
         View v = super.createView(context);
         TLRPC.User user = getMessagesController().getUser(userId);

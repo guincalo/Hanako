@@ -41,6 +41,8 @@ import java.util.regex.Pattern;
  * <ul>
  * <li>per day (UTC), how many times each named feature was used: fixed names only
  *     ({@link #count}), never an argument from the user;</li>
+ * <li>at most once a day, which features are switched on ({@link HanakoFeatureSnapshot}):
+ *     0/1, small numbers and fixed ids only;</li>
  * <li>crashes and caught errors: exception class, a scrubbed message, the code locations of
  *     the stack (class.method(File.java:line)), app version, Android version, device model.</li>
  * </ul>
@@ -65,6 +67,9 @@ public final class HanakoTelemetry {
     private static final String KEY_SECRET = "upload_key";
     private static final String KEY_INSTALL_ID = "install_id";
     private static final String KEY_LAST_UPLOAD_DAY = "last_upload_day";
+    private static final String KEY_LAST_SNAPSHOT = "last_snapshot_ms";
+    private static final long SNAPSHOT_EVERY_MS = 24L * 60 * 60 * 1000;
+    private static final Pattern SAFE_ENUM = Pattern.compile("[A-Za-z0-9._-]{1,48}");
     private static final String DIR = "hanako_telemetry";
     private static final String PENDING = "pending.json";
     private static final String CRASH = "crash.json";
@@ -82,9 +87,6 @@ public final class HanakoTelemetry {
     public static final String GHOST_EXCEPTION = "ghost_exception";
     public static final String BACKUP_CREATE = "backup_create";
     public static final String BACKUP_RESTORE = "backup_restore";
-    public static final String SETTINGS_EXPORT = "settings_export";
-    public static final String SETTINGS_IMPORT = "settings_import";
-    public static final String SETTINGS_UNDO = "settings_undo";
     public static final String CHAT_EXPORT = "chat_export";
     public static final String SETTINGS_SEARCH = "settings_search_open";
     public static final String STREAMER_TOGGLE = "streamer_toggle";
@@ -102,6 +104,33 @@ public final class HanakoTelemetry {
     public static final String USER_HIDE = "message_filter_user_hide";
     public static final String OPENPGP_DECRYPT = "openpgp_decrypt";
     public static final String HUB_OPEN = "hub_open";
+    // features used outside the settings pages (telemetry snapshot, 1.3.x)
+    public static final String TRANSCRIBE_PARAKEET = "transcribe_parakeet";
+    public static final String TRANSCRIBE_WHISPER = "transcribe_whisper";
+    public static final String TRANSLATE_OFFLINE = "translate_offline";
+    public static final String TRANSLATE_ALTERNATIVE = "translate_alternative";
+    public static final String TRANSLATE_CLOUD = "translate_cloud";
+    public static final String DELETED_MEDIA_OPEN = "deleted_media_open";
+    public static final String DELETED_MEDIA_VIEW = "deleted_media_view";
+    public static final String EDIT_HISTORY_OPEN = "edit_history_open";
+    public static final String VANISHED_CHATS_OPEN = "vanished_chats_open";
+    public static final String ACTIVITY_LOG_OPEN = "activity_log_open";
+    public static final String GHOST_READ_RECEIPT_SENT = "ghost_read_receipt_sent";
+    public static final String SEND_PROMPT_SHOWN = "send_prompt_shown";
+    /** Chat ⋮ menu taps on Hanako items. */
+    public static final String CHAT_MENU_GHOST_EXCEPTIONS = "chat_menu_ghost_exceptions";
+    public static final String CHAT_MENU_SEND_READ = "chat_menu_send_read";
+    public static final String CHAT_MENU_DELETED = "chat_menu_deleted";
+    public static final String CHAT_MENU_DELETED_MEDIA = "chat_menu_deleted_media";
+    public static final String CHAT_MENU_EXPORT = "chat_menu_export";
+    public static final String CHAT_MENU_OPENPGP = "chat_menu_openpgp";
+    public static final String CHAT_MENU_LOCK = "chat_menu_lock";
+    /** Message long-press menu taps on Hanako items. */
+    public static final String MSG_MENU_FILTERS = "msg_menu_filters";
+    public static final String MSG_MENU_DECRYPT = "msg_menu_decrypt";
+    /** Passive features: 1 on a day they actually did something ({@link #countDaily}). */
+    public static final String DOH_USED = "doh_used";
+    public static final String VPN_BYPASS_USED = "vpn_bypass_used";
     private static final String[] PAGE_NAMES = {
             "hub", "ghost", "deleted", "activity_log", "streamer", "chats", "tracking_ai", "network",
             "security", "updates",
@@ -213,6 +242,76 @@ public final class HanakoTelemetry {
         maybeUpload();
     }
 
+    /**
+     * For passive features that act many times a day (DoH lookups, VPN bypass): the day's
+     * value is 1 once it was used at all, so the counter reads as "days used".
+     */
+    public static void countDaily(String feature) {
+        if (feature == null || !isEnabled()) return;
+        synchronized (lock) {
+            try {
+                JSONObject days = load().getJSONObject("days");
+                String day = today();
+                JSONObject counts = days.optJSONObject(day);
+                if (counts == null) {
+                    counts = new JSONObject();
+                    days.put(day, counts);
+                }
+                if (counts.optInt(feature, 0) > 0) return;
+                counts.put(feature, 1);
+            } catch (Throwable t) {
+                Log.w(TAG, "count failed");
+                return;
+            }
+        }
+        scheduleSave();
+        maybeUpload();
+    }
+
+    /** Snapshot values may be short fixed ids only (a mode name, a model id), never free text. */
+    static boolean isSafeEnum(String s) {
+        return s != null && SAFE_ENUM.matcher(s).matches();
+    }
+
+    /**
+     * Records which features are switched on (see {@link HanakoFeatureSnapshot}), at most once
+     * every 24 hours. Called at app start and when the app comes to the front. The snapshot
+     * belongs to today's day record and goes out with the next upload, like the counters.
+     */
+    public static void maybeSnapshot() {
+        try {
+            if (!isEnabled()) return;
+            long now = System.currentTimeMillis();
+            long last = prefs().getLong(KEY_LAST_SNAPSHOT, 0);
+            if (last > 0 && last <= now && now - last < SNAPSHOT_EVERY_MS) return;
+            prefs().edit().putLong(KEY_LAST_SNAPSHOT, now).apply();
+            Utilities.globalQueue.postRunnable(() -> {
+                try {
+                    JSONObject state = HanakoFeatureSnapshot.collect();
+                    if (!isEnabled()) return;
+                    synchronized (lock) {
+                        JSONObject root = load();
+                        String day = today();
+                        JSONObject days = root.getJSONObject("days");
+                        if (days.optJSONObject(day) == null) days.put(day, new JSONObject());
+                        JSONObject states = root.optJSONObject("state");
+                        if (states == null) {
+                            states = new JSONObject();
+                            root.put("state", states);
+                        }
+                        states.put(day, state);
+                    }
+                    scheduleSave();
+                    maybeUpload();
+                } catch (Throwable t) {
+                    Log.w(TAG, "snapshot failed");
+                }
+            });
+        } catch (Throwable t) {
+            Log.w(TAG, "snapshot failed");
+        }
+    }
+
     /** Settings page opened (by its MercurygramSettingsActivity page number). */
     public static void countPage(int page) {
         if (page == 0) {
@@ -274,6 +373,7 @@ public final class HanakoTelemetry {
                     } else {
                         maybeUpload();
                     }
+                    maybeSnapshot();
                 }, 30_000);
             }
         } catch (Throwable t) {
@@ -466,11 +566,15 @@ public final class HanakoTelemetry {
             String today = today();
             JSONArray days = new JSONArray();
             JSONObject all = root.getJSONObject("days");
+            JSONObject states = root.optJSONObject("state");
             Iterator<String> it = all.keys();
             while (it.hasNext()) {
                 String day = it.next();
                 if (day.compareTo(today) >= 0) continue; // today is still being counted
-                days.put(new JSONObject().put("date", day).put("counts", all.getJSONObject(day)));
+                JSONObject d = new JSONObject().put("date", day).put("counts", all.getJSONObject(day));
+                JSONObject state = states != null ? states.optJSONObject(day) : null;
+                if (state != null) d.put("state", state);
+                days.put(d);
                 if (days.length() >= MAX_DAYS) break;
             }
             JSONArray errors = root.getJSONArray("errors");
@@ -571,8 +675,11 @@ public final class HanakoTelemetry {
         synchronized (lock) {
             JSONObject root = load();
             JSONArray days = payload.getJSONArray("days");
+            JSONObject states = root.optJSONObject("state");
             for (int i = 0; i < days.length(); i++) {
-                root.getJSONObject("days").remove(days.getJSONObject(i).getString("date"));
+                String date = days.getJSONObject(i).getString("date");
+                root.getJSONObject("days").remove(date);
+                if (states != null) states.remove(date);
             }
             JSONArray errors = root.getJSONArray("errors");
             JSONArray rest = new JSONArray();
