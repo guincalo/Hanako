@@ -1,0 +1,323 @@
+import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
+
+apply plugin: 'com.android.library'
+apply plugin: 'org.telegram.build-plugin'
+apply plugin: 'idea'
+apply from: '../utils.gradle'
+apply plugin: 'kotlin-android'
+
+idea {
+    module {
+        excludeDirs += [
+            file('jni/td'),
+            file('jni/third_party/absl'),
+            file('jni/third_party/boringssl'),
+            file('jni/third_party/dav1d'),
+            file('jni/third_party/ffmpeg'),
+            file('jni/third_party/libvpx'),
+            file('jni/third_party/libyuv'),
+            file('jni/third_party/openh264'),
+            file('jni/third_party/xiph'),
+            file('jni/third_party/wamr'),
+            file('jni/third_party/libprisma'),
+            file('jni/third_party/boost-regex'),
+            file('jni/tgcalls'),
+            file('jni/tlottie'),
+            file('jni/voip/webrtc'),
+            file('jni/sqlite')
+        ]
+    }
+}
+
+repositories {
+    mavenCentral()
+    google()
+}
+
+configurations {
+    compile.exclude module: 'support-v4'
+}
+
+configurations.all {
+    exclude group: 'androidx.recyclerview', module: 'recyclerview'
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+
+    implementation 'androidx.core:core:1.16.0'
+    implementation 'androidx.interpolator:interpolator:1.0.0'
+    implementation 'androidx.fragment:fragment:1.2.0'
+    implementation 'androidx.palette:palette:1.0.0'
+    implementation 'androidx.exifinterface:exifinterface:1.3.6'
+    implementation 'androidx.viewpager:viewpager:1.0.0'
+    implementation 'androidx.dynamicanimation:dynamicanimation:1.0.0'
+    implementation "androidx.sharetarget:sharetarget:1.2.0"
+    implementation 'androidx.interpolator:interpolator:1.0.0'
+    implementation 'androidx.biometric:biometric:1.1.0'
+    implementation 'androidx.webkit:webkit:1.14.0'
+
+    implementation "androidx.mediarouter:mediarouter:1.7.0"
+    implementation 'com.google.zxing:core:3.5.4'
+    implementation 'com.neovisionaries:nv-websocket-client:2.14'
+
+    implementation 'androidx.car.app:app:1.4.0'
+    implementation 'androidx.car.app:app-projected:1.4.0'
+    implementation 'org.nanohttpd:nanohttpd:2.3.1'
+    implementation "androidx.core:core-ktx:1.9.0"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    compileOnly 'org.checkerframework:checker-qual:2.5.2'
+    compileOnly 'org.checkerframework:checker-compat-qual:2.5.0'
+    implementation 'com.googlecode.mp4parser:isoparser:1.0.6'
+    implementation 'com.stripe:stripe-android:2.0.2'
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'com.google.guava:guava:31.1-android'
+    implementation 'com.google.android.play:integrity:1.3.0'
+    implementation 'com.google.android.gms:play-services-safetynet:18.0.1'
+
+    implementation 'co.nstant.in:cbor:0.8'
+    implementation "androidx.credentials:credentials:1.6.0-alpha04"
+    implementation "androidx.credentials:credentials-play-services-auth:1.6.0-alpha04"
+
+    implementation "io.noties.markwon:core:4.6.2"
+    implementation "io.noties.markwon:ext-strikethrough:4.6.2"
+    implementation "io.noties.markwon:ext-tables:4.6.2"
+    implementation "io.noties.markwon:html:4.6.2"
+    implementation "io.noties.markwon:inline-parser:4.6.2"
+    implementation("io.noties.markwon:ext-latex:4.6.2") {
+        exclude group: 'ru.noties', module: 'jlatexmath-android'
+    }
+
+    api project(":TMessagesProj_Modules:media3:media-lib-exoplayer")
+    api project(":TMessagesProj_Modules:media3:media-lib-exoplayer-dash")
+    api project(":TMessagesProj_Modules:media3:media-lib-exoplayer-hls")
+    api project(":TMessagesProj_Modules:media3:media-lib-decoder-ffmpeg")
+    api project(":TMessagesProj_Modules:media3:media-lib-session")
+    api project(':jlatexmath')
+
+    constraints {
+        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.0") {
+            because("kotlin-stdlib-jdk7 is now a part of kotlin-stdlib")
+        }
+        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.0") {
+            because("kotlin-stdlib-jdk8 is now a part of kotlin-stdlib")
+        }
+    }
+    implementation 'org.unifiedpush.android:connector:3.1.2'
+    implementation 'org.osmdroid:osmdroid-android:6.1.20'
+}
+
+def getStringForConfig(String s) {
+    return "\"" + s + "\""
+}
+
+def isWindows = String.valueOf(DefaultNativePlatform.currentOperatingSystem.toFamilyName() == OperatingSystemFamily.WINDOWS)
+android {
+    compileSdkVersion 36
+    buildToolsVersion '36.0.0'
+    ndkVersion "27.2.12479018"
+
+
+    externalNativeBuild {
+        cmake {
+            path 'jni/CMakeLists.txt'
+        }
+    }
+
+    buildFeatures {
+        aidl true
+    }
+
+    lintOptions {
+        disable 'MissingTranslation'
+        disable 'ExtraTranslation'
+        disable 'BlockedPrivateApi'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+
+        coreLibraryDesugaringEnabled true
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17
+    }
+
+    defaultConfig.versionCode = Integer.parseInt(Utils['getVersionCode']())
+
+    defaultConfig {
+        minSdkVersion 23
+        targetSdkVersion 36
+
+        vectorDrawables.generatedDensities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']
+
+        multiDexEnabled true
+
+        //obtain your own keys at https://core.telegram.org/api/obtaining_api_id
+        buildConfigField 'int', 'APP_ID', APP_ID
+        buildConfigField 'String', 'APP_HASH', getStringForConfig(APP_HASH)
+        buildConfigField 'int', 'USER_ID_OWNER', USER_ID_OWNER
+        buildConfigField 'String', 'USER_REPO', getStringForConfig(USER_REPO)
+        buildConfigField 'int', 'CHECK_UPDATES', CHECK_UPDATES
+        buildConfigField 'String', 'UPDATE_CHANNEL_USERNAME', getStringForConfig(UPDATE_CHANNEL_USERNAME)
+        buildConfigField 'String', 'LASTFM_API_KEY', getStringForConfig(LASTFM_API_KEY)
+        buildConfigField 'String', 'LASTFM_API_SECRET', getStringForConfig(LASTFM_API_SECRET)
+
+        vectorDrawables.generatedDensities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']
+
+        versionName = Utils['getVersionName']()
+        buildConfigField 'int', 'ADDITIONAL_BUILD_NUMBER', ADDITIONAL_BUILD_NUMBER
+        buildConfigField 'String', 'VERSION_NAME', getStringForConfig(versionName)
+        buildConfigField 'int', 'VERSION_CODE', Utils['getVersionCode']()
+
+        buildConfigField 'boolean', 'SKIP_DNS_RESOLVER', (Utils['isFdroid']() ? 'true' : 'false')
+        buildConfigField 'boolean', 'SKIP_INTERNAL_BROWSER_BY_DEFAULT', (Utils['isFdroid']() ? 'true' : 'false')
+        manifestPlaceholders = [appLabel: Utils['isFdroid']() ? "@string/AppNameFdroid" : "@string/AppName"]
+
+        externalNativeBuild {
+            cmake {
+                version '3.22.1'
+                arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-21' //, '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+                targets 'tmessages.49'
+                if (project.hasProperty("armeabi-v7a")) {
+                    abiFilters 'armeabi-v7a'
+                } else if (project.hasProperty("arm64-v8a")) {
+                    abiFilters 'arm64-v8a'
+                } else {
+                    abiFilters 'armeabi-v7a', 'arm64-v8a'
+                }
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            jniDebuggable true
+            shrinkResources false
+            multiDexEnabled true
+            buildConfigField "String", "BUILD_VERSION_STRING", "\"" + APP_VERSION_NAME + "\""
+            buildConfigField "String", "BETA_URL", "\"" + getProps("BETA_PRIVATE_URL") + "\""
+            buildConfigField "boolean", "DEBUG_VERSION", "true"
+            buildConfigField "boolean", "DEBUG_PRIVATE_VERSION", "true"
+            buildConfigField "boolean", "BUNDLE", "false"
+            buildConfigField "int", "VERSION_NUM", "0"
+        }
+
+        HA_private {
+            matchingFallbacks = ['release']
+            jniDebuggable false
+            multiDexEnabled true
+            buildConfigField "String", "BUILD_VERSION_STRING", "\"" + APP_VERSION_NAME + "\""
+            buildConfigField "String", "BETA_URL", "\"" + getProps("BETA_PRIVATE_URL") + "\""
+            buildConfigField "boolean", "DEBUG_VERSION", "true"
+            buildConfigField "boolean", "DEBUG_PRIVATE_VERSION", "true"
+            buildConfigField "boolean", "BUNDLE", "false"
+            buildConfigField "int", "VERSION_NUM", "1"
+        }
+
+        HA_public {
+            matchingFallbacks = ['release']
+            jniDebuggable false
+            multiDexEnabled true
+            buildConfigField "String", "BUILD_VERSION_STRING", "\"" + APP_VERSION_NAME + "\""
+            buildConfigField "String", "BETA_URL", "\"" + getProps("BETA_PUBLIC_URL") + "\""
+            buildConfigField "boolean", "DEBUG_VERSION", "true"
+            buildConfigField "boolean", "DEBUG_PRIVATE_VERSION", "false"
+            buildConfigField "boolean", "BUNDLE", "false"
+            buildConfigField "int", "VERSION_NUM", "4"
+        }
+
+        HA_hardcore {
+            matchingFallbacks = ['release']
+            jniDebuggable false
+            multiDexEnabled true
+            ndk.debugSymbolLevel = 'FULL'
+            buildConfigField "String", "BUILD_VERSION_STRING", "\"" + APP_VERSION_NAME + "\""
+            buildConfigField "String", "BETA_URL", "\"" + getProps("BETA_HARDCORE_URL") + "\""
+            buildConfigField "boolean", "DEBUG_VERSION", "true"
+            buildConfigField "boolean", "DEBUG_PRIVATE_VERSION", "true"
+            buildConfigField "boolean", "BUNDLE", "false"
+            buildConfigField "int", "VERSION_NUM", "5"
+        }
+
+        standalone {
+            matchingFallbacks = ['release']
+            jniDebuggable false
+            multiDexEnabled true
+            buildConfigField "String", "BUILD_VERSION_STRING", "\"" + APP_VERSION_NAME + "\""
+            buildConfigField "String", "BETA_URL", "\"\""
+            buildConfigField "boolean", "DEBUG_VERSION", "false"
+            buildConfigField "boolean", "DEBUG_PRIVATE_VERSION", "false"
+            buildConfigField "boolean", "BUNDLE", "false"
+            buildConfigField "int", "VERSION_NUM", "6"
+        }
+
+        release {
+            jniDebuggable false
+            shrinkResources false
+            multiDexEnabled true
+            buildConfigField "String", "BUILD_VERSION_STRING", "\"" + APP_VERSION_NAME + "\""
+            buildConfigField "String", "BETA_URL", "\"\""
+            buildConfigField "boolean", "DEBUG_VERSION", "false"
+            buildConfigField "boolean", "DEBUG_PRIVATE_VERSION", "false"
+            buildConfigField "boolean", "BUNDLE", "false"
+            buildConfigField "int", "VERSION_NUM", "7"
+        }
+    }
+
+    namespace 'org.telegram.messenger'
+}
+
+
+def getProps(String propName) {
+    def propsFile = rootProject.file('local.properties')
+    if (propsFile.exists()) {
+        def props = new Properties()
+        props.load(new FileInputStream(propsFile))
+        return props[propName]
+    } else {
+        return "";
+    }
+}
+
+task buildNativeDeps(description: 'Build native dependencies.') {
+    doFirst {
+        exec {
+            def depsNdk = getProps('NATIVE_DEPS_NDK_DIR')
+            if (depsNdk == null || depsNdk.toString().isEmpty()) {
+                depsNdk = project.hasProperty('NATIVE_DEPS_NDK_DIR') ? project.property('NATIVE_DEPS_NDK_DIR') : System.getenv('NATIVE_DEPS_NDK_DIR')
+            }
+            def ndkDir = (depsNdk != null && !depsNdk.toString().isEmpty()) ? depsNdk : android.ndkDirectory
+            println "NDK Directory: ${ndkDir}"
+            println "Working Directory: ${projectDir}/jni"
+            workingDir "${projectDir}/jni"
+            commandLine 'python3', 'prepare.py', 'silent', 'ndk=' + ndkDir, 'arm', 'arm64'
+        }
+    }
+}
+
+task checkVisibility {
+    doFirst {
+        def isPrivateBuild = project.gradle.startParameter.taskNames.find {
+            it.contains("HA_private") || it.contains("HA_hardcore") || it.contains("Debug") || it.contains("Release")
+        }
+        def isPublicAllowed = !project.hasProperty("IS_PRIVATE") || !project.property("IS_PRIVATE").toBoolean()
+        if (!isPrivateBuild && !isPublicAllowed) {
+            throw new GradleException("Building public version of private code!")
+        }
+    }
+    doLast {
+        if (project.gradle.startParameter.taskNames.find { it.contains("HA_public") }) {
+            def privateBuild = file("${projectDir}_AppHockeyApp/afat/HA_private/Telegram-Beta.apk")
+            if (privateBuild.exists()) {
+                privateBuild.delete()
+            }
+        }
+    }
+}
+
+preBuild.dependsOn buildNativeDeps
+preBuild.dependsOn checkVisibility
