@@ -5,7 +5,8 @@ rebased onto **Forkgram Classic** (`forkgram/forkgram-classic`, branch `classic`
 @ caac615000213fb47ab4a24469d77b2a707ab21f, APP_VERSION_NAME 13.0.2 / code 7176), which keeps
 the pre-Liquid-Glass Telegram 12.1.1 design (see `classic/PLAN.md`, `classic/DESIGN_FROZEN.txt`).
 
-Dev build, LRS numbering: nothing tagged.
+Released as Hanako 2.x (LRS numbering): first dev build v2.0d (pre-release, 2026-10-21). Default
+branch of guincalo/Hanako is now `hanako-classic`; `hanako` (1.x, Mercurygram) is frozen.
 
 ## How the port was done
 
@@ -186,6 +187,10 @@ Not runtime-tested on a device yet.
 - SharedConfig still carries dead MG translate/Tor fields and setters (no callers into dropped
   classes).
 - Chat export: see below for what still differs from Telegram Desktop.
+- In-app updater (MgUpdateChecker) still queries Mercurygram/Mercurygram releases and expects
+  `Mercurygram-<tag>-<abi>.apk` assets and 4/5-dotted tags; it needs pointing at guincalo/Hanako
+  with LRS `vX.Y[d]` tags and `Hanako-` asset names (the "PLAYSTORE_APP_URL / MgUpdateChecker ->
+  guincalo/Hanako" line above is not true for the URLs).
 
 ## Chat export vs Telegram Desktop (phase 2)
 
