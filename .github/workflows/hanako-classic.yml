@@ -1,0 +1,197 @@
+name: Hanako Classic build
+
+# Dev CI for the Forkgram Classic based Hanako (branch hanako-classic).
+#   * push to hanako-classic -> arm64 APK as a workflow artifact (14 days),
+#     signed with the private Hanako key when the secrets exist.
+#   * tag v*                 -> same, plus a GitHub pre/release (LRS tags only).
+#   * manual run             -> always builds.
+# Native deps (BoringSSL, FFmpeg, TDLib, ...) are built from source by
+# TMessagesProj/jni/prepare.py through Gradle; their outputs are cached.
+
+on:
+  push:
+    branches: [hanako-classic]
+    tags: ['v*']
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+  workflow_dispatch:
+
+concurrency:
+  group: hanako-classic-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    permissions:
+      contents: read
+    outputs:
+      apk_name: ${{ steps.out.outputs.apk_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Host build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends gperf meson nasm yasm ninja-build pkg-config cmake libuv1-dev
+          rustup default stable
+          rustup target add aarch64-linux-android armv7-linux-androideabi
+          go version
+
+      - name: Android SDK pieces
+        run: |
+          set -euo pipefail
+          SDKM="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          for i in 1 2 3; do
+            yes | "$SDKM" --licenses >/dev/null || true
+            if "$SDKM" "ndk;27.2.12479018" "cmake;3.22.1" "build-tools;36.0.0" "platforms;android-36"; then break; fi
+            sleep $((i*10))
+          done
+          echo "NATIVE_DEPS_NDK_DIR=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
+      - name: Native deps cache key
+        id: nkey
+        run: |
+          K=$( (git submodule status --recursive; cat TMessagesProj/jni/prepare.py TMessagesProj/jni/prebuild/*.sh) | sha256sum | cut -c1-20)
+          echo "key=jni-arm64-$K" >> "$GITHUB_OUTPUT"
+
+      - name: Restore native deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            TMessagesProj/jni/prebuild/lib
+            TMessagesProj/jni/prebuild/include
+            TMessagesProj/jni/cache_keys
+          key: ${{ steps.nkey.outputs.key }}
+
+      - name: Version and signing
+        id: prep
+        env:
+          HAS_KEY: ${{ secrets.HANAKO_KEYSTORE_B64 != '' }}
+          # refs whose builds may carry the private key: tags plus these branches
+          SIGN_REFS: 'refs/heads/hanako-classic'
+        run: |
+          set -euo pipefail
+          APP_VN=$(grep '^APP_VERSION_NAME=' gradle.properties | cut -d= -f2)
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then LABEL="${GITHUB_REF_NAME}"; else LABEL="classic-${APP_VN}-r${GITHUB_RUN_NUMBER}"; fi
+          echo "label=${LABEL}" >> "$GITHUB_OUTPUT"
+          ALLOWED=false
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then ALLOWED=true; fi
+          for r in ${SIGN_REFS}; do [ "${GITHUB_REF}" = "$r" ] && ALLOWED=true; done
+          if [ "${HAS_KEY}" = "true" ] && [ "${ALLOWED}" = "true" ]; then
+            echo "private=true" >> "$GITHUB_OUTPUT"; echo "suffix=" >> "$GITHUB_OUTPUT"
+            echo "Signed with the **private Hanako release key**." >> "$GITHUB_STEP_SUMMARY"
+          else
+            if [ "${GITHUB_REF_TYPE}" = "tag" ]; then echo "::error::no release key for a tag build"; exit 1; fi
+            echo "private=false" >> "$GITHUB_OUTPUT"; echo "suffix=-UNOFFICIAL-debugkey" >> "$GITHUB_OUTPUT"
+            echo "::warning::APK signed with the public in-repo debug key."
+          fi
+
+      - name: De-google and configure (CI only)
+        env:
+          HANAKO_TELEMETRY_ENDPOINT: ${{ steps.prep.outputs.private == 'true' && secrets.HANAKO_TELEMETRY_ENDPOINT || '' }}
+          HANAKO_TELEMETRY_KEY: ${{ steps.prep.outputs.private == 'true' && secrets.HANAKO_TELEMETRY_KEY || '' }}
+        run: |
+          set -euo pipefail
+          # same as prebuild_fdroid.sh: no Play Services / GMS captcha in Hanako
+          sed -i -e '/com\.google\.android\.play/d' -e '/play-services/d' TMessagesProj/build.gradle
+          sed -i -e '/gms/d' TMessagesProj/src/main/java/org/telegram/messenger/CaptchaController.java || true
+          # arm64 only: native deps and cmake
+          sed -i "s/'arm', 'arm64'/'arm64'/" TMessagesProj/build.gradle
+          # Goregram's public API id/hash (not Telegram's flooded id 4)
+          sed -i -e 's/^APP_ID=.*/APP_ID=105810/' -e 's/^APP_HASH=.*/APP_HASH=3e7a52498eec003c5896a330e5d29397/' \
+                 -e "s/^ADDITIONAL_BUILD_NUMBER=.*/ADDITIONAL_BUILD_NUMBER=0/" \
+                 -e 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g/' gradle.properties
+          {
+            echo "HANAKO_TELEMETRY_ENDPOINT=${HANAKO_TELEMETRY_ENDPOINT}"
+            echo "HANAKO_TELEMETRY_KEY=${HANAKO_TELEMETRY_KEY}"
+          } >> local.properties
+
+      - name: Build APK
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon -Parm64-v8a :TMessagesProj_App:assembleAfatFd_v8aRelease --stacktrace 2>&1 | tee build.log
+          APK=$(ls TMessagesProj_App/build/outputs/apk/afatFd_v8a/release/*.apk | head -1)
+          echo "APK=${APK}" >> "$GITHUB_ENV"
+
+      - name: Errors summary
+        if: failure()
+        run: |
+          grep -nE '^e: |error:|FAILED|What went wrong' build.log | head -150 >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Sign with the Hanako release key
+        if: steps.prep.outputs.private == 'true'
+        env:
+          HANAKO_KEYSTORE_B64: ${{ secrets.HANAKO_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.HANAKO_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.HANAKO_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.HANAKO_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          APKSIGNER=$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/apksigner | sort -V | tail -1)
+          KS="${RUNNER_TEMP}/hanako-release.jks"
+          ( umask 077; printf '%s' "${HANAKO_KEYSTORE_B64}" | base64 -d > "${KS}" )
+          "${APKSIGNER}" sign --ks "${KS}" --ks-key-alias "${KEY_ALIAS}" \
+            --ks-pass env:KS_PASS --key-pass env:KEY_PASS --out "${APK}.signed" "${APK}"
+          rm -f "${KS}"
+          "${APKSIGNER}" verify "${APK}.signed"
+          mv "${APK}.signed" "${APK}"
+
+      - name: Remove signing key
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/hanako-release.jks"
+
+      - name: Name APK
+        id: out
+        env:
+          EXPECTED_CERT: ${{ vars.HANAKO_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          NAME="Hanako-${{ steps.prep.outputs.label }}-arm64-v8a${{ steps.prep.outputs.suffix }}.apk"
+          mkdir -p dist
+          cp "${APK}" "dist/${NAME}"
+          (cd dist && sha256sum "${NAME}" > "${NAME}.sha256")
+          APKSIGNER=$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "${APKSIGNER}" ]; then
+            CERT=$("${APKSIGNER}" verify --print-certs "dist/${NAME}" | grep -m1 'SHA-256 digest' | awk '{print $NF}' || true)
+            echo "Signing cert SHA-256: \`${CERT}\`" >> "$GITHUB_STEP_SUMMARY"
+            if [ "${{ steps.prep.outputs.private }}" = "true" ] && [ -n "${EXPECTED_CERT}" ] && [ "${CERT,,}" != "${EXPECTED_CERT,,}" ]; then
+              echo "::error::Signing certificate ${CERT} is not the expected Hanako certificate."; exit 1
+            fi
+          fi
+          echo "apk_name=${NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanako-classic-arm64
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
