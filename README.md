@@ -12,6 +12,11 @@
 
 </div>
 
+> [!NOTE]
+> This branch is Hanako 1.x (Mercurygram based) and is no longer developed. Current development is
+> Hanako 2.x on the [`hanako-classic`](https://github.com/guincalo/Hanako/tree/hanako-classic) branch,
+> based on Forkgram Classic. Downloads: [Releases](https://github.com/guincalo/Hanako/releases).
+
 > [!WARNING]
 > **This is a fully vibecoded fork.** Every change Hanako adds on top of Mercurygram was written by AI
 > coding agents, and most of it was never compiled or tested by a human before it was published.
