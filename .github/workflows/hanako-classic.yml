@@ -54,6 +54,11 @@ jobs:
           sudo apt-get install -y --no-install-recommends gperf meson nasm yasm ninja-build pkg-config cmake libuv1-dev
           rustup default stable
           rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+          # submodules pin their own toolchains (wallet-engine: rust-toolchain file); give those the targets too
+          for d in $(find TMessagesProj/jni -maxdepth 3 \( -name rust-toolchain -o -name rust-toolchain.toml \) -printf '%h\n' | sort -u); do
+            echo "toolchain pinned in $d"
+            (cd "$d" && (rustup toolchain install || rustup install) && rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android)
+          done
           go version
 
       - name: Android SDK pieces
