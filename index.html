@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Hanako 🌸</title>
-    <meta name="description" content="An unofficial Telegram client for Android, built on Mercurygram." />
+    <title>Hanako</title>
+    <meta name="description" content="An unofficial Telegram client for Android with Telegram’s classic interface, built on Forkgram Classic." />
     <link rel="icon" type="image/png" href="hanako.png" />
     <style>
       @font-face {
@@ -111,26 +111,6 @@
       .small { font-size: 1rem; color: var(--quiet); margin: 1.5rem 0 0; }
       code { font: inherit; }
       button, input, select, textarea { font-family: inherit; }
-      .shots {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 1.5rem 1rem;
-        align-items: start;
-        margin-top: 0.75rem;
-      }
-      .shots figure { margin: 0; }
-      .shots a { display: block; }
-      .shots img {
-        display: block;
-        width: 100%;
-        height: auto;
-        border: 1px solid var(--lilac);
-        border-radius: 8px;
-      }
-      .shots figcaption { margin-top: 0.5rem; font-size: 1rem; line-height: 1.45; color: var(--quiet); }
-      @media (max-width: 480px) {
-        .shots { grid-template-columns: minmax(0, 18rem); gap: 2rem; }
-      }
       footer {
         margin-top: 4.5rem;
         padding-bottom: 3rem;
@@ -151,138 +131,76 @@
         <img src="hanako.png" alt="Hanako app icon" width="96" height="96" />
         <h1>Hanako</h1>
       </header>
-      <p class="lede">An unofficial Telegram client for Android, built on Mercurygram.</p>
+      <p class="lede">An unofficial Telegram client for Android with Telegram’s classic interface, built on Forkgram Classic.</p>
       <div class="actions">
-        <a class="button solid" href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22moe.hanako.chan%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%22author%22%3A%22guincalo%22%2C%22name%22%3A%22Hanako%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D" target="_blank" rel="noopener">Add to Obtainium</a>
-        <a class="button" href="https://github.com/guincalo/Hanako/releases/latest" target="_blank" rel="noopener">Download APK</a>
+        <a class="button solid" href="https://github.com/guincalo/Hanako/releases" target="_blank" rel="noopener">Download APK</a>
+        <a class="button" href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%20%22moe.hanako.chan%22%2C%20%22url%22%3A%20%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%20%22author%22%3A%20%22guincalo%22%2C%20%22name%22%3A%20%22Hanako%20%28with%20dev%20builds%29%22%2C%20%22additionalSettings%22%3A%20%22%7B%5C%22includePrereleases%5C%22%3A%20true%2C%20%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%28%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%29%3Fd%3F-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D" target="_blank" rel="noopener">Add to Obtainium</a>
         <a href="https://github.com/guincalo/Hanako" target="_blank" rel="noopener">Source on GitHub</a>
       </div>
 
       <p class="warning">
-        Hanako is experimental, and a fully vibecoded fork. Every change it adds on top of Mercurygram was
-        written by AI coding agents, and most of it was never compiled or tested by a human before release.
-        Expect bugs and use it at your own risk. Hanako is not affiliated with Telegram or the Mercurygram
-        project, so please don’t report Hanako bugs to them.
+        Hanako is experimental. Most of its own code was written with AI coding agents and has had limited
+        testing, so expect bugs and keep backups. It is not affiliated with Telegram, Forkgram or Mercurygram;
+        please report Hanako bugs on GitHub, not to them.
       </p>
 
       <section class="part" aria-label="Features">
-        <p>Everything Mercurygram does, plus the following.</p>
+        <p>Everything Forkgram Classic does, plus the following, in one settings screen.</p>
 
-        <h2>Ghost mode and privacy</h2>
+        <h2>Ghost mode</h2>
         <ul>
-          <li>Per-account ghost mode: no read receipts, typing, online status or story views</li>
-          <li>Ghost exceptions for chosen chats</li>
-          <li>Send as scheduled, so sending never shows you online</li>
-          <li>Story ghost guard</li>
-          <li>Peek at chats without marking them read</li>
-          <li>Ask before sending voice, stickers, GIFs or calls</li>
-          <li>Screenshots allowed, content protection ignored</li>
+          <li>No read receipts, typing, online status or story views, per account</li>
+          <li>Exceptions for chosen chats, a quick toggle, silent sending</li>
+          <li>Story guard, and peeking at chats without marking them read</li>
         </ul>
 
-        <h2>Chat lock and hidden chats</h2>
+        <h2>Privacy</h2>
         <ul>
-          <li>Lock chats with biometrics</li>
-          <li>Hide locked chats; long-press the app title to reveal them</li>
-          <li>Hide their notification text</li>
+          <li>Lock chats with biometrics and hide them</li>
+          <li>Streamer mode: pseudonyms, masked avatars, hidden numbers</li>
+          <li>Ask before sending voice, stickers, GIFs or calling</li>
         </ul>
 
         <h2>Deleted and edited messages</h2>
         <ul>
-          <li>Deleted messages stay in the chat, greyed out</li>
-          <li>Edits keep their history</li>
-          <li>Media is saved, including view-once</li>
-          <li>Vanished chats log</li>
-          <li>Deleted media browser</li>
+          <li>Deleted messages stay in the chat; edits keep their history</li>
+          <li>Media from deleted and view-once messages is kept and browsable</li>
+          <li>A local log of when contacts were online and read your messages</li>
         </ul>
 
-        <h2>Activity log</h2>
+        <h2>Chats</h2>
         <ul>
-          <li>A local last-seen and read log per contact, built from updates the app already receives</li>
+          <li>Regex message filters</li>
+          <li>Chat export in Telegram Desktop’s HTML and JSON formats</li>
+          <li>Message shots, session backup, profile DC and registration date</li>
         </ul>
-
-        <h2>Streamer mode</h2>
-        <ul>
-          <li>Pseudonyms</li>
-          <li>Masked avatars and titles</li>
-          <li>Dotted-out phone numbers</li>
-          <li>Optional screen-capture block</li>
-        </ul>
-
-        <h2>Messages and chats</h2>
-        <ul>
-          <li>Regex message filters and shadow-ban</li>
-          <li>Message shots as images</li>
-          <li>OpenPGP via OpenKeychain</li>
-          <li>Profile ID with DC and registration date</li>
-        </ul>
-
-        <h2>Plugins</h2>
-        <ul>
-          <li>JSON rule plugins</li>
-          <li>Opt-in code plugins</li>
-        </ul>
-
-        <h2>Network</h2>
-        <ul>
-          <li>Custom DNS-over-HTTPS</li>
-          <li>Proxy auto-switch</li>
-          <li>Disable the proxy while a VPN is on</li>
-        </ul>
-      </section>
-
-      <section class="part" id="screenshots">
-        <h2 class="top">Screenshots</h2>
-        <div class="shots">
-          <figure>
-            <a href="shot-menu.webp"><img src="shot-menu.webp" width="600" height="1353" alt="Hanako settings menu with privacy, messages and chats, and device and data sections" loading="lazy" decoding="async" /></a>
-            <figcaption>Everything Hanako adds, in one menu</figcaption>
-          </figure>
-          <figure>
-            <a href="shot-deleted.webp"><img src="shot-deleted.webp" width="600" height="1737" alt="Deleted and edited messages settings with per-type retention, deleted media and vanished chats" loading="lazy" decoding="async" /></a>
-            <figcaption>Deleted and edited messages stay</figcaption>
-          </figure>
-          <figure>
-            <a href="shot-ghost.webp"><img src="shot-ghost.webp" width="469" height="1302" alt="Ghost mode settings with story ghost guard and peek options" loading="lazy" decoding="async" /></a>
-            <figcaption>Ghost mode, story guard and peek</figcaption>
-          </figure>
-          <figure>
-            <a href="shot-transcribe.webp"><img src="shot-transcribe.webp" width="600" height="1217" alt="On-device transcription settings with the Parakeet v3 model, language and skip silence" loading="lazy" decoding="async" /></a>
-            <figcaption>Offline voice transcription with Parakeet</figcaption>
-          </figure>
-        </div>
       </section>
 
       <section class="part" id="install">
         <h2 class="top">Install</h2>
         <ol>
           <li>
-            On your phone, tap
-            <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22moe.hanako.chan%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%22author%22%3A%22guincalo%22%2C%22name%22%3A%22Hanako%22%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D" target="_blank" rel="noopener">Add to Obtainium</a>.
-            It fills in everything, installs stable releases and keeps Hanako updated.
+            <a href="https://github.com/guincalo/Hanako/releases" target="_blank" rel="noopener">Download</a>
+            <code>Hanako-&lt;version&gt;-arm64-v8a.apk</code> from Releases and install it. Only arm64-v8a
+            builds are published, and development builds are marked as pre-releases.
           </li>
           <li>
-            Or <a href="https://github.com/guincalo/Hanako/releases/latest" target="_blank" rel="noopener">download</a>
-            <code>Hanako-&lt;version&gt;-arm64-v8a.apk</code> from the latest release and install it. Only
-            arm64-v8a builds are published.
-          </li>
-          <li>
-            If you want release candidates too, use the
-            <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22moe.hanako.chan%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%22author%22%3A%22guincalo%22%2C%22name%22%3A%22Hanako%20%28Stable%20%2B%20Pre-release%29%22%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3A%20true%2C%20%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%28-%5B0-9A-Za-z.%5D%2B%29%3F-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D" target="_blank" rel="noopener">stable and pre-release Obtainium link</a>
-            instead.
+            Or let Obtainium keep it updated:
+            <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%20%22moe.hanako.chan%22%2C%20%22url%22%3A%20%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%20%22author%22%3A%20%22guincalo%22%2C%20%22name%22%3A%20%22Hanako%22%2C%20%22additionalSettings%22%3A%20%22%7B%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%28%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%29%3F-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D" target="_blank" rel="noopener">stable releases</a> or
+            <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%20%22moe.hanako.chan%22%2C%20%22url%22%3A%20%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%20%22author%22%3A%20%22guincalo%22%2C%20%22name%22%3A%20%22Hanako%20%28with%20dev%20builds%29%22%2C%20%22additionalSettings%22%3A%20%22%7B%5C%22includePrereleases%5C%22%3A%20true%2C%20%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%28%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%29%3Fd%3F-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D" target="_blank" rel="noopener">stable and development builds</a>.
           </li>
         </ol>
         <p class="small">
-          The package ID is <code>moe.hanako.chan</code>. It installs as a separate app beside old Hanako
-          v1.0.x or Mercurygram, so you’ll need to log in again. The in-app updater is off; Obtainium or
-          GitHub Releases handle updates.
+          The package ID is <code>moe.hanako.chan</code>. Hanako 2.x installs as an update over Hanako 1.2 and
+          later; make a session backup first.
         </p>
       </section>
     </main>
     <footer>
       <p>
-        Hanako vibecoded by <a href="https://github.com/guincalo/Hanako" target="_blank" rel="noopener">guincalo</a>,
-        licensed under <a href="https://github.com/guincalo/Hanako/blob/hanako/LICENSE" target="_blank" rel="noopener">GPL-2.0</a>
-        and based on <a href="https://github.com/Mercurygram/Mercurygram" target="_blank" rel="noopener">Mercurygram</a>.
+        Hanako by <a href="https://github.com/guincalo/Hanako" target="_blank" rel="noopener">guincalo</a>,
+        licensed under <a href="https://github.com/guincalo/Hanako/blob/hanako-classic/LICENSE" target="_blank" rel="noopener">GPL-2.0</a>
+        and based on <a href="https://github.com/forkgram/forkgram-classic" target="_blank" rel="noopener">Forkgram Classic</a>.
       </p>
     </footer>
   </body>
