@@ -5652,7 +5652,7 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
                 // the condition above instead of reading captionLimitView's visibility: that view
                 // stays VISIBLE for the whole 100ms fade-out, so a read here would keep the
                 // counter hidden until the next keystroke.
-                it.belloworld.mercurygram.ui.MgCharCounter.update(ChatActivityEnterView.this, resourcesProvider, currentAccount, codePointCount, currentLimit > 0 && currentLimit - codePointCount <= (isLiveComment ? 5 : 100));
+                it.belloworld.mercurygram.ui.MgCharCounter.update(ChatActivityEnterView.this, resourcesProvider, currentAccount, codePointCount, currentLimit > 0 && currentLimit - codePointCount <= 100);
 
                 if (doneButtonEnabled != doneButtonEnabledLocal && (doneButton != null)) {
                     doneButtonEnabled = doneButtonEnabledLocal;

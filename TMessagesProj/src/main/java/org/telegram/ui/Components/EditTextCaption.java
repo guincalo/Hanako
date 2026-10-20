@@ -309,7 +309,6 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
 
         new TranslateAlert3(getContext(), lastFragment != null ? lastFragment.getResourceProvider() : null)
             .setText(text)
-            .setSecret(isSelectionTranslateSecret())
             .setOnUse(translatedText -> {
                 getText().replace(start, end, translatedText);
                 setSelection(start, start + translatedText.length());

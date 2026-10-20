@@ -11901,7 +11901,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         if (translateItem == null) {
             return;
         }
-        translateItem.setVisibility(getMessagesController().getTranslateController().isTranslateDialogHidden(getDialogId()) && getMessagesController().getTranslateController().isDialogTranslatableMg(getDialogId()) ? View.VISIBLE : View.GONE);
+        translateItem.setVisibility(getMessagesController().getTranslateController().isTranslateDialogHidden(getDialogId()) && getMessagesController().getTranslateController().isDialogTranslatable(getDialogId()) ? View.VISIBLE : View.GONE);
     }
 
     private Animator infoTopViewAnimator;
@@ -46533,18 +46533,6 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     items.add(LocaleController.getString(R.string.Copy));
                     options.add(OPTION_COPY);
                     icons.add(R.drawable.msg_copy);
-                }
-                // Mercurygram: single-message translate in secret chats — only when the
-                // on-device offline translator is selected and usable (passesSecretTranslateGate),
-                // so secret text is translated entirely on-device (dispatchSecret) and never
-                // hits the network. The OPTION_TRANSLATE handler passes encrypted=true.
-                if (selectedObject != null && selectedObject.contentType == 0
-                        && !TextUtils.isEmpty(selectedObject.getMessageTextToTranslate(selectedObjectGroup, null))
-                        && !selectedObject.isAnimatedEmoji() && !selectedObject.isDice()
-                        && TranslateController.passesSecretTranslateGate(dialog_id)) {
-                    items.add(LocaleController.getString(R.string.TranslateMessage));
-                    options.add(OPTION_TRANSLATE);
-                    icons.add(R.drawable.msg_translate);
                 }
                 if (!isThreadChat() && chatMode != MODE_SCHEDULED && currentChat != null && primaryMessage != null && (currentChat.has_link || primaryMessage.hasReplies()) && currentChat.megagroup && primaryMessage.canViewThread()) {
                     if (primaryMessage.hasReplies()) {

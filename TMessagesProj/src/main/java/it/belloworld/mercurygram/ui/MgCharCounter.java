@@ -53,7 +53,7 @@ public final class MgCharCounter {
             view.setTypeface(AndroidUtilities.bold());
             view.setCenterAlign(true);
             view.setVisibility(View.GONE);
-            parent.addView(view, Math.min(2, parent.getChildCount()), LayoutHelper.createFrame(ChatActivityEnterView.DEFAULT_HEIGHT, 20, Gravity.BOTTOM | Gravity.RIGHT, 3, 0, 0, ChatActivityEnterView.DEFAULT_HEIGHT));
+            parent.addView(view, Math.min(2, parent.getChildCount()), LayoutHelper.createFrame(44, 20, Gravity.BOTTOM | Gravity.RIGHT, 3, 0, 0, 44));
         }
         if (show) {
             view.setNumber(count, view.getVisibility() == View.VISIBLE);

@@ -468,7 +468,6 @@ public class PasscodeView extends FrameLayout implements NotificationCenter.Noti
     private boolean skipFingerprintOnce;
     private View border;
     private int keyboardHeight = 0;
-    private boolean skipFingerprintOnce;
 
     private boolean selfCancelled;
 
