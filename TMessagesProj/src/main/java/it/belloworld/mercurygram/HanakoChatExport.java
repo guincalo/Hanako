@@ -888,6 +888,44 @@ public final class HanakoChatExport {
             json.endObject();
         }
     }
+    private void writeJsonText(ArrayList<Part> parts) throws IOException {
+        boolean plain = true;
+        for (Part p : parts) {
+            if (!"plain".equals(p.type)) {
+                plain = false;
+                break;
+            }
+        }
+        if (plain) {
+            StringBuilder sb = new StringBuilder();
+            for (Part p : parts) sb.append(p.text);
+            json.name("text").value(sb.toString());
+        } else {
+            json.name("text").beginArray();
+            for (Part p : parts) {
+                if ("plain".equals(p.type)) {
+                    json.value(p.text);
+                } else {
+                    writeEntity(p);
+                }
+            }
+            json.endArray();
+        }
+        json.name("text_entities").beginArray();
+        for (Part p : parts) writeEntity(p);
+        json.endArray();
+    }
+
+    private void writeEntity(Part p) throws IOException {
+        json.beginObject();
+        json.name("type").value(p.type);
+        json.name("text").value(p.text);
+        if (p.href != null) json.name("href").value(p.href);
+        if (p.userId != 0) json.name("user_id").value(p.userId);
+        if (p.language != null) json.name("language").value(p.language);
+        json.endObject();
+    }
+
     private static String actionName(TLRPC.MessageAction a) {
         if (a instanceof TLRPC.TL_messageActionChatCreate) return "create_group";
         if (a instanceof TLRPC.TL_messageActionChannelCreate) return "create_channel";
