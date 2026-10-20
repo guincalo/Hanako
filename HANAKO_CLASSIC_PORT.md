@@ -36,9 +36,8 @@ Hanako: ghost mode (+ per-chat exceptions, quick toggle/indicator, silent send, 
 story guard), deleted/anti-delete history + edit history (word diff) + deleted media browser +
 retention/Keep exceptions + deleted-dialog log/reactions, message shot, streamer mode, chat lock,
 session-only backup, activity log (+ saved last seen), peek, Smug language, telemetry
-(+ daily feature snapshot), Parakeet TDT transcription (sherpa-onnx), Hanako settings hub
-(now an entry "Hanako" in classic's settings screen, next to Forkgram settings) and settings
-search entries, message filters, chat export, App API ID, Rin theme, tg://hanako easter egg,
+(+ daily feature snapshot), Hanako settings (merged into Forkgram's settings screen, see
+"Settings merge") and settings search entries, message filters, chat export, App API ID, Rin theme, tg://hanako easter egg,
 honest own status, send/call confirm prompts, emoji-interaction toggles, transfer boost,
 profile DC/reg date.
 
@@ -72,7 +71,8 @@ offline translator, Hanako offline language detection; classic's own TranslateCo
 TranslateAlert2/3, TranslateButton, OfflineLanguageDetector kept), whisper.cpp (jni/whisper
 submodule, whisper_jni.cpp, CMake bits; the Java whisper framework classes stay only as
 Parakeet's host and are restricted to Parakeet), plugin engine (f11), ghost send-as-scheduled
-(f03).
+(f03), MG/Hanako on-device transcription (whisper/Parakeet, sherpa-onnx AAR; Forkgram's
+voice-to-text is the only one, see "Settings merge").
 
 Forkgram duplicates (Forkgram's version kept): hidden accounts (MG HiddenAccountHelper +
 HiddenAccountsActivity), QR login (MgQrLogin), UnifiedPush/push stack (MG push/*,
@@ -129,6 +129,44 @@ fixed until javac and the full arm64 build passed:
   TgNetWrapper.cpp and implemented in ConnectionsManager.cpp; they built in the full CI build.
 Not runtime-tested on a device yet.
 
+## Settings merge, STT, icons (2026-10-21)
+
+- **One entry, "Hanako".** Forkgram's `ForkSettingsActivity` is the single settings screen,
+  titled "Hanako" (R.string.MercurygramSettings) with the flower glyph `drawable/mg_settings.xml`
+  (24dp outline, white fill, tinted by the row; replaces the head-crop glyph that rendered as a
+  grey blob). Classic settings (ProfileActivity): the "Fork" header and the second row are gone.
+  New-style SettingsActivity: item 100 removed, item 98 is "Hanako" (Forkgram's update-check row
+  99 stays).
+- **Rows.** `it.belloworld.mercurygram.ui.HanakoSettingsSection` (was MercurygramSettingsActivity,
+  a hub of pages) fills Hanako's rows above Forkgram's, in sections: ghost mode (+ exceptions,
+  story guard, peek, emoji interactions, send/call prompts), chat lock, streamer mode, tracking
+  and privacy, deleted messages, activity log, message filters, chats (general, media, message
+  shot, transfer boost, profile info), updates, device (backup and export, App API ID,
+  telemetry). The host adds `ID_OFFSET` (100000) to their ids and strips it on click.
+  `HanakoSettingsSection.screen(PAGE_*)` / `screenAt(row)` open the merged screen scrolled to a
+  row (ghost quick toggle, streamer quick link, Settings search entries 95xx). Forkgram's lock
+  code (ForkSettingsLock) now also guards Hanako's rows.
+- **Duplicates -> Forkgram.** Removed MG rows: hide All tab, default folder, disable global
+  search, disable AI editor, disable AI summary, rear round camera, disable live photos, hide
+  premium promo. Their old readers: global search -> pref `disableGlobalSearch`, AI editor ->
+  `hideAiEditor`, rear camera (InstantCameraView2) -> `rearVideoMessages`, hide-All-tab /
+  default-folder / live-photo / premium-promo checks neutral (Forkgram's hideAllChatsTab,
+  default folder, Disable Motion Photos and Lock premium cover them). The MgAccountConfig fields
+  stay (stored values are ignored).
+- **Voice-to-text.** Forkgram's (Cloudflare / AIDL offline transcriber / premium) only. Removed:
+  `it.belloworld.mercurygram.transcribe` (whisper + Parakeet), the transcription settings
+  screen, TranscribeButton/ChatMessageCell MG hooks, SharedConfig mg_transcribe*, the sherpa-onnx
+  AAR download/jniLibs in TMessagesProj/build.gradle and its proguard keep. MG transcription
+  strings are left in mg_strings.xml (unused).
+- **Icons.** Launcher alias `DefaultIcon` (enabled by default) pointed at Forkgram's
+  `icon_01_launcher` and overrode the app icon: it and `AdaptiveIcon` now use the Hanako
+  `@mipmap/ic_launcher` / `ic_launcher_round` (adaptive, with the traced monochrome layer; same
+  files as Hanako 1.31d). Icon picker preview for Default/Adaptive uses the Hanako layers
+  (`ic_launcher_background` moved from drawable-v24 to drawable, a plain vector, so it resolves on
+  minSdk 23). Notification small icon for Default/Adaptive and the fallback: Telegram plane
+  (as Hanako 1.31d) instead of the fork. `ic_launcher_dr` (conversation-shortcut / call person
+  icon) copied from Hanako 1.31d (was Forkgram's fork). Other picker icons are Forkgram/Telegram's.
+
 ## CI
 
 - `.github/workflows/hanako-classic.yml`: full arm64 build (native deps from source, cached),
@@ -143,7 +181,7 @@ Not runtime-tested on a device yet.
 
 ## Open gaps / TODO
 
-- Device testing of the port (nothing has been run on a phone yet).
+- Device testing of the port and of the merged settings screen (not run on a phone by me).
 - Hanako strings for dropped features are still in plus_*_strings.xml / smug.xml (harmless).
 - SharedConfig still carries dead MG translate/Tor fields and setters (no callers into dropped
   classes).
