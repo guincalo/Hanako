@@ -116,6 +116,16 @@ jobs:
           HANAKO_TELEMETRY_KEY: ${{ steps.prep.outputs.private == 'true' && secrets.HANAKO_TELEMETRY_KEY || '' }}
         run: |
           set -euo pipefail
+          # gradle signs with config/release.keystore + gradle.properties passwords (android/androidkey);
+          # the in-repo store is Forkgram's and doesn't open with those, so use a throwaway key for the
+          # gradle step. The APK is re-signed with the Hanako key below (or ships "UNOFFICIAL-debugkey").
+          SP=$(grep '^RELEASE_STORE_PASSWORD=' gradle.properties | cut -d= -f2)
+          KP=$(grep '^RELEASE_KEY_PASSWORD=' gradle.properties | cut -d= -f2)
+          KA=$(grep '^RELEASE_KEY_ALIAS=' gradle.properties | cut -d= -f2)
+          rm -f TMessagesProj/config/release.keystore
+          keytool -genkeypair -noprompt -keystore TMessagesProj/config/release.keystore -storetype JKS \
+            -storepass "$SP" -keypass "$KP" -alias "$KA" -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Hanako Classic CI throwaway"
           # same as prebuild_fdroid.sh: no Play Services / GMS captcha in Hanako
           sed -i -e '/com\.google\.android\.play/d' -e '/play-services/d' TMessagesProj/build.gradle
           sed -i -e '/gms/d' TMessagesProj/src/main/java/org/telegram/messenger/CaptchaController.java || true
