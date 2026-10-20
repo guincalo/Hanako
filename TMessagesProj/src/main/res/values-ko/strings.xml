@@ -66,7 +66,7 @@
     <string name="QRLoginStep3">휴대전화를 이 화면에 비추어 로그인을 확인하세요</string>
     <string name="QRLoginSubtitle">다른 기기에서 텔레그램을 열고 이 QR 코드를 스캔하여 계정에 로그인하세요.</string>
     <string name="QRLoginTitle">QR 코드로 로그인</string>
-    <string name="AppNameFdroid">Forkgram</string>
+    <string name="AppNameFdroid">Hanako</string>
     <string name="UnifiedPush">UnifiedPush</string>
     <string name="ForkSectionAppearance">모양</string>
     <string name="ForkSectionMedia">사진 및 동영상</string>
@@ -251,8 +251,8 @@
     <string name="LinkReplacementInvalid">잘못된 표현식</string>
     <string name="LinkReplacedOnPaste">링크가 바뀌었습니다</string>
 
-    <string name="AppName">Forkgram Classic</string>
-    <string name="AppNameBeta">Forkgram Classic</string>
+    <string name="AppName">Hanako</string>
+    <string name="AppNameBeta">Hanako Beta</string>
     <string name="LanguageName">한국어</string>
     <string name="English">영어</string>
     <string name="LanguageNameInEnglish">한국어</string>
@@ -840,7 +840,7 @@
     <string name="DirectShareInfo">안드로이드 공유 메뉴에 최근 대화방을 표시합니다</string>
     <string name="Emoji">이모지</string>
     <string name="LargeEmoji">큰 이모지</string>
-    <string name="TelegramVersion">Android용 텔레그램 %1$s</string>
+    <string name="TelegramVersion">Android용 Hanako %1$s</string>
     <string name="DebugMenu">디버그 메뉴</string>
     <string name="DebugMenuLongPress">디버그 메뉴로 이동하려면 길게 눌러주세요</string>
     <string name="DebugSendLogs">로그 보내기</string>

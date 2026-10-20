@@ -240,6 +240,8 @@ import java.util.zip.GZIPOutputStream;
 
 import me.vkryl.core.BitwiseUtils;
 
+import it.belloworld.mercurygram.MgUpdateChecker;
+
 public class AndroidUtilities {
     public final static int REPLACING_TAG_TYPE_LINK = 0;
     public final static int REPLACING_TAG_TYPE_BOLD = 1;
@@ -259,7 +261,7 @@ public class AndroidUtilities {
 
     public static Typeface bold() {
         if (mediumTypeface == null) {
-            if (SharedConfig.useSystemBoldFont && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            if ((SharedConfig.useSystemBoldFont || SharedConfig.useSystemFont) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 mediumTypeface = Typeface.create(null, 500, false);
             } else {
                 mediumTypeface = getTypeface(TYPEFACE_ROBOTO_MEDIUM);
@@ -2412,6 +2414,12 @@ public class AndroidUtilities {
     }
 
     public static Typeface getTypeface(String assetPath) {
+        if (SharedConfig.useSystemFont) {
+            Typeface sys = it.belloworld.mercurygram.MgSystemFont.typefaceFor(assetPath);
+            if (sys != null) {
+                return sys;
+            }
+        }
         synchronized (typefaceCache) {
             if (!typefaceCache.containsKey(assetPath)) {
                 try {
@@ -2441,6 +2449,13 @@ public class AndroidUtilities {
             }
             return typefaceCache.get(assetPath);
         }
+    }
+
+    public static void clearTypefaceCache() {
+        synchronized (typefaceCache) {
+            typefaceCache.clear();
+        }
+        mediumTypeface = null;
     }
 
     public static boolean isWaitingForSms() {
@@ -3616,6 +3631,7 @@ public class AndroidUtilities {
     }
 
     public static boolean addToClipboard(CharSequence plain, String html) {
+        if (it.belloworld.mercurygram.MgUrlCleaner.handleCopy(plain)) return true;
         if (html == null) return addToClipboard(plain);
         try {
             android.content.ClipboardManager clipboard = (android.content.ClipboardManager) ApplicationLoader.applicationContext.getSystemService(Context.CLIPBOARD_SERVICE);
@@ -3629,6 +3645,7 @@ public class AndroidUtilities {
     }
 
     public static boolean addToClipboard(CharSequence str) {
+        if (it.belloworld.mercurygram.MgUrlCleaner.handleCopy(str)) return true;
         try {
             android.content.ClipboardManager clipboard = (android.content.ClipboardManager) ApplicationLoader.applicationContext.getSystemService(Context.CLIPBOARD_SERVICE);
 
@@ -3868,6 +3885,11 @@ public class AndroidUtilities {
     public static boolean isKeyguardSecure() {
         KeyguardManager km = (KeyguardManager) ApplicationLoader.applicationContext.getSystemService(Context.KEYGUARD_SERVICE);
         return km.isKeyguardSecure();
+    }
+
+    public static boolean isKeyguardLocked() {
+        KeyguardManager km = (KeyguardManager) ApplicationLoader.applicationContext.getSystemService(Context.KEYGUARD_SERVICE);
+        return km != null && km.isKeyguardLocked();
     }
 
     public static boolean isSimAvailable() {
@@ -4209,6 +4231,12 @@ public class AndroidUtilities {
         if (f == null || f != null && !f.exists()) {
             f = FileLoader.getInstance(UserConfig.selectedAccount).getPathToMessage(message.messageOwner);
         }
+        if (f == null || !f.exists()) {
+            File mgCached = it.belloworld.mercurygram.MgLocalMedia.cachedFile(message);
+            if (mgCached != null) {
+                f = mgCached;
+            }
+        }
         if (f != null && f.exists()) {
             if (parentFragment != null && f.getName().toLowerCase().endsWith("attheme")) {
                 Theme.ThemeInfo themeInfo = Theme.applyThemeFile(f, message.getDocumentName(), null, true);
@@ -4341,6 +4369,12 @@ public class AndroidUtilities {
         }
         if (f == null || !f.exists()) {
             f = FileLoader.getInstance(message.currentAccount).getPathToMessage(message.messageOwner);
+        }
+        if (f == null || !f.exists()) {
+            File mgCached = it.belloworld.mercurygram.MgLocalMedia.cachedFile(message);
+            if (mgCached != null) {
+                f = mgCached;
+            }
         }
         String mimeType = message.type == MessageObject.TYPE_FILE || message.type == MessageObject.TYPE_TEXT ? message.getMimeType() : null;
         return openForView(f, message.getFileName(), mimeType, activity, resourcesProvider, restrict);
@@ -5552,6 +5586,9 @@ public class AndroidUtilities {
 
     public static boolean shouldShowUrlInAlert(String url) {
         try {
+            if (UserConfig.getInstance(UserConfig.selectedAccount).mg.confirmInternalLinks && Browser.isInternalUrl(url, null)) {
+                return true;
+            }
             Uri uri = Uri.parse(url);
             url = uri.getHost();
             return checkHostForPunycode(url);
@@ -6703,7 +6740,7 @@ public class AndroidUtilities {
                     }
                     break;
             }
-            return formatString("TelegramVersion", R.string.TelegramVersion, String.format(Locale.US, "v%s (%d) %s", pInfo.versionName, code, abi));
+            return formatString("TelegramVersion", R.string.TelegramVersion, String.format(Locale.US, "v%s (%d) %s", MgUpdateChecker.currentInstallVersion(), code, abi));
         } catch (Exception e) {
             FileLog.e(e);
         }

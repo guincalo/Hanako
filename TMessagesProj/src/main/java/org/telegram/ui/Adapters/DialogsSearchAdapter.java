@@ -283,6 +283,9 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
     }
 
     private boolean filter(Object obj) {
+        if (it.belloworld.mercurygram.PlusChatLock.isHiddenSearchResult(currentAccount, obj)) { // plus f08
+            return false;
+        }
         if (dialogsType != DialogsActivity.DIALOGS_TYPE_START_ATTACH_BOT) {
             return true;
         }
@@ -352,7 +355,8 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                 return searchId == lastSearchId;
             }
         });
-        searchAdapterHelper.setAllowGlobalResults(allowGlobalSearch);
+        // Mercurygram: disable-global-search keeps search local — no public username/channel lookup.
+        searchAdapterHelper.setAllowGlobalResults(allowGlobalSearch && !UserConfig.getInstance(currentAccount).mg.disableGlobalSearch);
         mContext = context;
         needMessagesSearch = messagesSearch;
         dialogsType = type;
@@ -547,6 +551,32 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
             return;
         }
 
+        // Mercurygram: disable-global-search suppresses the global message-search RPC
+        // (messages.searchGlobal). Search stays local; the earlier guards already
+        // handled the empty-query / forum / bot-request paths, so reaching here means
+        // a real global query would have been sent. Mirror the empty-result branch of
+        // the RPC callback (drain waitingResponseCount, clear the spinner) so the search
+        // state machine settles instead of hanging on "searching".
+        if (UserConfig.getInstance(currentAccount).mg.disableGlobalSearch) {
+            lastMessagesSearchString = query;
+            lastMessagesSearchFilterFlags = currentMessagesFilter.flags;
+            if (searchId > 0) {
+                lastMessagesSearchId = searchId;
+            }
+            searchResultMessages.clear();
+            searchWas = true;
+            messagesSearchEndReached = true;
+            forceLoadingMessages = false;
+            waitingResponseCount--;
+            searchAdapterHelper.mergeResults(searchResult, filtered2RecentSearchObjects);
+            if (delegate != null) {
+                delegate.searchStateChanged(waitingResponseCount > 0, true);
+                delegate.runResultsEnterAnimation();
+            }
+            notifyDataSetChanged();
+            return;
+        }
+
         final TLRPC.TL_messages_searchGlobal req = new TLRPC.TL_messages_searchGlobal();
         req.broadcasts_only = (currentMessagesFilter.flags & 2) != 0;
         req.groups_only = (currentMessagesFilter.flags & 4) != 0;
@@ -626,6 +656,9 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                             long did = MessageObject.getDialogId(message);
                             int maxId = MessagesController.getInstance(currentAccount).deletedHistory.get(did);
                             if (maxId != 0 && message.id <= maxId) {
+                                continue;
+                            }
+                            if (it.belloworld.mercurygram.PlusChatLock.isDialogHidden(currentAccount, did)) { // plus f08
                                 continue;
                             }
                             MessageObject msg = messageObjects.get(a);
@@ -1131,7 +1164,7 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                 ConnectionsManager.getInstance(currentAccount).cancelRequest(sponsoredReqId, true);
                 sponsoredReqId = 0;
             }
-            if (query == null || query.length() < 4 || UserConfig.getInstance(currentAccount).isPremium() && MessagesController.getInstance(currentAccount).isSponsoredDisabled()) {
+            if (query == null || query.length() < 4 || org.telegram.messenger.SharedConfig.removeAdsAndProxySponsor || UserConfig.getInstance(currentAccount).isPremium() && MessagesController.getInstance(currentAccount).isSponsoredDisabled()) {
                 sponsoredQuery = null;
             } else {
                 final TLRPC.TL_contacts_getSponsoredPeers req = new TLRPC.TL_contacts_getSponsoredPeers();

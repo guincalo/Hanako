@@ -2885,6 +2885,7 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
                                     });
                                     return true;
                                 }
+                                if (plusF16ConfirmRecording(true)) return true; // plus f16
                                 delegate.needStartRecordVideo(1, true, 0, 0, voiceOnce ? 0x7FFFFFFF : 0, effectId, 0);
                                 sendButton.setEffect(effectId = 0);
                             } else {
@@ -2912,6 +2913,7 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
                                     });
                                     return true;
                                 }
+                                if (plusF16ConfirmRecording(false)) return true; // plus f16
                                 MediaController.getInstance().stopRecording(isInScheduleMode() ? 3 : 1, true, 0, voiceOnce, 0);
                                 delegate.needStartRecordAudio(0);
                             }
@@ -3007,6 +3009,7 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
                                     });
                                     return true;
                                 }
+                                if (plusF16ConfirmRecording(true)) return true; // plus f16
                                 CameraController.getInstance().cancelOnInitRunnable(onFinishInitCameraRunnable);
                                 delegate.needStartRecordVideo(1, true, 0, 0, voiceOnce ? 0x7FFFFFFF : 0, effectId, 0);
                                 sendButton.setEffect(effectId = 0);
@@ -3027,6 +3030,7 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
                                     });
                                     return true;
                                 }
+                                if (plusF16ConfirmRecording(false)) return true; // plus f16
                                 if (recordingAudioVideo && isInScheduleMode()) {
                                     AlertsCreator.createScheduleDatePickerDialog(parentActivity, parentFragment.getDialogId(), (notify, scheduleDate, scheduleRepeatPeriod) -> MediaController.getInstance().stopRecording(1, notify, scheduleDate, false, 0), () -> MediaController.getInstance().stopRecording(0, false, 0, false, 0), resourcesProvider);
                                 }
@@ -4981,6 +4985,13 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
         }
 
         @Override
+        protected boolean isSelectionTranslateSecret() {
+            // Mercurygram: composing in a secret chat — translate the selection
+            // on-device only (fail-closed), never via Telegram cloud / Mozhi.
+            return parentFragment != null && parentFragment.getCurrentEncryptedChat() != null;
+        }
+
+        @Override
         protected void onContextMenuClose() {
             if (delegate != null) {
                 delegate.onContextMenuClose();
@@ -5027,7 +5038,8 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
                             return false;
                         }
                     }
-                    if (inputContentInfo.getDescription().hasMimeType("image/gif") || SendMessagesHelper.shouldSendWebPAsSticker(null, inputContentInfo.getContentUri())) {
+                    boolean isGboardSticker = inputContentInfo.getDescription().getExtras() != null && inputContentInfo.getDescription().getExtras().getBoolean("com.google.android.inputmethod.content.IS_STICKER");
+                    if (inputContentInfo.getDescription().hasMimeType("image/gif") || isGboardSticker || (inputContentInfo.getDescription().hasMimeType("image/webp") && SendMessagesHelper.shouldSendWebPAsSticker(null, inputContentInfo.getContentUri()))) {
                         if (isInScheduleMode()) {
                             AlertsCreator.createScheduleDatePickerDialog(parentActivity, parentFragment.getDialogId(), (notify, scheduleDate, scheduleRepeatPeriod) -> send(inputContentInfo, notify, scheduleDate), resourcesProvider);
                         } else {
@@ -5635,6 +5647,12 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
                         }
                     });
                 }
+
+                // Mercurygram: live character counter while composing. The last argument repeats
+                // the condition above instead of reading captionLimitView's visibility: that view
+                // stays VISIBLE for the whole 100ms fade-out, so a read here would keep the
+                // counter hidden until the next keystroke.
+                it.belloworld.mercurygram.ui.MgCharCounter.update(ChatActivityEnterView.this, resourcesProvider, currentAccount, codePointCount, currentLimit > 0 && currentLimit - codePointCount <= (isLiveComment ? 5 : 100));
 
                 if (doneButtonEnabled != doneButtonEnabledLocal && (doneButton != null)) {
                     doneButtonEnabled = doneButtonEnabledLocal;
@@ -6620,6 +6638,14 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
     }
 
     public boolean isMessageWebPageSearchEnabled() {
+        // Mercurygram: when "disable link previews" is on, report search as
+        // disabled so the send / edit / draft paths set no_webpage=true. The
+        // account.getWebPagePreview RPC itself is suppressed at the
+        // searchLinks() chokepoint in ChatActivity. Hard-off for now;
+        // per-chat/per-link override deferred (#26).
+        if (it.belloworld.mercurygram.MgLinkPreview.suppressed(currentAccount)) {
+            return false;
+        }
         return messageWebPageSearch;
     }
 
@@ -7404,7 +7430,7 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
         if (!TextUtils.equals(message[0], editingMessageObject.messageText) || entities != null && !entities.isEmpty() || !editingMessageObject.messageOwner.entities.isEmpty() || editingMessageObject.messageOwner.media instanceof TLRPC.TL_messageMediaWebPage) {
             editingMessageObject.editingMessage = message[0];
             editingMessageObject.editingMessageEntities = entities;
-            editingMessageObject.editingMessageSearchWebPage = messageWebPageSearch;
+            editingMessageObject.editingMessageSearchWebPage = isMessageWebPageSearchEnabled();
             if (parentFragment != null && parentFragment.getCurrentChat() != null && (editingMessageObject.type == MessageObject.TYPE_TEXT || editingMessageObject.type == MessageObject.TYPE_EMOJIS) && !ChatObject.canSendEmbed(parentFragment.getCurrentChat())) {
                 editingMessageObject.editingMessageSearchWebPage = false;
                 editingMessageObject.messageOwner.flags &=~ 512;
@@ -11653,7 +11679,7 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
                             }
                         };
                         if (!showConfirmAlert(runnable)) {
-                            runnable.run();
+                            it.belloworld.mercurygram.PlusSendPrompts.runSend(getContext(), it.belloworld.mercurygram.PlusSendPrompts.KIND_GIF, scheduleDate, stars, resourcesProvider, runnable); // plus f16
                         }
                     });
                 }
@@ -11924,11 +11950,42 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
                     MediaDataController.getInstance(currentAccount).addRecentSticker(MediaDataController.TYPE_IMAGE, parent, sticker, (int) (System.currentTimeMillis() / 1000), false);
                 };
                 if (!showConfirmAlert(runnable)) {
-                    runnable.run();
+                    it.belloworld.mercurygram.PlusSendPrompts.runSend(getContext(), it.belloworld.mercurygram.PlusSendPrompts.stickerKind(sticker), scheduleDate, stars, resourcesProvider, runnable); // plus f16
                 }
             });
         }
     }
+
+    // plus f16: instead of sending, pause into the recorded preview (the same flow the paid-message
+    // confirmation above uses) and ask; Send sends the preview, Cancel leaves it to play, trim or delete.
+    private boolean plusF16ConfirmRecording(boolean video) {
+        if (isInScheduleMode() || delegate == null || !it.belloworld.mercurygram.PlusSendPrompts.isEnabled(video ? it.belloworld.mercurygram.PlusSendPrompts.KIND_ROUND : it.belloworld.mercurygram.PlusSendPrompts.KIND_VOICE)) {
+            return false;
+        }
+        if (video) {
+            if (slideText != null) {
+                slideText.setEnabled(false);
+            }
+            delegate.toggleVideoRecordingPause();
+        } else {
+            if (sendButtonVisible) {
+                calledRecordRunnable = true;
+            }
+            MediaController.getInstance().toggleRecordingPause(voiceOnce);
+            delegate.needStartRecordAudio(0);
+            if (slideText != null) {
+                slideText.setEnabled(false);
+            }
+        }
+        it.belloworld.mercurygram.PlusSendPrompts.confirm(getContext(), video ? it.belloworld.mercurygram.PlusSendPrompts.KIND_ROUND : it.belloworld.mercurygram.PlusSendPrompts.KIND_VOICE, resourcesProvider, () -> {
+            // nothing to send yet (still encoding, or too short to keep): the preview's own send button stays available
+            if (audioToSend != null || videoToSendMessageObject != null) {
+                sendMessageInternal(true, 0, 0, 0, false);
+            }
+        });
+        return true;
+    }
+    // plus f16 end
 
     @Override
     public boolean canSchedule() {

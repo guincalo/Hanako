@@ -158,6 +158,8 @@ import java.util.Set;
 import me.vkryl.android.animator.BoolAnimator;
 import me.vkryl.android.animator.FactorAnimator;
 
+import it.belloworld.mercurygram.MgUpdateChecker;
+
 public class SettingsActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate, ImageUpdater.ImageUpdaterDelegate, MainTabsActivity.TabFragmentDelegate, FactorAnimator.Target {
 
     private static final int ANIMATOR_ID_SEARCH_PAGE_VISIBLE = 0;
@@ -235,6 +237,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         getNotificationCenter().addObserver(this, NotificationCenter.updateInterfaces);
         getNotificationCenter().addObserver(this, NotificationCenter.starBalanceUpdated);
         getNotificationCenter().addObserver(this, NotificationCenter.newSuggestionsAvailable);
+        getNotificationCenter().addObserver(this, NotificationCenter.mainUserInfoChanged);
 
         if (arguments != null) {
             hasMainTabs = arguments.getBoolean("hasMainTabs", false);
@@ -534,6 +537,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         getNotificationCenter().removeObserver(this, NotificationCenter.updateInterfaces);
         getNotificationCenter().removeObserver(this, NotificationCenter.starBalanceUpdated);
         getNotificationCenter().removeObserver(this, NotificationCenter.newSuggestionsAvailable);
+        getNotificationCenter().removeObserver(this, NotificationCenter.mainUserInfoChanged);
     }
 
     @Override
@@ -549,6 +553,20 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             if (listView != null) {
                 listView.adapter.update(true);
             }
+        } else if (id == NotificationCenter.mainUserInfoChanged) {
+            setInfo();
+            if (listView != null) {
+                listView.adapter.update(true);
+            }
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        setInfo();
+        if (listView != null) {
+            listView.adapter.update(true);
         }
     }
 
@@ -565,7 +583,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         titleView.setText(UserObject.getUserName(user));
         final SpannableStringBuilder sb = new SpannableStringBuilder();
         if (user != null && !TextUtils.isEmpty(user.phone)) {
-            sb.append(spoilerIfSensitive(PhoneFormat.getInstance().format("+" + user.phone)));
+            sb.append(spoilerIfSensitive(it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + user.phone)))); // plus f10
         }
         final String username = UserObject.getPublicUsername(user);
         if (username != null) {
@@ -734,6 +752,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         items.add(SettingCell.Factory.of(8, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.settings_devices, getString(R.string.SettingsDevices), getString(R.string.SettingsDevicesInfo)));
         items.add(SettingCell.Factory.of(9, IconBackgroundColors.ORANGE_DEEP.top, IconBackgroundColors.ORANGE_DEEP.bottom, R.drawable.settings_power, getString(R.string.SettingsPowerSaving), getString(R.string.SettingsPowerSavingInfo)));
         items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));
+        items.add(SettingCell.Factory.of(100, 0xFF8F77FF, 0xFF6E5BD9, R.drawable.mg_settings, getString(R.string.MercurygramSettings), getString(R.string.MercurygramSettingsInfo)));
 
         {
             items.add(UItem.asShadow(null));
@@ -749,7 +768,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(UItem.asShadow(null));
         }
 
-        if (!getMessagesController().premiumFeaturesBlocked()) {
+        // Mercurygram: hide premium upsell promo (opt-in, UI-only, no gate removed)
+        if (!getMessagesController().premiumFeaturesBlocked() && !getUserConfig().mg.hidePremiumPromo) {
             items.add(SettingCell.Factory.of(11, 0xFFB659FF, 0xFF617CFF, R.drawable.settings_premium, getString(R.string.TelegramPremium)));
         }
         if (getMessagesController().starsPurchaseAvailable()) {
@@ -764,10 +784,12 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(SettingCell.Factory.of(13, 0xFF1BA4ED, 0xFF1488E1, R.drawable.filled_gram_earnings, getString(R.string.GramEarnings), null, c.balanceAvailable() && balance > 0 ? StarsIntroActivity.formatStarsAmount(c.getBalance(), 0.85f, ' ') : ""));
         }
 
-        if (!getMessagesController().premiumFeaturesBlocked()) {
+        // Mercurygram: hide premium upsell promo (opt-in, UI-only, no gate removed)
+        if (!getMessagesController().premiumFeaturesBlocked() && !getUserConfig().mg.hidePremiumPromo) {
             items.add(SettingCell.Factory.of(15, 0xFFF45255, 0xFFDF3955, R.drawable.settings_business, getString(R.string.TelegramBusiness)));
         }
-        if (!getMessagesController().premiumPurchaseBlocked()) {
+        // Mercurygram: hide premium upsell promo (opt-in, UI-only, no gate removed)
+        if (!getMessagesController().premiumPurchaseBlocked() && !getUserConfig().mg.hidePremiumPromo) {
             items.add(SettingCell.Factory.of(16, 0xFFF38B31, 0xFFE26314, R.drawable.settings_gift, getString(R.string.SendAGift)));
         }
         if (items.get(items.size() - 1).viewType != UniversalAdapter.VIEW_TYPE_SHADOW)
@@ -878,6 +900,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 break;
             case 10:
                 presentSettingFragment(new LanguageSelectActivity());
+                break;
+            case 100:
+                presentFragment(new it.belloworld.mercurygram.ui.MercurygramSettingsActivity());
                 break;
 
             case 11:
@@ -990,7 +1015,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                     }
                     break;
             }
-            return formatString(R.string.TelegramVersion, String.format(Locale.US, "v%s (%d)\n%s", pInfo.versionName, code, abi));
+            return formatString(R.string.TelegramVersion, String.format(Locale.US, "v%s (%d)\n%s", MgUpdateChecker.currentInstallVersion(), code, abi));
         } catch (Exception e) {
             FileLog.e(e);
         }
@@ -1551,7 +1576,10 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 (SharedConfig.frameMetricsEnabled ? "hide frame metrics" : "show frame metrics"),
                 BuildVars.DEBUG_PRIVATE_VERSION ? (SharedConfig.shadowsInSections ? "disable shadows in settings" : "enable shadows in settings") : null,
                 BuildVars.DEBUG_PRIVATE_VERSION ? (SharedConfig.debugViewMetrics ? "disable debug view metrics" : "enable debug view metrics") : null,
-                (SharedSettings.experimentalSettingsAllowed.get() ? "hide experimental settings" : "show experimental settings")
+                (SharedSettings.experimentalSettingsAllowed.get() ? "hide experimental settings" : "show experimental settings"),
+                // [MG] Mercurygram Debug items
+                SharedConfig.disableSecureFlags ? "Enable Secure Flags" : "Disable Secure Flags",
+                SharedConfig.removeAdsAndProxySponsor ? "Enable Ads & Proxy Sponsor" : "Remove Ads & Proxy Sponsor"
         };
 
         builder.setItems(items, (dialog, which) -> {
@@ -1864,6 +1892,10 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             } else if (which == 42) {
                 SharedSettings.experimentalSettingsAllowed.toggle();
                 listView.adapter.update(true);
+            } else if (which == 43) {
+                SharedConfig.toggleDisableSecureFlags();
+            } else if (which == 44) {
+                SharedConfig.toggleRemoveAdsAndProxySponsor();
             }
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);

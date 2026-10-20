@@ -526,7 +526,7 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
                     ReactionsLayoutInBubble.VisibleReaction newReaction = ReactionsLayoutInBubble.VisibleReaction.fromTL(v.mediaArea.reaction);
                     ReactionsLayoutInBubble.VisibleReaction currentReaction = ReactionsLayoutInBubble.VisibleReaction.fromTL(currentStory.storyItem.sent_reaction);
                     if (!Objects.equals(newReaction, currentReaction)) {
-                        likeStory(newReaction);
+                        applyMessageToChat(() -> likeStory(newReaction)); // plus f06: was likeStory(newReaction), bypassing the confirm gate
                     }
                 }
                 v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
@@ -2023,10 +2023,10 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
                             boolean canShowArchive;
                             boolean storiesIsHidden;
                             if (dialogId > 0) {
-                                canShowArchive = user != null && user.contact;
+                                canShowArchive = user != null;
                                 storiesIsHidden = user != null && user.stories_hidden;
                             } else {
-                                canShowArchive = chat != null && !ChatObject.isNotInChat(chat);
+                                canShowArchive = chat != null;
                                 storiesIsHidden = chat != null && chat.stories_hidden;
                             }
                             if (fromTopPeer) {
@@ -2274,7 +2274,8 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
                 if (user == null) {
                     return;
                 }
-                String firstName = user.first_name;
+                // first_name is null for deleted users
+                String firstName = UserObject.getForcedFirstName(user);
                 int index;
                 if ((index = firstName.indexOf(' ')) > 0) {
                     firstName = firstName.substring(0, index);
@@ -3718,6 +3719,11 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
     private boolean applyMessageToChat(Runnable runnable) {
         if (MessagesController.getInstance(currentAccount).isFrozen()) {
             AccountFrozenAlert.show(currentAccount);
+            return true;
+        }
+        // plus f06: reacting/replying marks the story seen server-side even in ghost mode
+        if (!currentStory.isLive && it.belloworld.mercurygram.PlusStoryGuard.confirmInteraction(getContext(), currentAccount, dialogId, resourcesProvider,
+                SharedConfig.stealthModeSendMessageConfirm > 0 && stealthModeIsActive, () -> applyMessageToChat(runnable))) {
             return true;
         }
         if (SharedConfig.stealthModeSendMessageConfirm > 0 && stealthModeIsActive) {

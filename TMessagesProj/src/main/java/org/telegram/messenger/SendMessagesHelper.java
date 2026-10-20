@@ -2300,6 +2300,8 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
             final TLRPC.Peer peer_id = getMessagesController().getPeer(peer);
             boolean isSignature = false;
             boolean canSendStickers = true;
+            boolean canSendGifs = true;
+            boolean canSendGames = true;
             boolean canSendPhoto = true;
             boolean canSendVideo = true;
             boolean canSendDocument = true;
@@ -2349,6 +2351,8 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                     rank = getMessagesController().getAdminRank(chat.id, myId);
                 }
                 canSendStickers = ChatObject.canSendStickers(chat);
+                canSendGifs = ChatObject.canSendGifs(chat);
+                canSendGames = ChatObject.canSendGames(chat);
                 canSendPhoto = ChatObject.canSendPhoto(chat);
                 canSendVideo = ChatObject.canSendVideo(chat);
                 canSendDocument = ChatObject.canSendDocument(chat);
@@ -2385,7 +2389,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                     continue;
                 }
                 boolean mediaIsSticker = (msgObj.isSticker() || msgObj.isAnimatedSticker() || msgObj.isGif() || msgObj.isGame());
-                if (!canSendStickers && mediaIsSticker) {
+                if (!canSendStickers && (msgObj.isSticker() || msgObj.isAnimatedSticker()) || !canSendGifs && msgObj.isGif() || !canSendGames && msgObj.isGame()) {
                     if (sendResult == 0) {
                         sendResult = ChatObject.isActionBannedByDefault(chat, ChatObject.ACTION_SEND_STICKERS) ? 4 : 1;
                     }
@@ -3044,7 +3048,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         boolean canSendMusic = ChatObject.canSendMusic(chat);
 
         boolean mediaIsSticker = (msgObj.isSticker() || msgObj.isAnimatedSticker() || msgObj.isGif() || msgObj.isGame());
-        if (!canSendStickers && mediaIsSticker) {
+        if (!canSendStickers && (msgObj.isSticker() || msgObj.isAnimatedSticker()) || !ChatObject.canSendGifs(chat) && msgObj.isGif() || !ChatObject.canSendGames(chat) && msgObj.isGame()) {
             return ChatObject.isActionBannedByDefault(chat, ChatObject.ACTION_SEND_STICKERS) ? 4 : 1;
         } else if (!canSendPhoto && msgObj.messageOwner.media instanceof TLRPC.TL_messageMediaPhoto && !msgObj.isVideo() && !mediaIsSticker) {
             return ChatObject.isActionBannedByDefault(chat, ChatObject.ACTION_SEND_PHOTO) ? 10 : 12;
@@ -4885,7 +4889,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                         newMsg = new TLRPC.TL_message();
                     }
                     if (DialogObject.isChatDialog(peer)) {
-                        if (!canSendStickers) {
+                        if (!ChatObject.canSendGifs(getMessagesController().getChat(-peer))) {
                             for (int a = 0, N = document.attributes.size(); a < N; a++) {
                                 if (document.attributes.get(a) instanceof TLRPC.TL_documentAttributeAnimated) {
                                     document.attributes.remove(a);
@@ -10118,7 +10122,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 TLRPC.TL_messages_messages messagesRes = new TLRPC.TL_messages_messages();
                 messagesRes.messages.add(prevMessage.messageOwner);
                 if (!message.paidMedia && !message.pollMedia) {
-                    accountInstance.getMessagesStorage().putMessages(messagesRes, message.peer, -2, 0, false, scheduleDate != 0 ? 1 : 0, 0);
+                    accountInstance.getMessagesStorage().putMessages(messagesRes, message.peer, -2, 0, false, (scheduleDate != 0 || message.scheduled) ? 1 : 0, 0); // plus f03: the group may have been scheduled inside sendMessage
                 }
                 instance.sendReadyToSendGroup(message, true, true);
             }
@@ -10934,24 +10938,12 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                         if (!TextUtils.isEmpty(info.imagePath)) {
                             info.path = info.imagePath;
                         } else {
+                            // [MG] Truncate the trailing MotionPhoto MP4 data and forward the original
+                            // JPEG bytes as-is. Upstream re-encoded through Bitmap → JPEG@97% to bake
+                            // EXIF orientation into pixels, which lost quality and metadata; the regular
+                            // photo upload pipeline handles EXIF orientation for us.
                             copyRange(wholeFile, 0, videoStart, imageFile);
                             info.path = imageFile.getAbsolutePath();
-
-                            final Pair<Integer, Integer> orientation = AndroidUtilities.getImageOrientation(imageFile);
-                            if (orientation != null && orientation.first != 0) {
-                                final Bitmap bitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
-                                if (bitmap != null) {
-                                    final int invert = orientation.second;
-                                    final Matrix matrix = new Matrix();
-                                    matrix.postScale(invert == 1 ? -1.0f : 1.0f, invert == 2 ? -1.0f : 1.0f, bitmap.getWidth() / 2f, bitmap.getHeight() / 2f);
-                                    matrix.postRotate(orientation.first);
-                                    final Bitmap rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-                                    final File rotatedImageFile = new File(FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE), Integer.MIN_VALUE + "_" + SharedConfig.getLastLocalId() + ".jpeg");
-                                    rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 97, new FileOutputStream(rotatedImageFile));
-                                    info.path = rotatedImageFile.getAbsolutePath();
-                                    imageFile.delete();
-                                }
-                            }
                         }
 
                         info.videoEditedInfo = null;
@@ -11561,6 +11553,15 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                             //prepareSendingDocumentInternal(accountInstance, info.path, info.path, null, null, dialogId, replyToMsg, replyToTopMsg, info.caption, info.entities, editingMessageObject, null, false, forceDocument, notify, scheduleDate, null);
                         }
                     } else {
+                        // Mercurygram: same repair the grouped branch does above. The editor bakes
+                        // its result at the normal send size, so without re-baking from the source
+                        // a high quality send uploads that smaller intermediate.
+                        if (info.originalPhotoEntry != null && info.highQuality) {
+                            info.originalPhotoEntry.rebuildPhoto(true);
+                            if (info.originalPhotoEntry.imagePath != null) {
+                                info.path = info.originalPhotoEntry.imagePath;
+                            }
+                        }
                         String originalPath = info.path;
                         String tempPath = info.path;
                         if (tempPath == null && info.uri != null) {
@@ -11686,7 +11687,11 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                                     ensureMediaThumbExists(accountInstance, isEncrypted, photo, info.path, info.uri, 0);
                                 }
                                 if (photo == null) {
-                                    photo = accountInstance.getSendMessagesHelper().generatePhotoSizes(info.path, info.uri);
+                                    // Mercurygram: honour the high quality flag here too. The grouped
+                                    // branch passes it; this one dropped it, so an ungrouped high
+                                    // quality send was encoded at the normal size and quality while
+                                    // still being cached under the high quality key.
+                                    photo = accountInstance.getSendMessagesHelper().generatePhotoSizes(null, info.path, info.uri, info.highQuality);
                                     if (isEncrypted && info.canDeleteAfter) {
                                         new File(info.path).delete();
                                     }

@@ -100,6 +100,7 @@ public class WearReplyReceiver extends BroadcastReceiver {
 
         //TODO handle topics
         if (topicId == 0) {
+            it.belloworld.mercurygram.PlusGhost.allowReads(accountInstance.getCurrentAccount(), dialog_id, it.belloworld.mercurygram.PlusGhost.MANUAL_READ_WINDOW_MS); // plus: replying from the notification reads that chat anyway
             accountInstance.getMessagesController().markDialogAsRead(dialog_id, max_id, max_id, 0, false, topicId, 0, true, 0);
         }
     }

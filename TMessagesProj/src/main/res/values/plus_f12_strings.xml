@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- plus f12: peek a chat without opening it -->
+    <string name="PlusF12Header">Peek</string>
+    <string name="PlusF12Guard">Peek leaves the chat untouched</string>
+    <string name="PlusF12LongPressAnywhere">Long-press a chat to peek</string>
+    <string name="PlusF12PeekLocked">Unlock the chat to peek</string>
+    <string name="PlusF12About">Peek shows a chat over the list without opening it. With the first option on, peeking never marks anything as read.</string>
+</resources>

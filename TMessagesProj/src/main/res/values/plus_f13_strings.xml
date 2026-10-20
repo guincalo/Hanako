@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- plus f13: message shot -->
+    <string name="PlusMessageShot">Message shot</string>
+    <string name="PlusMessageShotSave">Save to gallery</string>
+    <string name="PlusMessageShotShare">Share</string>
+    <string name="PlusMessageShotBackground">Chat background</string>
+    <string name="PlusMessageShotFailed">Couldn\'t create the image</string>
+    <string name="PlusMessageShotSetting">Message shot button</string>
+    <string name="PlusMessageShotSettingAbout">Adds a button to message selection that turns the selected messages into one image. Made on this device.</string>
+</resources>

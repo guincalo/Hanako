@@ -51,6 +51,7 @@ import org.telegram.ui.Components.SizeNotifierFrameLayout;
 
 import java.util.ArrayList;
 
+
 public class ExternalActionActivity extends Activity implements INavigationLayout.INavigationLayoutDelegate {
 
     private boolean finished;
@@ -78,7 +79,7 @@ public class ExternalActionActivity extends Activity implements INavigationLayou
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setTheme(R.style.Theme_TMessages);
         getWindow().setBackgroundDrawable(new ActivityWindowEmptyBackgroundDrawable());
-        if (!SharedConfig.passcodeHash.isEmpty() && !SharedConfig.allowScreenCapture) {
+        if (!SharedConfig.passcodeHash.isEmpty() && !SharedConfig.allowScreenCapture && !SharedConfig.disableSecureFlags) {
             try {
                 getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
                 AndroidUtilities.logFlagSecure();

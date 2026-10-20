@@ -73,6 +73,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.Objects;
 
+
 public class UserInfoActivity extends UniversalFragment implements NotificationCenter.NotificationCenterDelegate {
 
     private EditTextCell firstNameEdit;
@@ -356,7 +357,7 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
         items.add(UItem.asHeader(getString(R.string.EditAccountInfoHeader)));
         if (user != null) {
             numberRow = items.size();
-            items.add(SettingsActivity.SettingCell.Factory.of(INFO_PHONE, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_calls, SettingsActivity.spoilerIfSensitive(PhoneFormat.getInstance().format("+" + user.phone)), getString(R.string.TapToChangePhone)));
+            items.add(SettingsActivity.SettingCell.Factory.of(INFO_PHONE, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_calls, SettingsActivity.spoilerIfSensitive(it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + user.phone))), getString(R.string.TapToChangePhone))); // plus f10
         }
         usernameRow = items.size();
         if (UserObject.getPublicUsername(user) != null) {
@@ -434,14 +435,20 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
             adapter.reorderSectionEnd();
             if (!UserConfig.hasPremiumOnAccounts()) {
                 final int moreAccounts = Math.max(0, UserConfig.getMaxAccountCount() - UserConfig.getActivatedAccountsCount());
-                items.add(UItem.asShadow(
-                    TextUtils.concat(
-                        moreAccounts > 0 ? LocaleController.formatPluralStringComma("AddAccountInfo1", moreAccounts) + " " : "",
-                        replaceSingleTag(LocaleController.formatPluralStringComma("AddAccountInfo2", UserConfig.getMaxAccountCount()), () -> {
-                            presentFragment(new PremiumPreviewFragment("add_account"));
-                        })
-                    )
-                ));
+                if (UserConfig.MAX_ACCOUNT_DEFAULT_COUNT == UserConfig.MAX_ACCOUNT_COUNT) {
+                    items.add(UItem.asShadow(
+                        moreAccounts > 0 ? LocaleController.formatPluralStringComma("AddAccountInfo1", moreAccounts) : null
+                    ));
+                } else {
+                    items.add(UItem.asShadow(
+                        TextUtils.concat(
+                            moreAccounts > 0 ? LocaleController.formatPluralStringComma("AddAccountInfo1", moreAccounts) + " " : "",
+                            replaceSingleTag(LocaleController.formatPluralStringComma("AddAccountInfo2", UserConfig.getMaxAccountCount()), () -> {
+                                presentFragment(new PremiumPreviewFragment("add_account"));
+                            })
+                        )
+                    ));
+                }
             } else {
                 items.add(UItem.asShadow(null));
             }

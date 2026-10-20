@@ -92,6 +92,7 @@ import java.util.ArrayList;
 import me.vkryl.android.animator.BoolAnimator;
 import me.vkryl.android.animator.FactorAnimator;
 
+
 public class MainTabsActivity extends ViewPagerActivity implements NotificationCenter.NotificationCenterDelegate, FactorAnimator.Target {
 
     public static final int TABS_COUNT = 4;

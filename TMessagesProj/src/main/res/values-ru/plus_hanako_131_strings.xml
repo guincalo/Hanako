@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- hanako 1.3.1: own-profile ghost status and saved exact last seen -->
+<resources>
+    <string name="HanakoSelfOffline">не в сети</string>
+    <string name="HanakoSelfOnlineOtherDevice">в сети на другом устройстве</string>
+    <string name="HanakoSavedLastSeen">%1$s (сохранено)</string>
+    <string name="HanakoSelfGhostIcon">Режим призрака включён. Нажмите, чтобы открыть настройки</string>
+</resources>

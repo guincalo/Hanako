@@ -30,6 +30,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -84,6 +85,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="replace" />
 
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
 
     <queries>
         <intent>
@@ -550,6 +552,12 @@
             android:name="org.telegram.ui.Stories.recorder.StoryUploadingService"
             android:enabled="true"
             android:exported="true"
+            android:foregroundServiceType="dataSync"
+        />
+        <!-- hanako: chat export runs as a foreground service with a progress notification -->
+        <service
+            android:name="it.belloworld.mercurygram.HanakoChatExportService"
+            android:exported="false"
             android:foregroundServiceType="dataSync"
         />
         <service

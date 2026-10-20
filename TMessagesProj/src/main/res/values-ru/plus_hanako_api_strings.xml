@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- hanako: App API ID setting (HanakoApiActivity / HanakoApiConfig) -->
+<resources>
+    <string name="HanakoApiTitle">API ID приложения</string>
+    <string name="HanakoApiHeader">Подключаться как</string>
+    <string name="HanakoApiPresetBuild">По умолчанию (сборка)</string>
+    <string name="HanakoApiPresetGoregram">Goregram</string>
+    <string name="HanakoApiPresetMercurygram">Mercurygram</string>
+    <string name="HanakoApiPresetOfficial">Telegram Android</string>
+    <string name="HanakoApiPresetIos">Telegram iOS</string>
+    <string name="HanakoApiPresetMacos">Telegram macOS</string>
+    <string name="HanakoApiPresetDesktopSnap">Telegram Desktop (Snap)</string>
+    <string name="HanakoApiPresetTelegramX">Telegram X</string>
+    <string name="HanakoApiPresetWebK">Telegram Web K</string>
+    <string name="HanakoApiPresetWebLegacy">Telegram Web (старый)</string>
+    <string name="HanakoApiPresetOctogram">OctoGram</string>
+    <string name="HanakoApiPresetOwlgram">OwlGram</string>
+    <string name="HanakoApiPresetCustom">Свой</string>
+    <string name="HanakoApiCustomNotSet">не задан</string>
+    <string name="HanakoApiActive">Сейчас: api_id %1$d</string>
+    <string name="HanakoApiPending">После перезапуска: api_id %1$d</string>
+    <string name="HanakoApiInfo">Telegram узнаёт приложение по api_id и api_hash. Выбор общий для всех аккаунтов на этом устройстве и вступает в силу после перезапуска приложения. Вошедшие аккаунты остаются в системе. Свою пару можно получить на my.telegram.org.</string>
+    <string name="HanakoApiCustomTitle">Свой API ID</string>
+    <string name="HanakoApiIdHint">api_id (число)</string>
+    <string name="HanakoApiHashHint">api_hash (32 шестнадцатеричных символа)</string>
+    <string name="HanakoApiBadId">api_id должен быть целым положительным числом</string>
+    <string name="HanakoApiBadHash">api_hash должен состоять ровно из 32 символов: 0–9 и a–f</string>
+    <string name="HanakoApiRestartTitle">Перезапустить Hanako?</string>
+    <string name="HanakoApiRestartText">api_id %1$d начнёт использоваться после перезапуска. Перезапустить сейчас?</string>
+    <string name="HanakoApiRestartLater">Позже</string>
+    <string name="HanakoApiSummaryPending">%1$d → %2$d после перезапуска</string>
+    <string name="HanakoApiLoginButton">API ID: %1$s</string>
+</resources>

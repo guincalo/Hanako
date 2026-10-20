@@ -53,7 +53,6 @@ import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.EmptyTextProgressView;
 import org.telegram.ui.Components.LayoutHelper;
-import org.telegram.ui.Components.Premium.PremiumFeatureBottomSheet;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.TranslateAlert2;
 
@@ -63,6 +62,8 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Timer;
+
+import it.belloworld.mercurygram.HanakoSmugLanguage; // hanako: Smug language
 
 public class LanguageSelectActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
 
@@ -221,10 +222,11 @@ public class LanguageSelectActivity extends BaseFragment implements Notification
                         NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateSearchSettings);
                     } else if (position == autoTranslationPosition) {
                         boolean value = !getChatValue();
-                        if (value && !getUserConfig().isPremium()) {
-                            showDialog(new PremiumFeatureBottomSheet(LanguageSelectActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_TRANSLATIONS, false));
-                            return;
-                        }
+                        // Mercurygram: Premium is a Telegram monetization gate, not a
+                        // technical requirement — the chat translate bar is unlocked
+                        // for every user, so the "Translate entire chat" toggle must
+                        // be reachable without Premium (otherwise turning it off locks
+                        // a non-premium user out permanently).
                         getMessagesController().getTranslateController().setChatTranslateEnabled(value);
                         NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateSearchSettings);
                         ((TextCheckCell) view).setChecked(value);
@@ -381,7 +383,7 @@ public class LanguageSelectActivity extends BaseFragment implements Notification
                     }
                     localeInfo = sortedLanguages.get(position);
                 }
-                if (localeInfo == null || localeInfo.pathToFile == null || localeInfo.isRemote() && localeInfo.serverIndex != Integer.MAX_VALUE) {
+                if (localeInfo == null || localeInfo.pathToFile == null || localeInfo.isRemote() && localeInfo.serverIndex != Integer.MAX_VALUE || HanakoSmugLanguage.isSmug(localeInfo)) { // hanako: Smug language is built in
                     return false;
                 }
                 final LocaleController.LocaleInfo finalLocaleInfo = localeInfo;
@@ -619,7 +621,7 @@ public class LanguageSelectActivity extends BaseFragment implements Notification
                     if (getMessagesController().isTranslationsManualEnabled()) {
                         count++;
                     }
-                    if (getMessagesController().isTranslationsAutoEnabled() && !getMessagesController().premiumFeaturesBlocked()) {
+                    if (getMessagesController().isTranslationsAutoEnabled()) {
                         count++;
                     }
                     if (getChatValue() || getContextValue()) {
@@ -790,7 +792,8 @@ public class LanguageSelectActivity extends BaseFragment implements Notification
                         cell.setCheckBoxIcon(0);
                     } else if (position == autoTranslationPosition) {
                         cell.setTextAndCheck(LocaleController.getString(R.string.ShowTranslateChatButton), getChatValue(), getContextValue() || getChatValue());
-                        cell.setCheckBoxIcon(!getUserConfig().isPremium() ? R.drawable.permission_locked : 0);
+                        // Mercurygram: unlocked for every user — no Premium padlock.
+                        cell.setCheckBoxIcon(0);
                     }
                     break;
                 }
@@ -836,7 +839,10 @@ public class LanguageSelectActivity extends BaseFragment implements Notification
                     } else {
                         manualTranslationPosition = -1;
                     }
-                    if (getMessagesController().isTranslationsAutoEnabled() && !getMessagesController().premiumFeaturesBlocked()) {
+                    // Mercurygram: the chat translate bar is unlocked for every user, so
+                    // its off switch must be listed without Premium. Otherwise an account
+                    // with Premium locked server-side gets the bar with no way to hide it.
+                    if (getMessagesController().isTranslationsAutoEnabled()) {
                         if (i-- == 0) {
                             autoTranslationPosition = position;
                             return VIEW_TYPE_SWITCH;

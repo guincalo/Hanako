@@ -66,7 +66,7 @@
     <string name="QRLoginStep3">Richt je telefoon op dit scherm om het inloggen te bevestigen</string>
     <string name="QRLoginSubtitle">Open Telegram op een ander apparaat en scan deze QR-code om in te loggen op je account.</string>
     <string name="QRLoginTitle">Inloggen met QR-code</string>
-    <string name="AppNameFdroid">Forkgram</string>
+    <string name="AppNameFdroid">Hanako</string>
     <string name="UnifiedPush">UnifiedPush</string>
     <string name="ForkSectionAppearance">Weergave</string>
     <string name="ForkSectionMedia">Foto\'s en video</string>
@@ -251,8 +251,8 @@
     <string name="LinkReplacementInvalid">Ongeldige expressie</string>
     <string name="LinkReplacedOnPaste">Link vervangen</string>
 
-    <string name="AppName">Forkgram Classic</string>
-    <string name="AppNameBeta">Forkgram Classic</string>
+    <string name="AppName">Hanako</string>
+    <string name="AppNameBeta">Hanako Beta</string>
     <string name="LanguageName">Nederlands</string>
     <string name="English">Engels</string>
     <string name="LanguageNameInEnglish">Dutch</string>
@@ -840,7 +840,7 @@
     <string name="DirectShareInfo">Recente chats in snel delen weergeven</string>
     <string name="Emoji">Emoji</string>
     <string name="LargeEmoji">Grote emoji</string>
-    <string name="TelegramVersion">Telegram voor Android %1$s</string>
+    <string name="TelegramVersion">Hanako voor Android %1$s</string>
     <string name="ChangeLanguageLater">Via instellingen kun je je taal altijd aanpassen.</string>
     <string name="ChooseYourLanguage">Kies je taal</string>
     <string name="ChooseYourLanguageOther">Overige</string>

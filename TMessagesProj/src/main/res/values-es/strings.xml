@@ -66,7 +66,7 @@
     <string name="QRLoginStep3">Apunta con tu teléfono a esta pantalla para confirmar el inicio de sesión</string>
     <string name="QRLoginSubtitle">Abre Telegram en otro dispositivo y escanea este código QR para iniciar sesión en tu cuenta.</string>
     <string name="QRLoginTitle">Iniciar sesión con código QR</string>
-    <string name="AppNameFdroid">Forkgram</string>
+    <string name="AppNameFdroid">Hanako</string>
     <string name="UnifiedPush">UnifiedPush</string>
     <string name="ForkSectionAppearance">Apariencia</string>
     <string name="ForkSectionMedia">Fotos y vídeos</string>
@@ -250,8 +250,8 @@
     <string name="LinkReplacementReplaceWith">Reemplazar con</string>
     <string name="LinkReplacementInvalid">Expresión no válida</string>
     <string name="LinkReplacedOnPaste">Enlace reemplazado</string>
-    <string name="AppName">Forkgram Classic</string>
-    <string name="AppNameBeta">Forkgram Classic</string>
+    <string name="AppName">Hanako</string>
+    <string name="AppNameBeta">Hanako Beta</string>
     <string name="LanguageName">Español</string>
     <string name="English">Inglés</string>
     <string name="LanguageNameInEnglish">Spanish</string>
@@ -802,7 +802,7 @@
     <string name="DirectShareInfo">Chats recientes al compartir en Android</string>
     <string name="Emoji">Emojis</string>
     <string name="LargeEmoji">Emojis grandes</string>
-    <string name="TelegramVersion">Telegram para Android %1$s</string>
+    <string name="TelegramVersion">Hanako para Android %1$s</string>
     <string name="ChangeLanguageLater">Puedes cambiar el idioma más tarde en Ajustes.</string>
     <string name="ChooseYourLanguage">Elige tu idioma</string>
     <string name="ChooseYourLanguageOther">Otro</string>

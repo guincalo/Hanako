@@ -397,6 +397,7 @@ public class FileLog {
     }
 
     public static void e(final String message, final Throwable exception) {
+        it.belloworld.mercurygram.HanakoTelemetry.caught(exception); // hanako: only the exception, never the message
         if (!BuildVars.LOGS_ENABLED) {
             return;
         }
@@ -442,6 +443,7 @@ public class FileLog {
     }
 
     public static void e(final Throwable e, boolean logToAppCenter) {
+        it.belloworld.mercurygram.HanakoTelemetry.caught(e); // hanako: usage statistics (off by default)
         if (!BuildVars.LOGS_ENABLED) {
             return;
         }

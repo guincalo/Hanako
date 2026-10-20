@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest a new feature or a change to an existing Hanako feature
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Hanako is a small, fully vibecoded hobby fork. Requests are welcome, but there is no promise that any of them gets built.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do?
+      description: The problem or use case, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: How should it work?
+      description: Where would the option live, what should it do, and what should happen in edge cases.
+    validations:
+      required: true
+  - type: textarea
+    id: elsewhere
+    attributes:
+      label: Seen elsewhere? (optional)
+      description: Another Telegram client that does this, with a link or screenshot.

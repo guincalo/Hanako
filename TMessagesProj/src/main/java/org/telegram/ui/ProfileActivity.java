@@ -611,6 +611,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int edit_profile = 41;
     private final static int copy_link_profile = 42;
     private final static int set_username = 43;
+    private final static int show_admins = 200;
     private final static int bot_privacy = 44;
 
     private Rect rect = new Rect();
@@ -648,6 +649,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private int devicesSectionRow;
     private int forkHeaderRow;
     private int forkRow;
+    private int hanakoRow; // hanako
     private int forkSectionCell;
     private int helpHeaderRow;
     private int questionRow;
@@ -2521,6 +2523,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (getParentActivity() == null) {
                     return;
                 }
+                if (it.belloworld.mercurygram.PlusActivityLog.onProfileMenuClick(ProfileActivity.this, id, userId)) { // plus f05
+                    return;
+                }
                 if (id == -1) {
                     if (sharedMediaLayout != null && sharedMediaLayout.scrollSlidingTextTabStrip != null && sharedMediaLayout.scrollSlidingTextTabStrip.isReordering()) {
                         stopTabsReorder();
@@ -2609,6 +2614,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     }
                 } else if (id == report) {
                     ReportBottomSheet.openChat(ProfileActivity.this, getDialogId());
+                } else if (id == show_admins) {
+                    Bundle args = new Bundle();
+                    args.putLong("chat_id", chatId);
+                    args.putInt("type", ChatUsersActivity.TYPE_ADMIN);
+                    ChatUsersActivity fragment = new ChatUsersActivity(args);
+                    fragment.setInfo(chatInfo);
+                    presentFragment(fragment);
                 } else if (id == edit_channel) {
                     if (isTopic) {
                         Bundle args = new Bundle();
@@ -4253,7 +4265,18 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 return;
             }
             listView.stopScroll();
-            if (position == affiliateRow) {
+            if (position == idRow && did != 0) {
+                final long cdid = mgDialogIdForProfile();
+                try {
+                    android.content.ClipboardManager clipboard = (android.content.ClipboardManager) ApplicationLoader.applicationContext.getSystemService(Context.CLIPBOARD_SERVICE);
+                    android.content.ClipData clip = android.content.ClipData.newPlainText("label", cdid + "");
+                    clipboard.setPrimaryClip(clip);
+                    Toast.makeText(getParentActivity(), LocaleController.getString("TextCopied", R.string.TextCopied), Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    FileLog.e(e);
+                }
+                return;
+            } else if (position == affiliateRow) {
                 TLRPC.User user = getMessagesController().getUser(userId);
                 if (userInfo != null && userInfo.starref_program != null) {
                     final long selfId = getUserConfig().getClientUserId();
@@ -4437,6 +4460,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 presentFragment(new SessionsActivity(0));
             } else if (position == forkRow) {
                 presentFragment(new ForkSettingsActivity());
+            } else if (position == hanakoRow) {
+                presentFragment(new it.belloworld.mercurygram.ui.MercurygramSettingsActivity()); // hanako
             } else if (position == questionRow) {
                 showDialog(AlertsCreator.createSupportAlert(ProfileActivity.this, resourcesProvider));
             } else if (position == faqRow) {
@@ -4932,6 +4957,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 } else if (position == noteRow) {
                     editNotes(view, position);
                     return true;
+                } else if (position == idRow && mgDialogIdForProfile() != 0) { // plus f14
+                    return it.belloworld.mercurygram.PlusProfileInfo.showIdMenu(ProfileActivity.this, currentAccount, userId, chatId, mgDialogIdForProfile()); // plus f14
                 } else {
                     if (editRow(view, position)) return true;
                     return processOnClickOrPress(position, view, view.getWidth() / 2f, (int) (view.getHeight() * .75f));
@@ -5493,6 +5520,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             nameTextView[a].setRightDrawableOutside(a == 0);
             avatarContainer2.addView(nameTextView[a], LayoutHelper.createFrame(a == 0 ? initialTitleWidth : LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 118, -6, (a == 0 ? rightMargin - (hasTitleExpanded ? 10 : 0) : 0), 0));
         }
+        // Mercurygram: long-tap the profile title to copy the chat/user name
+        nameTextView[1].setOnLongClickListener(v -> {
+            CharSequence text = nameTextView[1].getText();
+            if (TextUtils.isEmpty(text)) {
+                return false;
+            }
+            AndroidUtilities.addToClipboard(text);
+            BulletinFactory.of(ProfileActivity.this).createCopyBulletin(getString(R.string.TextCopied)).show();
+            return true;
+        });
         for (int a = 0; a < onlineTextView.length; a++) {
             if (a == 1) {
                 onlineTextView[a] = new LinkSpanDrawable.ClickableSmallTextView(context) {
@@ -10628,6 +10665,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         devicesSectionRow = -1;
         forkHeaderRow = -1;
         forkRow = -1;
+        hanakoRow = -1;
         forkSectionCell = -1;
         helpHeaderRow = -1;
         questionRow = -1;
@@ -10811,8 +10849,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 devicesSectionRow = rowCount++;
                 forkHeaderRow = rowCount++;
                 forkRow = rowCount++;
+                hanakoRow = rowCount++; // hanako: Hanako settings entry (classic settings screen)
                 forkSectionCell = rowCount++;
-                if (!getMessagesController().premiumFeaturesBlocked()) {
+                if (!getMessagesController().premiumFeaturesBlocked() && !getUserConfig().mg.hidePremiumPromo) { // Mercurygram: hide premium promo
                     premiumRow = rowCount++;
                 }
                 if (getMessagesController().starsPurchaseAvailable()) {
@@ -10822,10 +10861,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (ApplicationLoader.isBetaBuild() || ApplicationLoader.isStandaloneBuild() || ApplicationLoader.isHuaweiStoreBuild() || (StarsController.getInstance(currentAccount, true).balanceAvailable() && (StarsController.getInstance(currentAccount, true).hasTransactions() || StarsController.getInstance(currentAccount, true).getBalance().positive()))) {
                     tonRow = rowCount++;
                 }
-                if (!getMessagesController().premiumFeaturesBlocked()) {
+                // Mercurygram: hide premium upsell promo (opt-in, UI-only, no gate removed)
+                if (!getMessagesController().premiumFeaturesBlocked() && !getUserConfig().mg.hidePremiumPromo) {
                     businessRow = rowCount++;
                 }
-                if (!getMessagesController().premiumPurchaseBlocked()) {
+                // Mercurygram: hide premium upsell promo (opt-in, UI-only, no gate removed)
+                if (!getMessagesController().premiumPurchaseBlocked() && !getUserConfig().mg.hidePremiumPromo) {
                     premiumGiftingRow = rowCount++;
                 }
                 if (premiumRow >= 0 || starsRow >= 0 || tonRow >= 0 || businessRow >= 0 || premiumGiftingRow >= 0) {
@@ -10886,6 +10927,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (user != null && username != null && !(myProfile && SharedConfig.hideSensitiveUsername())) {
                     usernameRow = rowCount++;
                 }
+                idRow = rowCount++;
                 if (userInfo != null) {
                     if (userInfo.birthday != null) {
                         birthdayRow = rowCount++;
@@ -11013,6 +11055,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 infoHeaderRowEmpty = rowCount++;
             }
             usernameRow = rowCount++;
+            idRow = rowCount++;
             if (actionsView == null) {
                 notificationsSimpleRow = rowCount++;
             }
@@ -11419,6 +11462,19 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
     private MessagesController.PeerColor peerColor;
 
+    // Mercurygram: single source of the profile dialog-id resolution used by
+    // the ID row (bind and tap-to-copy).
+    private long mgDialogIdForProfile() {
+        if (dialogId != 0) {
+            return dialogId;
+        } else if (userId != 0) {
+            return userId;
+        } else if (ChatObject.isChannel(currentChat)) {
+            return -(1_000_000_000_000L + chatId);
+        }
+        return -chatId;
+    }
+
     private void updateProfileData(boolean reload) {
         if (avatarContainer == null || nameTextView == null || getParentActivity() == null) {
             return;
@@ -11541,7 +11597,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     if (userInfo != null && userInfo.stars_rating != null && userInfo.stars_rating.stars < 0) {
                         newString2 = getString(R.string.StarRatingLevelNegative).toLowerCase(Locale.ROOT);
                     } else {
-                        newString2 = LocaleController.getString(R.string.Online);
+                        String ghostSelf = it.belloworld.mercurygram.PlusGhost.selfStatus(currentAccount, null); // hanako 1.3.1
+                        newString2 = ghostSelf != null ? ghostSelf : LocaleController.getString(R.string.Online);
                     }
                 }
             } else if (user.id == UserObject.VERIFY) {
@@ -11559,6 +11616,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             } else {
                 isOnline[0] = false;
                 newString2 = LocaleController.formatUserStatus(currentAccount, user, isOnline, shortStatus ? new boolean[1] : null);
+                String savedLastSeen = it.belloworld.mercurygram.PlusActivityLog.savedLastSeenSuffix(currentAccount, user); // hanako 1.3.1
+                if (savedLastSeen != null) {
+                    newString2 = newString2 + " · " + savedLastSeen; // hanako 1.3.1
+                }
                 hiddenStatusButton = user != null && !isOnline[0] && !getUserConfig().isPremium() && user.status != null && (user.status instanceof TLRPC.TL_userStatusRecently || user.status instanceof TLRPC.TL_userStatusLastMonth || user.status instanceof TLRPC.TL_userStatusLastWeek) && user.status.by_me;
                 if (onlineTextView[1] != null && !mediaHeaderVisible) {
                     int key = isOnline[0] && peerColor == null ? Theme.key_profile_status : Theme.key_avatar_subtitleInProfileBlue;
@@ -11590,7 +11651,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     nameTextView[a].setRightDrawable2(titleTextView.getRightDrawable2());
                 } else if (a == 0 && user.id != getUserConfig().getClientUserId() && !MessagesController.isSupportUser(user) && user.phone != null && user.phone.length() != 0 && getContactsController().contactsDict.get(user.id) == null &&
                         (getContactsController().contactsDict.size() != 0 || !getContactsController().isLoadingContacts())) {
-                    nameTextView[a].setText(PhoneFormat.getInstance().format("+" + user.phone));
+                    nameTextView[a].setText(it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + user.phone))); // plus f10
                 } else {
                     nameTextView[a].setText(newString);
                 }
@@ -11616,6 +11677,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         getMessagesController().reloadUser(getDialogId());
                     }, resourcesProvider);
                 } : null);
+                if (user.id == getUserConfig().getClientUserId() && a == 1 && it.belloworld.mercurygram.PlusGhost.hidesOwnOnline(currentAccount) && onlineTextOverride == null) { // hanako 1.3.1
+                    it.belloworld.mercurygram.PlusGhost.applySelfGhostIcon(this, onlineTextView[a], currentAccount, onlineTextView[a].getTextColor()); // hanako 1.3.1
+                }
                 Drawable leftIcon = currentEncryptedChat != null ? getLockIconDrawable() : null;
                 boolean rightIconIsPremium = false, rightIconIsStatus = false;
                 nameTextView[a].setRightDrawableOutside(a == 0);
@@ -11747,7 +11811,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (userInfo != null && userInfo.stars_rating != null && userInfo.stars_rating.stars < 0) {
                     onlineTextView[3].setText(newString2 = getString(R.string.StarRatingLevelNegative).toLowerCase(Locale.ROOT));
                 } else {
-                    onlineTextView[3].setText(LocaleController.getString(R.string.Online));
+                    String ghostSelf = it.belloworld.mercurygram.PlusGhost.selfStatus(currentAccount, null); // hanako 1.3.1
+                    onlineTextView[3].setText(ghostSelf != null ? ghostSelf : LocaleController.getString(R.string.Online));
                 }
             } else {
                 if (user.photo != null && user.photo.personal && user.photo.has_video) {
@@ -11925,7 +11990,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         changed = true;
                     }
                 } else if (chat.title != null) {
-                    CharSequence title = chat.title;
+                    CharSequence title = it.belloworld.mercurygram.PlusStreamer.chatTitle(chat); // plus f10
                     try {
                         title = Emoji.replaceEmoji(title, nameTextView[a].getPaint().getFontMetricsInt(), false);
                     } catch (Exception ignore) {
@@ -12367,6 +12432,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (!isBot && getContactsController().contactsDict.get(userId) != null) {
                     otherItem.addSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString(R.string.AddShortcut));
                 }
+                if (it.belloworld.mercurygram.PlusActivityLog.showInProfile(currentAccount, user)) { // plus f05
+                    otherItem.addSubItem(it.belloworld.mercurygram.PlusActivityLog.MENU_ID, R.drawable.msg_log, getString(R.string.PlusF05ActivityLog));
+                }
             }
         } else if (chatId != 0) {
             TLRPC.Chat chat = getMessagesController().getChat(chatId);
@@ -12403,6 +12471,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     voiceChatAction = call != null || voiceChatAction;
                 }
                 if (chat.megagroup) {
+                    if (!chat.left && !chat.kicked) {
+                        otherItem.addSubItem(show_admins, R.drawable.msg_admins, LocaleController.getString(R.string.ChannelAdministrators));
+                    }
                     if (chatInfo == null || !chatInfo.participants_hidden || ChatObject.hasAdminRights(chat)) {
                         canSearchMembers = true;
                         otherItem.addSubItem(search_members, R.drawable.msg_search, LocaleController.getString(R.string.SearchMembers));
@@ -12455,6 +12526,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (!ChatObject.isKickedFromChat(chat) && !ChatObject.isLeftFromChat(chat)) {
                     if (chatInfo == null || !chatInfo.participants_hidden || ChatObject.hasAdminRights(chat)) {
                         canSearchMembers = true;
+                        otherItem.addSubItem(show_admins, R.drawable.msg_admins, LocaleController.getString(R.string.ChannelAdministrators));
                         otherItem.addSubItem(search_members, R.drawable.msg_search, LocaleController.getString(R.string.SearchMembers));
                     }
                 }
@@ -13656,10 +13728,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         TLRPC.User user = getMessagesController().getUser(userId);
                         String phoneNumber;
                         if (user != null && !TextUtils.isEmpty(vcardPhone)) {
-                            text = PhoneFormat.getInstance().format("+" + vcardPhone);
+                            text = it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + vcardPhone)); // plus f10
                             phoneNumber = vcardPhone;
                         } else if (user != null && !TextUtils.isEmpty(user.phone)) {
-                            text = PhoneFormat.getInstance().format("+" + user.phone);
+                            text = it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + user.phone)); // plus f10
                             phoneNumber = user.phone;
                         } else {
                             text = LocaleController.getString(R.string.PhoneHidden);
@@ -13667,6 +13739,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         }
                         isFragmentPhoneNumber = phoneNumber != null && phoneNumber.matches("888\\d{8}");
                         detailCell.setTextAndValue(text, LocaleController.getString(isFragmentPhoneNumber ? R.string.AnonymousNumber : R.string.PhoneMobile), false);
+                    } else if (position == idRow) {
+                        final long did = mgDialogIdForProfile();
+                        if (did != 0) {
+                            detailCell.setTextAndValue(it.belloworld.mercurygram.PlusProfileInfo.idRowText(currentAccount, userId, chatId, did), it.belloworld.mercurygram.PlusProfileInfo.idRowSubtitle(currentAccount, userId, chatId), false); // plus f14
+                        }
                     } else if (position == noteRow) {
                         final TLRPC.UserFull userInfo = getMessagesController().getUserFull(userId);
                         if (userInfo == null) return;
@@ -13758,7 +13835,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         TLRPC.User user = UserConfig.getInstance(currentAccount).getCurrentUser();
                         String value;
                         if (user != null && user.phone != null && user.phone.length() != 0) {
-                            value = PhoneFormat.getInstance().format("+" + user.phone);
+                            value = it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + user.phone)); // plus f10
                         } else {
                             value = LocaleController.getString(R.string.NumberUnknown);
                         }
@@ -14011,6 +14088,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         textCell.setTextAndIcon(LocaleController.getString(R.string.Devices), R.drawable.msg2_devices, true);
                     } else if (position == forkRow) {
                         textCell.setTextAndIcon(LocaleController.getString(R.string.ForkSettingsTitle), R.drawable.menu_fork, true);
+                    } else if (position == hanakoRow) {
+                        textCell.setTextAndIcon(LocaleController.getString(R.string.MercurygramSettings), R.drawable.mg_settings, true); // hanako
                     } else if (position == setAvatarRow) {
                         cellCameraDrawable.setCustomEndFrame(86);
                         cellCameraDrawable.setCurrentFrame(85, false);
@@ -14462,7 +14541,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             if (notificationRow != -1) {
                 int position = holder.getAdapterPosition();
-                return position == notificationRow || position == numberRow || position == privacyRow || position == forkRow ||
+                return position == notificationRow || position == numberRow || position == privacyRow || position == forkRow || position == hanakoRow ||
                         position == languageRow || position == setUsernameRow || position == bioRow ||
                         position == versionRow || position == dataRow || position == chatRow ||
                         position == questionRow || position == devicesRow || position == filtersRow || position == stickersRow ||
@@ -14510,7 +14589,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     position == subscribersRow || position == subscribersRequestsRow || position == administratorsRow || position == settingsRow || position == blockedUsersRow ||
                     position == addMemberRow || position == joinRow || position == unblockRow ||
                     position == sendMessageRow || position == notificationRow || position == privacyRow ||
-                    position == languageRow || position == forkRow || position == dataRow || position == chatRow ||
+                    position == languageRow || position == forkRow || position == hanakoRow || position == dataRow || position == chatRow ||
                     position == questionRow || position == devicesRow || position == filtersRow || position == stickersRow ||
                     position == faqRow || position == policyRow || position == sendLogsRow || position == sendLastLogsRow ||
                     position == clearLogsRow || position == switchBackendRow || position == setAvatarRow || position == addToGroupButtonRow ||
@@ -14993,6 +15072,29 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     new SearchResult(402, getString(R.string.AskAQuestion), getString(R.string.SettingsHelp), R.drawable.msg2_help, () -> showDialog(AlertsCreator.createSupportAlert(ProfileActivity.this, null))),
                     new SearchResult(403, getString(R.string.TelegramFAQ), getString(R.string.SettingsHelp), R.drawable.msg2_help, () -> Browser.openUrl(getParentActivity(), getString(R.string.TelegramFaqUrl))),
                     new SearchResult(404, getString(R.string.PrivacyPolicy), getString(R.string.SettingsHelp), R.drawable.msg2_help, () -> Browser.openUrl(getParentActivity(), getString(R.string.PrivacyPolicyUrl))),
+                    // hanako: Hanako settings are findable from Settings search (P1-5). Page level only:
+                    // a result opens the page, it doesn't point at a row (the hub footer says so).
+                    // Fully qualified names on purpose: no new imports, so upstream merges stay small.
+                    new SearchResult(9500, getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity())),
+                    new SearchResult(9501, getString(R.string.PlusGhostMode), getString(R.string.MercurygramSettings), R.drawable.plus_ghost, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_GHOST))),
+                    new SearchResult(9502, getString(R.string.PlusGhostExcTitle), getString(R.string.MercurygramSettings), R.drawable.plus_ghost, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_GHOST))),
+                    new SearchResult(9504, getString(R.string.PlusF08Title), getString(R.string.MercurygramSettings), R.drawable.msg_permissions, () -> { it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.SETTINGS_SEARCH); it.belloworld.mercurygram.PlusChatLock.openSettings(ProfileActivity.this); }),
+                    new SearchResult(9505, getString(R.string.PlusF10StreamerMode), getString(R.string.MercurygramSettings), R.drawable.msg_screencast, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_STREAMER))),
+                    new SearchResult(9506, getString(R.string.HanakoPageDeleted), getString(R.string.MercurygramSettings), R.drawable.msg_delete, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_DELETED))),
+                    new SearchResult(9507, getString(R.string.PlusF20Title), getString(R.string.MercurygramSettings), R.drawable.msg_delete, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_DELETED))),
+                    new SearchResult(9508, getString(R.string.MercurygramSavedMessagesHistory), getString(R.string.MercurygramSettings), R.drawable.msg_delete, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_DELETED))),
+                    new SearchResult(9509, getString(R.string.HanakoPageActivityLog), getString(R.string.MercurygramSettings), R.drawable.msg_log, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_ACTIVITY_LOG))),
+                    new SearchResult(9510, getString(R.string.PlusF04Title), getString(R.string.MercurygramSettings), R.drawable.msg_archive_hide, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.PlusMessageFiltersActivity())),
+                    new SearchResult(9511, getString(R.string.HanakoPageChats), getString(R.string.MercurygramSettings), R.drawable.msg_message, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_CHATS))),
+                    new SearchResult(9512, getString(R.string.PlusMessageShot), getString(R.string.MercurygramSettings), R.drawable.msg_message, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_CHATS))),
+                    new SearchResult(9513, getString(R.string.PlusF19Header), getString(R.string.MercurygramSettings), R.drawable.msg_message, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_CHATS))),
+                    new SearchResult(9514, getString(R.string.PlusF14Header), getString(R.string.MercurygramSettings), R.drawable.msg_message, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_CHATS))),
+                    new SearchResult(9515, getString(R.string.MercurygramSettingsPrivacy), getString(R.string.MercurygramSettings), R.drawable.msg2_secret, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_PRIVACY))),
+                    new SearchResult(9522, getString(R.string.HanakoBackupTitle), getString(R.string.MercurygramSettings), R.drawable.msg_download, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.HanakoBackupActivity())),
+                    new SearchResult(9523, getString(R.string.HanakoBackupCreate), getString(R.string.MercurygramSettings), R.drawable.msg_download, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.HanakoBackupActivity())),
+                    new SearchResult(9524, getString(R.string.HanakoBackupExportChat), getString(R.string.MercurygramSettings), R.drawable.msg_download, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.HanakoBackupActivity())),
+                    new SearchResult(9525, getString(R.string.PlusF12Header), getString(R.string.MercurygramSettings), R.drawable.plus_ghost, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_GHOST))),
+                    new SearchResult(9526, getString(R.string.HanakoApiTitle), getString(R.string.MercurygramSettings), R.drawable.msg_link, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.HanakoApiActivity())),
 
                     new SearchResult(1000, getString(R.string.ForkSettingsTitle), R.drawable.menu_fork, () -> presentFragment(new ForkSettingsActivity())),
                     new SearchResult(1001, getString(R.string.HideSensitiveData), getString(R.string.ForkSettingsTitle), R.drawable.menu_fork, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_HIDE_SENSITIVE_DATA))),

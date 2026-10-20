@@ -2176,6 +2176,12 @@ public class ChannelAdminLogActivity extends BaseFragment implements Notificatio
                 if (path == null || path.length() == 0) {
                     path = getFileLoader().getPathToMessage(selectedObject.messageOwner).toString();
                 }
+                if (path == null || path.length() == 0 || !new File(path).exists()) {
+                    File mgCached = it.belloworld.mercurygram.MgLocalMedia.cachedFile(selectedObject);
+                    if (mgCached != null) {
+                        path = mgCached.getPath();
+                    }
+                }
                 if (selectedObject.type == MessageObject.TYPE_VIDEO || selectedObject.type == MessageObject.TYPE_PHOTO) {
                     if (Build.VERSION.SDK_INT >= 23 && (Build.VERSION.SDK_INT <= 28 || BuildVars.NO_SCOPED_STORAGE) && getParentActivity().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                         getParentActivity().requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 4);
@@ -2263,6 +2269,12 @@ public class ChannelAdminLogActivity extends BaseFragment implements Notificatio
                 if (path == null || path.length() == 0) {
                     path = getFileLoader().getPathToMessage(selectedObject.messageOwner).toString();
                 }
+                if (path == null || path.length() == 0 || !new File(path).exists()) {
+                    File mgCached = it.belloworld.mercurygram.MgLocalMedia.cachedFile(selectedObject);
+                    if (mgCached != null) {
+                        path = mgCached.getPath();
+                    }
+                }
                 Intent intent = new Intent(Intent.ACTION_SEND);
                 intent.setType(selectedObject.getDocument().mime_type);
                 if (Build.VERSION.SDK_INT >= 24) {
@@ -2292,6 +2304,12 @@ public class ChannelAdminLogActivity extends BaseFragment implements Notificatio
                 }
                 if (path == null || path.length() == 0) {
                     path = getFileLoader().getPathToMessage(selectedObject.messageOwner).toString();
+                }
+                if (path == null || path.length() == 0 || !new File(path).exists()) {
+                    File mgCached = it.belloworld.mercurygram.MgLocalMedia.cachedFile(selectedObject);
+                    if (mgCached != null) {
+                        path = mgCached.getPath();
+                    }
                 }
                 if (Build.VERSION.SDK_INT >= 23 && (Build.VERSION.SDK_INT <= 28 || BuildVars.NO_SCOPED_STORAGE) && getParentActivity().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     getParentActivity().requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 4);
@@ -2326,6 +2344,12 @@ public class ChannelAdminLogActivity extends BaseFragment implements Notificatio
                 }
                 if (path == null || path.length() == 0) {
                     path = getFileLoader().getPathToMessage(selectedObject.messageOwner).toString();
+                }
+                if (path == null || path.length() == 0 || !new File(path).exists()) {
+                    File mgCached = it.belloworld.mercurygram.MgLocalMedia.cachedFile(selectedObject);
+                    if (mgCached != null) {
+                        path = mgCached.getPath();
+                    }
                 }
                 MediaController.saveFile(path, getParentActivity(), selectedObject.isMusic() ? 3 : 2, fileName, selectedObject.getDocument() != null ? selectedObject.getDocument().mime_type : "");
                 break;
@@ -2458,6 +2482,9 @@ public class ChannelAdminLogActivity extends BaseFragment implements Notificatio
                     if (f.exists()) {
                         canSave = true;
                     }
+                }
+                if (!canSave && it.belloworld.mercurygram.MgLocalMedia.cachedFile(messageObject) != null) {
+                    canSave = true;
                 }
                 if (canSave) {
                     if (messageObject.getDocument() != null) {

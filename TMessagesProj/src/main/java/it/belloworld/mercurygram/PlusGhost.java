@@ -1,0 +1,694 @@
+package it.belloworld.mercurygram;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.Drawable;
+import android.os.SystemClock;
+
+import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.DialogObject;
+import org.telegram.messenger.FileLog;
+import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.R;
+import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.Utilities;
+import org.telegram.tgnet.ConnectionsManager;
+import org.telegram.tgnet.RequestDelegate;
+import org.telegram.tgnet.TLObject;
+import org.telegram.tgnet.TLRPC;
+import org.telegram.tgnet.tl.TL_account;
+import org.telegram.tgnet.tl.TL_phone;
+import org.telegram.tgnet.tl.TL_stories;
+import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.ActionBar.SimpleTextView;
+
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicIntegerArray;
+
+/**
+ * plus: per-account ghost mode. Hooked into ConnectionsManager.sendRequestInternal,
+ * so every outgoing request passes through {@link #intercept} and {@link #wrapCompletion}.
+ *
+ * Dropped requests are completed locally with a fake, empty success result (the same idea
+ * AyuGram/NagramX use), so client bookkeeping that waits for the callback (pending
+ * readMessageContents tasks, typing state, status timer) still runs and does not pile up.
+ *
+ * "Stay offline": account.updateStatus is never sent by the normal status timer, neither
+ * online nor offline (0009: no offline packet at app start either, because offline=true
+ * stamps "last seen = now"; AyuGram Desktop with sendOnlinePackets=false sends nothing too).
+ * The only status packets that go out are the ones PlusGhost builds itself (marked in
+ * {@link #ownStatusRequests}): one offline=true when Stay offline is switched on, and one
+ * after each request that makes the server show us online (sending, forwarding, reacting,
+ * voting, editing, calls, ...). Optionally (OPT_FORCE_OFFLINE) also when the server reports
+ * our own account online while this device is in use.
+ *
+ * Cold start: 0008 sent one offline=true on every process start. Its only real use was clearing
+ * an "online" left by a previous process that died between an action and its offline packet
+ * (the server keeps userStatusOnline until it expires, ~5 min). Connecting, initConnection and
+ * getDifference do not make the server show us online (Telegram Desktop and AyuGram send nothing
+ * at start either), so 0009 keeps that benefit without the leak: the start-up offline goes out
+ * only when a persisted marker says an action may have left us online less than
+ * STALE_ONLINE_MS ago and no offline was confirmed after it.
+ */
+public final class PlusGhost {
+
+    public static final int OPT_READS = 0;
+    public static final int OPT_TYPING = 1;
+    public static final int OPT_ONLINE = 2;
+    public static final int OPT_STORIES = 3;
+    /** 0009: after sending/reacting/voting in a chat, send a read receipt for that chat (AyuGram "Read on interact"). */
+    public static final int OPT_READ_ON_SEND = 4;
+    /** 0009: when the server reports this account online while this device is in use, push offline again. */
+    public static final int OPT_FORCE_OFFLINE = 5;
+    public static final int OPT_COUNT = 6;
+
+    /** How long a manual "mark as read" lets read receipts of that one chat through. */
+    public static final long MANUAL_READ_WINDOW_MS = 10000;
+    private static final long OFFLINE_DELAY_MS = 1500;
+
+    private static final long FORCE_OFFLINE_MIN_INTERVAL_MS = 15000;
+    private static final long RECENT_ACTIVITY_MS = 30000;
+    /** Upper bound for how long the server keeps us "online" after an action without a new status. */
+    private static final long STALE_ONLINE_MS = 5 * 60 * 1000;
+    private static final String MAYBE_ONLINE_KEY = "maybe_online_";
+    private static final String SELF_OFFLINE_KEY = "self_offline_at_";
+
+    private static final String[] OPT_KEYS = {"reads", "typing", "online", "stories", "read_on_send", "force_offline"};
+    private static final boolean[] OPT_DEFAULTS = {true, true, true, true, true, false};
+
+    /** account -> (dialogId -> elapsedRealtime deadline) for manual mark-as-read. */
+    @SuppressWarnings("unchecked")
+    private static final ConcurrentHashMap<Long, Long>[] allowedReads = new ConcurrentHashMap[UserConfig.MAX_ACCOUNT_COUNT];
+    /**
+     * updateStatus objects built by PlusGhost itself; only these pass while Stay offline is on.
+     * (0008 used a per-account "next packet may pass" flag instead. That flag was raised when the
+     * offline was scheduled, so a timer packet sent in the 1.5-6 s gap used it up before the send
+     * reached the server, and the real offline was then skipped, leaving us online.)
+     */
+    private static final Set<TLObject> ownStatusRequests = Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
+    private static final Runnable[] offlineRunnables = new Runnable[UserConfig.MAX_ACCOUNT_COUNT];
+    private static final long[] lastActivityAt = new long[UserConfig.MAX_ACCOUNT_COUNT];
+    private static final long[] lastForcedOfflineAt = new long[UserConfig.MAX_ACCOUNT_COUNT];
+    /** hanako 1.3.1: server-clock seconds when the last own updateUserStatus arrived (0 = none this process). */
+    private static final long[] selfStatusAt = new long[UserConfig.MAX_ACCOUNT_COUNT];
+    private static final boolean[] selfStatusOnline = new boolean[UserConfig.MAX_ACCOUNT_COUNT];
+    /** 1 = the start-up stale-online check already ran for this account in this process. */
+    private static final AtomicIntegerArray startChecked = new AtomicIntegerArray(UserConfig.MAX_ACCOUNT_COUNT);
+
+    static {
+        for (int i = 0; i < UserConfig.MAX_ACCOUNT_COUNT; i++) {
+            allowedReads[i] = new ConcurrentHashMap<>();
+        }
+    }
+
+    private PlusGhost() {
+    }
+
+    private static SharedPreferences prefs() {
+        return ApplicationLoader.applicationContext.getSharedPreferences("plus_ghost", Context.MODE_PRIVATE);
+    }
+
+    private static boolean validAccount(int account) {
+        return PlusUtil.validAccount(account);
+    }
+
+    // Defaults are intentionally unchanged (everything on for every account); see 0004/0005.
+    // Keys follow the Telegram user id, not the slot (PlusUtil.accountKey).
+    public static boolean isEnabled(int account) {
+        SharedPreferences p = prefs();
+        return p.getBoolean(PlusUtil.accountKey(p, "on", account), true);
+    }
+
+    public static void setEnabled(int account, boolean value) {
+        HanakoTelemetry.count(HanakoTelemetry.GHOST_TOGGLE); // hanako: usage statistics (off by default)
+        SharedPreferences p = prefs();
+        p.edit().putBoolean(PlusUtil.accountKey(p, "on", account), value).apply();
+        onSettingsChanged(account);
+    }
+
+    /** true = this kind of packet is hidden (not sent) while ghost mode is on. */
+    public static boolean isHidden(int account, int opt) {
+        SharedPreferences p = prefs();
+        return p.getBoolean(PlusUtil.accountKey(p, OPT_KEYS[opt], account), OPT_DEFAULTS[opt]);
+    }
+
+    public static void setHidden(int account, int opt, boolean value) {
+        HanakoTelemetry.count(HanakoTelemetry.GHOST_OPTION); // hanako: usage statistics (off by default)
+        SharedPreferences p = prefs();
+        p.edit().putBoolean(PlusUtil.accountKey(p, OPT_KEYS[opt], account), value).apply();
+        if (opt == OPT_ONLINE) {
+            onSettingsChanged(account);
+        }
+    }
+
+    private static boolean active(int account, int opt) {
+        return isEnabled(account) && isHidden(account, opt);
+    }
+
+    /** After a toggle: if "Stay offline" is now in effect, go offline once right away. */
+    private static void onSettingsChanged(int account) {
+        if (validAccount(account) && active(account, OPT_ONLINE)) {
+            scheduleOffline(account, 0);
+        }
+    }
+
+    // ---- manual read exception (scoped to one dialog) ----
+
+    /** Let read receipts for this one dialog through for {@code ms} (manual "mark as read"). */
+    public static void allowReads(int account, long dialogId, long ms) {
+        if (validAccount(account) && dialogId != 0) {
+            allowedReads[account].put(dialogId, SystemClock.elapsedRealtime() + ms);
+        }
+    }
+
+    private static boolean readsAllowed(int account, long dialogId) {
+        if (!validAccount(account) || dialogId == 0) {
+            return false;
+        }
+        if (PlusGhostExceptions.readsExcepted(account, dialogId)) {
+            return true; // plus f01: per-chat ghost exception
+        }
+        return manualReadWindowOpen(account, dialogId);
+    }
+
+    /** plus f12: the timed "Mark as read" window only (not the f01 per-chat exceptions). */
+    private static boolean manualReadWindowOpen(int account, long dialogId) {
+        if (!validAccount(account) || dialogId == 0) {
+            return false;
+        }
+        Long until = allowedReads[account].get(dialogId);
+        if (until == null) {
+            return false;
+        }
+        if (SystemClock.elapsedRealtime() >= until) {
+            allowedReads[account].remove(dialogId);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * plus f12: is a manual "mark as read" window open for this dialog? (PlusPeek honours it.)
+     * A per-chat read exception (f01) does not count: a peek never sends read receipts.
+     */
+    public static boolean isReadAllowed(int account, long dialogId) {
+        return manualReadWindowOpen(account, dialogId);
+    }
+
+    /** hanako: would a read receipt for this dialog be dropped right now? (PlusReadLedger) */
+    public static boolean readsHidden(int account, long dialogId) {
+        return validAccount(account) && active(account, OPT_READS) && !readsAllowed(account, dialogId);
+    }
+
+    /** Called by SecretChatHelper before it sends decryptedMessageActionReadMessages. */
+    public static boolean blockSecretRead(int account, long encryptedDialogId) {
+        return readsHidden(account, encryptedDialogId);
+    }
+
+    static long peerDialogId(TLRPC.InputPeer peer) { // plus f12: also used by PlusPeek
+        if (peer == null) {
+            return 0;
+        }
+        if (peer.channel_id != 0) {
+            return -peer.channel_id;
+        }
+        if (peer.chat_id != 0) {
+            return -peer.chat_id;
+        }
+        return peer.user_id;
+    }
+
+    /** Dialog a read request belongs to, or 0 when the request carries no peer. */
+    private static long readDialogId(TLObject o) {
+        if (o instanceof TLRPC.TL_messages_readHistory) {
+            return peerDialogId(((TLRPC.TL_messages_readHistory) o).peer);
+        } else if (o instanceof TLRPC.TL_channels_readHistory) {
+            TLRPC.InputChannel ch = ((TLRPC.TL_channels_readHistory) o).channel;
+            return ch != null ? -ch.channel_id : 0;
+        } else if (o instanceof TLRPC.TL_messages_readDiscussion) {
+            return peerDialogId(((TLRPC.TL_messages_readDiscussion) o).peer);
+        } else if (o instanceof TLRPC.TL_channels_readMessageContents) {
+            TLRPC.InputChannel ch = ((TLRPC.TL_channels_readMessageContents) o).channel;
+            return ch != null ? -ch.channel_id : 0;
+        } else if (o instanceof TLRPC.TL_messages_readEncryptedHistory) {
+            TLRPC.TL_inputEncryptedChat p = ((TLRPC.TL_messages_readEncryptedHistory) o).peer;
+            return p != null ? DialogObject.makeEncryptedDialogId(p.chat_id) : 0;
+        } else if (o instanceof TLRPC.TL_messages_readSavedHistory) {
+            // monoforum (channel direct messages) topic; the dialog is the parent channel
+            return peerDialogId(((TLRPC.TL_messages_readSavedHistory) o).parent_peer);
+        }
+        return 0; // messages.readMessageContents has ids only
+    }
+
+    /** plus f01: dialog a typing request belongs to, or 0. */
+    private static long typingDialogId(TLObject o) {
+        if (o instanceof TLRPC.TL_messages_setTyping) {
+            return peerDialogId(((TLRPC.TL_messages_setTyping) o).peer);
+        } else if (o instanceof TLRPC.TL_messages_setEncryptedTyping) {
+            TLRPC.TL_inputEncryptedChat p = ((TLRPC.TL_messages_setEncryptedTyping) o).peer;
+            return p != null ? DialogObject.makeEncryptedDialogId(p.chat_id) : 0;
+        }
+        return 0;
+    }
+
+    private static boolean isReadRequest(TLObject o) {
+        return o instanceof TLRPC.TL_messages_readHistory
+                || o instanceof TLRPC.TL_channels_readHistory
+                || o instanceof TLRPC.TL_messages_readDiscussion
+                || o instanceof TLRPC.TL_messages_readMessageContents
+                || o instanceof TLRPC.TL_channels_readMessageContents
+                || o instanceof TLRPC.TL_messages_readEncryptedHistory
+                || o instanceof TLRPC.TL_messages_readSavedHistory;
+    }
+
+    /** Requests after which the server shows us online (Stay offline re-sends offline after them). */
+    private static boolean isActivityRequest(TLObject o) {
+        return o instanceof TLRPC.TL_messages_sendMessage
+                || o instanceof TLRPC.TL_messages_sendMedia
+                || o instanceof TLRPC.TL_messages_sendMultiMedia
+                || o instanceof TLRPC.TL_messages_forwardMessages
+                || o instanceof TLRPC.TL_messages_forwardMessage
+                || o instanceof TLRPC.TL_messages_sendInlineBotResult
+                || o instanceof TLRPC.TL_messages_sendReaction
+                || o instanceof TLRPC.TL_messages_sendPaidReaction
+                || o instanceof TLRPC.TL_messages_sendVote
+                || o instanceof TLRPC.TL_messages_editMessage
+                || o instanceof TLRPC.TL_messages_sendScreenshotNotification
+                || o instanceof TLRPC.TL_messages_sendBotRequestedPeer
+                || o instanceof TLRPC.TL_messages_sendWebViewData
+                || o instanceof TLRPC.TL_messages_sendQuickReplyMessages
+                || o instanceof TLRPC.TL_messages_startBot
+                || o instanceof TLRPC.TL_messages_importChatInvite
+                || o instanceof TLRPC.TL_channels_joinChannel
+                || o instanceof TLRPC.TL_messages_sendEncrypted
+                || o instanceof TLRPC.TL_messages_sendEncryptedFile
+                || o instanceof TLRPC.TL_messages_sendEncryptedMultiMedia
+                // 0009: sendEncryptedService removed. It is mostly automatic (layer notify, rekeying,
+                // resend requests), and every extra offline packet stamps a fresh "last seen".
+                || o instanceof TL_phone.requestCall
+                || o instanceof TL_phone.acceptCall
+                || o instanceof TL_phone.confirmCall
+                || o instanceof TL_stories.TL_stories_sendStory
+                || o instanceof TL_stories.TL_stories_sendReaction;
+    }
+
+    // ---- fake completion for dropped requests ----
+
+    static TLObject fakeResult(TLObject o) { // plus f12: also used by PlusPeek
+        if (o instanceof TLRPC.TL_messages_readHistory || o instanceof TLRPC.TL_messages_readMessageContents) {
+            // real return type is messages.affectedMessages; pts=-1 makes processNewDifferenceParams a no-op
+            TLRPC.TL_messages_affectedMessages res = new TLRPC.TL_messages_affectedMessages();
+            res.pts = -1;
+            res.pts_count = 0;
+            return res;
+        }
+        if (o instanceof TLRPC.TL_messages_readMentions || o instanceof TLRPC.TL_messages_readReactions
+                || o instanceof TLRPC.TL_messages_readPollVotes) {
+            // plus f12 (PlusPeek drops these): real return type is messages.affectedHistory
+            TLRPC.TL_messages_affectedHistory res = new TLRPC.TL_messages_affectedHistory();
+            res.pts = -1;
+            res.pts_count = 0;
+            res.offset = 0;
+            return res;
+        }
+        // channels.readHistory, channels.readMessageContents, messages.readDiscussion,
+        // messages.readEncryptedHistory, messages.readSavedHistory, setTyping, setEncryptedTyping, incrementStoryViews,
+        // account.updateStatus all return Bool. (stories.readStories returns Vector<int>, but its
+        // only caller, StoriesController, passes a null callback, so nothing ever sees this.)
+        return new TLRPC.TL_boolTrue();
+    }
+
+    private static boolean drop(TLObject o, RequestDelegate onComplete) {
+        if (onComplete != null) {
+            final TLObject res = fakeResult(o);
+            Utilities.stageQueue.postRunnable(() -> {
+                try {
+                    onComplete.run(res, null);
+                } catch (Exception e) {
+                    FileLog.e(e);
+                }
+            });
+        }
+        return true;
+    }
+
+    // ---- hooks ----
+
+    /** @return true when the request must be dropped (its callback is completed with a fake result). */
+    public static boolean intercept(int account, TLObject o, RequestDelegate onComplete) {
+        if (o != null && PlusStoryGuard.dropStoryView(account, o)) { // plus f06: "Open without being seen"
+            return drop(o, onComplete);
+        }
+        if (o == null || !validAccount(account) || !isEnabled(account)) {
+            return false;
+        }
+        if (startChecked.compareAndSet(account, 0, 1)) {
+            checkStaleOnline(account);
+        }
+        if (o instanceof TL_account.updateStatus) {
+            if (!isHidden(account, OPT_ONLINE)) {
+                return false;
+            }
+            if (ownStatusRequests.remove(o)) {
+                ((TL_account.updateStatus) o).offline = true; // one of our own offline packets
+                return false;
+            }
+            if (PlusGhostExceptions.onlineExceptedNow(account)) {
+                if (!((TL_account.updateStatus) o).offline) {
+                    markMaybeOnline(account); // plus f01 (landed 0009): an online packet goes out, so arm the cold-start check
+                }
+                return false; // plus f01: an "online while open" exception chat is on screen
+            }
+            return drop(o, onComplete); // no online packets, no periodic last-seen refresh, nothing at start
+        }
+        if (isHidden(account, OPT_TYPING)
+                && (o instanceof TLRPC.TL_messages_setTyping || o instanceof TLRPC.TL_messages_setEncryptedTyping)
+                && !PlusGhostExceptions.typingExcepted(account, typingDialogId(o))) { // plus f01
+            return drop(o, onComplete);
+        }
+        if (isHidden(account, OPT_READS) && isReadRequest(o) && !readsAllowed(account, readDialogId(o))) {
+            return drop(o, onComplete);
+        }
+        if (isHidden(account, OPT_READS) && o instanceof TLRPC.TL_messages_getMessagesViews
+                && !PlusGhostExceptions.readsExcepted(account, peerDialogId(((TLRPC.TL_messages_getMessagesViews) o).peer))) { // plus f01
+            // 0009: still fetch view counts, but don't count our view (AyuGram Desktop api_views.cpp does the same)
+            ((TLRPC.TL_messages_getMessagesViews) o).increment = false;
+            return false;
+        }
+        if (isHidden(account, OPT_STORIES)
+                && (o instanceof TL_stories.TL_stories_readStories || o instanceof TL_stories.TL_stories_incrementStoryViews)) {
+            return drop(o, onComplete);
+        }
+        return false;
+    }
+
+    /**
+     * Runs after write requests:
+     * - Stay offline: send one offline=true (debounced) after the server has processed a request
+     *   that shows us online.
+     * - Read on send (OPT_READ_ON_SEND): after a successful send/reaction/vote into a chat while
+     *   read receipts are hidden, read that chat once, the way a normal client does when you reply.
+     *   Replying while your messages stay unread is the easiest ghost-mode tell.
+     */
+    public static RequestDelegate wrapCompletion(int account, TLObject o, RequestDelegate onComplete) {
+        if (o == null || !validAccount(account) || !isEnabled(account)) {
+            return onComplete;
+        }
+        final boolean goOffline = isHidden(account, OPT_ONLINE) && isActivityRequest(o);
+        final long readDialog = (isHidden(account, OPT_READS) && isHidden(account, OPT_READ_ON_SEND)) ? interactionDialogId(o) : 0;
+        if (!goOffline && readDialog == 0) {
+            return onComplete;
+        }
+        if (goOffline) {
+            lastActivityAt[account] = SystemClock.elapsedRealtime();
+            markMaybeOnline(account);
+        }
+        if (onComplete == null) {
+            // Never wrap a null callback: ConnectionsManager then routes Updates/timestamp
+            // callbacks itself. Act once the request has had time to land.
+            if (readDialog != 0) {
+                AndroidUtilities.runOnUIThread(() -> readNow(account, readDialog), OFFLINE_DELAY_MS);
+            }
+            if (goOffline) {
+                scheduleOffline(account, OFFLINE_DELAY_MS * 2);
+            }
+            return null;
+        }
+        if (goOffline) {
+            scheduleOffline(account, OFFLINE_DELAY_MS * 4); // fallback if the response never arrives
+        }
+        return (response, error) -> {
+            try {
+                onComplete.run(response, error);
+            } finally {
+                if (readDialog != 0 && error == null) {
+                    AndroidUtilities.runOnUIThread(() -> readNow(account, readDialog));
+                }
+                if (goOffline) {
+                    scheduleOffline(account, OFFLINE_DELAY_MS);
+                }
+            }
+        };
+    }
+
+    /** Chat a user interaction (send, forward, inline result, reaction, vote) goes to, or 0. */
+    private static long interactionDialogId(TLObject o) {
+        TLRPC.InputPeer peer = null;
+        if (o instanceof TLRPC.TL_messages_sendMessage) {
+            peer = ((TLRPC.TL_messages_sendMessage) o).peer;
+        } else if (o instanceof TLRPC.TL_messages_sendMedia) {
+            peer = ((TLRPC.TL_messages_sendMedia) o).peer;
+        } else if (o instanceof TLRPC.TL_messages_sendMultiMedia) {
+            peer = ((TLRPC.TL_messages_sendMultiMedia) o).peer;
+        } else if (o instanceof TLRPC.TL_messages_sendInlineBotResult) {
+            peer = ((TLRPC.TL_messages_sendInlineBotResult) o).peer;
+        } else if (o instanceof TLRPC.TL_messages_forwardMessages) {
+            peer = ((TLRPC.TL_messages_forwardMessages) o).to_peer;
+        } else if (o instanceof TLRPC.TL_messages_sendReaction) {
+            peer = ((TLRPC.TL_messages_sendReaction) o).peer;
+        } else if (o instanceof TLRPC.TL_messages_sendPaidReaction) {
+            peer = ((TLRPC.TL_messages_sendPaidReaction) o).peer;
+        } else if (o instanceof TLRPC.TL_messages_sendVote) {
+            peer = ((TLRPC.TL_messages_sendVote) o).peer;
+        }
+        return peerDialogId(peer);
+    }
+
+    /**
+     * Send a read receipt for one chat now, through the normal read path (UI thread).
+     * Skips Saved Messages, secret chats and forums (reading a whole forum after a reply in
+     * one topic would read the other topics too).
+     */
+    public static void readNow(int account, long dialogId) {
+        if (!validAccount(account) || dialogId == 0 || DialogObject.isEncryptedDialog(dialogId)) {
+            return;
+        }
+        try {
+            if (dialogId == UserConfig.getInstance(account).getClientUserId()) {
+                return;
+            }
+            MessagesController mc = MessagesController.getInstance(account);
+            if (mc.isForum(dialogId) || mc.isMonoForum(dialogId)) {
+                return;
+            }
+            TLRPC.Dialog dialog = mc.dialogs_dict.get(dialogId);
+            if (dialog == null || dialog.top_message <= 0) {
+                return;
+            }
+            allowReads(account, dialogId, MANUAL_READ_WINDOW_MS);
+            mc.markDialogAsRead(dialogId, dialog.top_message, dialog.top_message, dialog.last_message_date, false, 0, 0, true, 0);
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    /**
+     * Hook from MessagesController (updateUserStatus for our own user). With OPT_FORCE_OFFLINE,
+     * when the server shows this account online while this device is in use (or right after one
+     * of our own actions), push offline again. Rate limited. Like AyuGram's "Go offline
+     * automatically", this fights any other client of the account that is open at the same time.
+     */
+    public static void onSelfStatus(int account, TLRPC.UserStatus status) {
+        if (validAccount(account)) {
+            selfStatusAt[account] = ConnectionsManager.getInstance(account).getCurrentTime(); // server-clock seconds
+            selfStatusOnline[account] = status instanceof TLRPC.TL_userStatusOnline;
+        }
+        if (!validAccount(account) || !(status instanceof TLRPC.TL_userStatusOnline)
+                || !active(account, OPT_ONLINE) || !isHidden(account, OPT_FORCE_OFFLINE)) {
+            return;
+        }
+        long now = SystemClock.elapsedRealtime();
+        boolean inUse = !ApplicationLoader.mainInterfacePaused || now - lastActivityAt[account] < RECENT_ACTIVITY_MS;
+        if (!inUse || now - lastForcedOfflineAt[account] < FORCE_OFFLINE_MIN_INTERVAL_MS) {
+            return;
+        }
+        lastForcedOfflineAt[account] = now;
+        scheduleOffline(account, OFFLINE_DELAY_MS);
+    }
+
+    /** An action that shows us online went out; remembered across process death until an offline is confirmed. */
+    private static void markMaybeOnline(int account) {
+        try {
+            prefs().edit().putLong(MAYBE_ONLINE_KEY + account, System.currentTimeMillis()).apply();
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    private static void clearMaybeOnline(int account, long offlineSentAt) {
+        try {
+            SharedPreferences p = prefs();
+            long mark = p.getLong(MAYBE_ONLINE_KEY + account, 0);
+            if (mark != 0 && mark <= offlineSentAt) { // keep a mark set by a newer action
+                p.edit().remove(MAYBE_ONLINE_KEY + account).apply();
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    /**
+     * Once per process and account: if the previous process may have died while the server still
+     * shows us online (an action without a confirmed offline, less than STALE_ONLINE_MS ago), send
+     * one offline. Otherwise send nothing: an offline=true on a quiet start would stamp a fresh
+     * "last seen" every time the app process starts.
+     */
+    private static void checkStaleOnline(int account) {
+        try {
+            SharedPreferences p = prefs();
+            long mark = p.getLong(MAYBE_ONLINE_KEY + account, 0);
+            if (mark == 0) {
+                return;
+            }
+            long age = System.currentTimeMillis() - mark;
+            if (age >= 0 && age < STALE_ONLINE_MS && isHidden(account, OPT_ONLINE)) {
+                scheduleOffline(account, OFFLINE_DELAY_MS); // posted to globalQueue, never re-enters intercept
+            } else {
+                p.edit().remove(MAYBE_ONLINE_KEY + account).apply(); // already expired server-side
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    /** plus f01: send one offline packet now (only while Stay offline is in effect). */
+    public static void goOfflineNow(int account) {
+        if (validAccount(account) && active(account, OPT_ONLINE)) {
+            scheduleOffline(account, 0);
+        }
+    }
+
+    private static synchronized void scheduleOffline(int account, long delay) {
+        if (offlineRunnables[account] != null) {
+            Utilities.globalQueue.cancelRunnable(offlineRunnables[account]);
+        }
+        final Runnable r = () -> {
+            synchronized (PlusGhost.class) {
+                offlineRunnables[account] = null;
+            }
+            if (active(account, OPT_ONLINE) && !PlusGhostExceptions.onlineExceptedNow(account)) { // plus f01: not while an "online while open" chat is on screen
+                TL_account.updateStatus req = new TL_account.updateStatus();
+                req.offline = true;
+                ownStatusRequests.add(req); // lets exactly this object through intercept()
+                final long sentAt = System.currentTimeMillis();
+                ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
+                    if (error == null) {
+                        clearMaybeOnline(account, sentAt);
+                        try {
+                            prefs().edit().putInt(SELF_OFFLINE_KEY + account, ConnectionsManager.getInstance(account).getCurrentTime()).apply();
+                            AndroidUtilities.runOnUIThread(() -> NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_STATUS));
+                        } catch (Exception e) {
+                            FileLog.e(e);
+                        }
+                    }
+                });
+            }
+        };
+        offlineRunnables[account] = r;
+        Utilities.globalQueue.postRunnable(r, delay);
+    }
+
+    // ---- honest own-profile status (hanako 1.3.1) ----
+
+    public static boolean hidesOwnOnline(int account) {
+        return validAccount(account) && active(account, OPT_ONLINE);
+    }
+
+    private static boolean otherDevice(int account) {
+        return selfStatusAt[account] != 0 && selfStatusOnline[account] && SystemClock.elapsedRealtime() - lastActivityAt[account] > 60000 && !PlusGhostExceptions.onlineExceptedNow(account);
+    }
+
+    /**
+     * Own status for your own profile while ghost mode hides online: what the server last said about
+     * this account, or the last offline it acknowledged for this device, never "online" on unknown.
+     * null = ghost doesn't hide online here, keep the stock text. Local reads only, sends nothing.
+     */
+    public static String selfStatus(int account, boolean[] isOnline) {
+        try {
+            if (!hidesOwnOnline(account)) {
+                return null;
+            }
+            TLRPC.User user = MessagesController.getInstance(account).getUser(UserConfig.getInstance(account).getClientUserId());
+            TLRPC.UserStatus status = user != null ? user.status : null;
+            int now = ConnectionsManager.getInstance(account).getCurrentTime();
+            int localOff = prefs().getInt(SELF_OFFLINE_KEY + account, 0);
+            if (status instanceof TLRPC.TL_userStatusOnline && status.expires > now) {
+                long onlineArrivedAt = selfStatusAt[account];
+                boolean offlineNewer = false;
+                if (localOff > 0) {
+                    if (onlineArrivedAt != 0) {
+                        offlineNewer = localOff >= onlineArrivedAt - 2; // our offline was acknowledged after that online arrived
+                    } else {
+                        offlineNewer = localOff >= status.expires - 300;
+                    }
+                }
+                if (!offlineNewer) {
+                    if (isOnline != null) {
+                        isOnline[0] = true;
+                    }
+                    if (otherDevice(account)) {
+                        return LocaleController.getString(R.string.HanakoSelfOnlineOtherDevice);
+                    }
+                    return LocaleController.getString(R.string.Online);
+                }
+            }
+            int lastSeen = 0;
+            if (status instanceof TLRPC.TL_userStatusOffline && status.expires > 0) {
+                lastSeen = Math.max(lastSeen, status.expires);
+            }
+            if (status instanceof TLRPC.TL_userStatusOnline && status.expires > 0) {
+                lastSeen = Math.max(lastSeen, status.expires);
+            }
+            if (localOff > 0) {
+                lastSeen = Math.max(lastSeen, localOff);
+            }
+            if (lastSeen > 0) {
+                return LocaleController.formatDateOnline(lastSeen, null);
+            }
+            return LocaleController.getString(R.string.HanakoSelfOffline);
+        } catch (Exception e) {
+            FileLog.e(e);
+            return LocaleController.getString(R.string.HanakoSelfOffline);
+        }
+    }
+
+    public static android.graphics.drawable.Drawable selfGhostIcon(Context ctx, int color) {
+        try {
+            android.graphics.drawable.Drawable d = ctx.getResources().getDrawable(R.drawable.plus_ghost).mutate();
+            d.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+            int size = AndroidUtilities.dp(14);
+            d.setBounds(0, 0, size, size);
+            return d;
+        } catch (Exception e) {
+            FileLog.e(e);
+            return null;
+        }
+    }
+
+    public static void openGhostSettings(BaseFragment f) {
+        f.presentFragment(new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_GHOST));
+    }
+
+    public static void applySelfGhostIcon(BaseFragment f, SimpleTextView tv, int account, int color) {
+        if (f == null || tv == null || !hidesOwnOnline(account)) {
+            return;
+        }
+        try {
+            android.graphics.drawable.Drawable icon = selfGhostIcon(f.getContext(), color);
+            if (icon != null) {
+                tv.setRightDrawable(icon);
+                tv.setRightDrawableOnClick(v -> openGhostSettings(f));
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+}

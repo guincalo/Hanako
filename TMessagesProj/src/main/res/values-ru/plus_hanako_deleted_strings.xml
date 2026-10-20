@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- hanako: deleted/edited messages UX pass (retention, exceptions, chat menu, edit history) -->
+<resources>
+    <string name="HanakoKeepDeletedHeader">Хранить сохранённые сообщения</string>
+    <string name="HanakoKeepDeletedInfo">Сохранённые удалённые сообщения и старые версии удаляются с устройства по истечении срока. Срок считается с момента удаления или изменения. «Не сохранять» останавливает сохранение новых; уже сохранённое остаётся, пока вы его не очистите.</string>
+    <string name="HanakoKeepDeletedOff">Не сохранять</string>
+    <string name="HanakoKeepDeletedDefault">По умолчанию</string>
+    <string name="HanakoKeepDeletedDefaultValue">По умолчанию (%1$s)</string>
+    <string name="HanakoKeepDeletedFor">Хранить: %1$s</string>
+    <string name="HanakoKeepDeletedExceptionsInfo">Для этих чатов настройка их типа не действует. Её также можно задать в меню ⋮ чата → Удалённые сообщения.</string>
+    <string name="HanakoKeepDeletedRemoveException">Удалить исключение</string>
+    <string name="HanakoKeepDeletedChatTitle">Хранить удалённые сообщения в этом чате</string>
+    <string name="HanakoDeletedChatMenu">Удалённые сообщения</string>
+    <string name="HanakoDeletedClearChat">Очистить сохранённое в чате</string>
+    <string name="HanakoDeletedClearChatConfirm">Удалить %1$s и %2$s из этого чата вместе с медиа? Это нельзя отменить.</string>
+    <string name="HanakoDeletedClearChatNothing">Из этого чата пока ничего не сохранено.</string>
+    <string name="HanakoDeletedStorageHeader">На этом устройстве</string>
+    <string name="HanakoDeletedStorageInfo">Сохранённые копии хранятся только на этом устройстве, отдельно от кэша Telegram.</string>
+    <string name="HanakoDeletedStorageCounts">Сохранено %1$s и %2$s, отдельно от кэша Telegram.</string>
+    <string name="HanakoDeletedStorageEmpty">Пока ничего не сохранено.</string>
+    <string name="HanakoDeletedCount_one">%1$d удалённое сообщение</string>
+    <string name="HanakoDeletedCount_few">%1$d удалённых сообщения</string>
+    <string name="HanakoDeletedCount_many">%1$d удалённых сообщений</string>
+    <string name="HanakoDeletedCount_other">%1$d удалённого сообщения</string>
+    <string name="HanakoEditedCount_one">%1$d старая версия</string>
+    <string name="HanakoEditedCount_few">%1$d старые версии</string>
+    <string name="HanakoEditedCount_many">%1$d старых версий</string>
+    <string name="HanakoEditedCount_other">%1$d старой версии</string>
+    <string name="HanakoDeletedInChatsHeader">В чатах</string>
+    <string name="HanakoDeletedInChatsInfo">Удалённые сообщения остаются в чате серыми с пометкой «удалено». Зажмите изменённое сообщение → История изменений, чтобы увидеть старые версии.</string>
+    <string name="HanakoEditHistoryInfo">Зажмите «Копировать», чтобы удалить сохранённую версию с устройства.</string>
+    <string name="HanakoEditHistoryChanges">Изменения</string>
+    <string name="HanakoEditHistoryOriginal">Оригинал</string>
+    <string name="HanakoEditHistoryOriginalSent">Оригинал · отправлено %1$s</string>
+    <string name="HanakoEditHistoryEditN">Правка %1$d</string>
+    <string name="HanakoEditHistoryCurrentEdited">Текущая · изменено %1$s</string>
+    <string name="HanakoEditHistoryRemove">Удалить эту версию</string>
+    <string name="HanakoEditHistoryRemoveConfirm">Удалить эту сохранённую версию с устройства? Это нельзя отменить.</string>
+</resources>

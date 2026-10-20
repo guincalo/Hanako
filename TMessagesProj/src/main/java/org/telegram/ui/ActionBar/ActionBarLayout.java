@@ -1524,6 +1524,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         boolean preview = params.preview;
         ActionBarPopupWindow.ActionBarPopupWindowLayout menu = params.menuView;
 
+        if (it.belloworld.mercurygram.PlusChatLock.interceptPresent(this, params)) { // plus f08
+            return false;
+        }
         if (fragment == null || checkTransitionAnimation() || delegate != null && check && !delegate.needPresentFragment(this, params) || !fragment.onFragmentCreate()) {
             return false;
         }
@@ -1866,6 +1869,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
     @Override
     public boolean addFragmentToStack(BaseFragment fragment, int position) {
+        if (it.belloworld.mercurygram.PlusChatLock.blocksAddToStack(fragment)) { // plus f08
+            return false;
+        }
         if (delegate != null && !delegate.needAddFragmentToStack(fragment, this) || !fragment.onFragmentCreate()) {
             return false;
         }

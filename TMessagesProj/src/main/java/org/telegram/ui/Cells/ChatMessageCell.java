@@ -99,6 +99,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.math.MathUtils;
 
+
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
@@ -4586,7 +4587,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             isSpoilerRevealing = true;
             spoilerPressed.setOnRippleEndCallback(() -> post(() -> {
                 isSpoilerRevealing = false;
-                getMessageObject().isSpoilersRevealed = true;
+                (captionLayout != null ? getPrimaryMessageObject() : getMessageObject()).isSpoilersRevealed = true;
                 if (explanationLayout != null) {
                     for (MessageObject.TextLayoutBlock block : explanationLayout.textLayoutBlocks) {
                         block.spoilers.clear();
@@ -6230,7 +6231,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (currentMessageObject != null && (!hasLinkPreview && MessageObject.getMedia(currentMessageObject.messageOwner) != null && MessageObject.getMedia(currentMessageObject.messageOwner).webpage instanceof TLRPC.TL_webPage)) {
             return true;
         }
-        if (currentMessageObject == null || currentUser == null && currentChat == null) {
+        if (currentMessageObject == null) {
+            return false;
+        }
+        if (currentUser == null && currentChat == null) {
+            // hanako: a deleted-message ghost is rebuilt from its archived copy and
+            // its sender can load after the cell was bound; re-resolve then instead
+            // of keeping the blank avatar and missing name for good.
+            if (currentMessageObject.mgDeletedGhost) {
+                updateCurrentUserAndChat();
+                return currentUser != null || currentChat != null;
+            }
             return false;
         }
         if (lastSendState != currentMessageObject.messageOwner.send_state) {
@@ -9002,7 +9013,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     phone = messageObject.vCardData;
                 } else {
                     if (user != null && !TextUtils.isEmpty(user.phone)) {
-                        phone = PhoneFormat.getInstance().format("+" + user.phone);
+                        phone = it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + user.phone)); // plus f10
                     } else {
                         phone = MessageObject.getMedia(messageObject.messageOwner).phone_number;
                         if (!TextUtils.isEmpty(phone)) {
@@ -12674,6 +12685,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 org.telegram.messenger.CloudflareSTT.isConfigured()
                 ||
                 org.telegram.messenger.forkgram.ForkOfflineTranscribe.isActive()
+                ||
+                it.belloworld.mercurygram.transcribe.MgWhisperTranscriber.isUsable()
                 ||
                 TranscribeButton.isFreeTranscribeInChat(currentMessageObject)
                 ||
@@ -18418,10 +18431,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (isMegagroup && messageObject.getFromChatId() == messageObject.getDialogId()) {
                 signString = null;
             } else {
-                signString = messageObject.messageOwner.post_author.replace("\n", "");
+                signString = plusShotName(messageObject.messageOwner.post_author.replace("\n", "")); // plus f13
             }
         } else if (messageObject.messageOwner.fwd_from != null && messageObject.messageOwner.fwd_from.post_author != null) {
-            signString = messageObject.messageOwner.fwd_from.post_author.replace("\n", "");
+            signString = plusShotName(messageObject.messageOwner.fwd_from.post_author.replace("\n", "")); // plus f13
         } else if (messageObject.messageOwner.fwd_from != null && messageObject.messageOwner.fwd_from.imported) {
             if (messageObject.messageOwner.fwd_from.date == messageObject.messageOwner.date) {
                 signString = getString("ImportedMessage", R.string.ImportedMessage);
@@ -18495,6 +18508,14 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             timeString = LocaleController.formatSeenDate(date);
         } else {
             timeString = LocaleController.getInstance().getFormatterDay().format((long) (messageObject.messageOwner.date) * 1000);
+        }
+        if (currentMessageObject.mgDeletedGhost) {
+            if (currentMessageObject.mgDeletedWhenMs > 0) {
+                String deletedWhen = LocaleController.getInstance().getFormatterDay().format(currentMessageObject.mgDeletedWhenMs); // short: bubble meta is narrow
+                timeString = LocaleController.formatString(R.string.HanakoDeletedAtSent, deletedWhen, timeString);
+            } else {
+                timeString = getString(R.string.MercurygramSavedMessagesDeleted) + " · " + timeString;
+            }
         }
         if (currentMessageObject.messageOwner.video_processing_pending) {
             timeString = formatString(R.string.ScheduledTimeApprox, timeString);
@@ -18896,7 +18917,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (messageObject.isWelcomeMessage()) {
                 adminString = null;
             } else if (isMegagroup && currentChat != null && messageObject.messageOwner.post_author != null && currentChat.id == -currentMessageObject.getFromChatId()) {
-                adminString = new SpannableStringBuilder(messageObject.messageOwner.post_author.replace("\n", ""));
+                adminString = new SpannableStringBuilder(plusShotName(messageObject.messageOwner.post_author.replace("\n", ""))); // plus f13
             } else if (isMegagroup && currentChat != null && currentMessageObject.isForwardedChannelPost()) {
                 adminString = new SpannableStringBuilder(getString(R.string.DiscussChannel));
             } else if ((currentUser != null || currentChat != null) && !currentMessageObject.isOutOwner() && !currentMessageObject.isAnyKindOfSticker() && currentMessageObject.type != MessageObject.TYPE_ROUND_VIDEO && delegate != null) {
@@ -19167,20 +19188,20 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     boolean includeAvatar = true;
                     if (currentForwardChannel != null) {
                         if (currentForwardUser != null) {
-                            currentForwardNameString = String.format("%s (%s)", currentForwardChannel.title, UserObject.getUserName(currentForwardUser));
+                            currentForwardNameString = String.format("%s (%s)", plusShotTitle(currentForwardChannel), UserObject.getUserName(currentForwardUser)); // plus f13
                             forwardAvatar.setUser(currentForwardUser);
                         } else if (!TextUtils.isEmpty(messageObject.messageOwner.fwd_from.post_author)) {
-                            currentForwardNameString = String.format("%s (%s)", currentForwardChannel.title, messageObject.messageOwner.fwd_from.post_author);
+                            currentForwardNameString = String.format("%s (%s)", plusShotTitle(currentForwardChannel), plusShotName(messageObject.messageOwner.fwd_from.post_author)); // plus f13
                             forwardAvatar.setChat(currentForwardChannel);
                         } else {
-                            currentForwardNameString = currentForwardChannel.title;
+                            currentForwardNameString = plusShotTitle(currentForwardChannel); // plus f13
                             forwardAvatar.setChat(currentForwardChannel);
                         }
                     } else if (currentForwardUser != null) {
                         currentForwardNameString = UserObject.getUserName(currentForwardUser);
                         forwardAvatar.setUser(currentForwardUser);
                     } else {
-                        currentForwardNameString = currentForwardName;
+                        currentForwardNameString = plusShotName(currentForwardName); // plus f13
                         includeAvatar = false;
                     }
 
@@ -19411,7 +19432,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                             if (messageObject.sendAsPeer.channel_id != 0) {
                                 TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(messageObject.sendAsPeer.channel_id);
                                 if (chat != null) {
-                                    name = AndroidUtilities.removeDiacritics(chat.title);
+                                    name = AndroidUtilities.removeDiacritics(plusShotTitle(chat)); // plus f13
                                 }
                             } else {
                                 TLRPC.User user = MessagesController.getInstance(currentAccount).getUser(messageObject.sendAsPeer.user_id);
@@ -19439,12 +19460,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                             } else if (fromId < 0) {
                                 TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-fromId);
                                 if (chat != null) {
-                                    name = AndroidUtilities.removeDiacritics(chat.title);
+                                    name = AndroidUtilities.removeDiacritics(plusShotTitle(chat)); // plus f13
                                 }
                             } else if (messageObject.replyMessageObject.messageOwner != null && messageObject.replyMessageObject.messageOwner.peer_id != null) {
                                 TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(messageObject.replyMessageObject.messageOwner.peer_id.channel_id);
                                 if (chat != null) {
-                                    name = AndroidUtilities.removeDiacritics(chat.title);
+                                    name = AndroidUtilities.removeDiacritics(plusShotTitle(chat)); // plus f13
                                 }
                             }
                         }
@@ -19586,17 +19607,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         boolean includeAvatar = true;
                         if (currentForwardChannel != null) {
                             if (currentForwardUser != null) {
-                                currentForwardNameString = String.format("%s (%s)", currentForwardChannel.title, UserObject.getUserName(currentForwardUser));
+                                currentForwardNameString = String.format("%s (%s)", plusShotTitle(currentForwardChannel), UserObject.getUserName(currentForwardUser)); // plus f13
                                 forwardAvatar.setUser(currentForwardUser);
                             } else {
-                                currentForwardNameString = currentForwardChannel.title;
+                                currentForwardNameString = plusShotTitle(currentForwardChannel); // plus f13
                                 forwardAvatar.setChat(currentForwardChannel);
                             }
                         } else if (currentForwardUser != null) {
                             currentForwardNameString = UserObject.getUserName(currentForwardUser);
                             forwardAvatar.setUser(currentForwardUser);
                         } else {
-                            currentForwardNameString = currentForwardName;
+                            currentForwardNameString = plusShotName(currentForwardName); // plus f13
                             includeAvatar = false;
                         }
                         name = getForwardedMessageText(messageObject);
@@ -19779,7 +19800,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         } else if (fromId < 0) {
             TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-fromId);
             if (chat != null) {
-                name = chat.title;
+                name = plusShotTitle(chat); // plus f13
             }
         }
         return name;
@@ -19815,6 +19836,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         );
     }
 
+    /** plus f13: set on the cells of a message shot; their names and titles follow streamer mode (f10). */
+    public boolean plusShot;
+
+    private String plusShotTitle(TLRPC.Chat chat) { // plus f13
+        return plusShot ? it.belloworld.mercurygram.PlusStreamer.chatTitle(chat) : chat.title;
+    }
+
+    private String plusShotName(String name) { // plus f13
+        return plusShot ? it.belloworld.mercurygram.PlusStreamer.freeName(name) : name;
+    }
+
     private String getAuthorName() {
         if (currentUser != null) {
             return UserObject.getUserName(currentUser);
@@ -19826,10 +19858,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     if (user != null) return UserObject.getUserName(user);
                 } else {
                     TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-did);
-                    if (chat != null) return chat.title;
+                    if (chat != null) return plusShotTitle(chat); // plus f13
                 }
             }
-            return currentChat.title;
+            return plusShotTitle(currentChat); // plus f13
         } else if (currentMessageObject != null && currentMessageObject.isSponsored()) {
             return currentMessageObject.sponsoredTitle;
         }
@@ -20183,6 +20215,19 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     @Override
     protected void onDraw(Canvas canvas) {
         drawInternal(canvas);
+    }
+
+    // Mercurygram: gray-out the whole cell when this message is a kept-after-delete ghost.
+    // Wrapping draw() (not onDraw) covers bubble + media + child views (reactions, replies).
+    @Override
+    public void draw(Canvas canvas) {
+        if (currentMessageObject == null || !currentMessageObject.mgDeletedGhost) {
+            super.draw(canvas);
+            return;
+        }
+        int restore = canvas.saveLayerAlpha(0, 0, getWidth(), getHeight(), 165, Canvas.ALL_SAVE_FLAG);
+        super.draw(canvas);
+        canvas.restoreToCount(restore);
     }
     public void drawInternal(Canvas canvas) {
         if (currentMessageObject == null) {
@@ -23761,6 +23806,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             invalidate();
         }
         canvas.restore();
+        if (origin && selectionOnly && linkBlockNum >= 0 && linkBlockNum < captionLayout.textLayoutBlocks.size()) {
+            MessageObject.TextLayoutBlock block = captionLayout.textLayoutBlocks.get(linkBlockNum);
+            float blockRtl = block.isRtl() ? captionLayout.textXOffset - (block.quote ? dp(10) : 0) : 0;
+            canvas.save();
+            canvas.translate(captionX - blockRtl, captionY + block.textYOffset(captionLayout.textLayoutBlocks, transitionParams) + transitionYOffsetForDrawables + block.padTop);
+            if (links.draw(canvas)) {
+                invalidate();
+            }
+            drawProgressLoadingLink(canvas, linkBlockNum);
+            canvas.restore();
+        }
         if (currentMessageObject.type == MessageObject.TYPE_ROUND_VIDEO) {
             Theme.chat_timePaint.setColor(
                 ColorUtils.blendARGB(

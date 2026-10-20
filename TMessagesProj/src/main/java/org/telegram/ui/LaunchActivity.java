@@ -271,6 +271,8 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import it.belloworld.mercurygram.MgNetworkChangeWatcher;
+import it.belloworld.mercurygram.location.MgBackgroundLocationGate;
 import tw.nekomimi.nekogram.helpers.MonetHelper;
 
 public class LaunchActivity extends BasePermissionsActivity implements INavigationLayout.INavigationLayoutDelegate, NotificationCenter.NotificationCenterDelegate, DialogsActivity.DialogsActivityDelegate, IPipActivity {
@@ -463,6 +465,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
 
         flagSecureReason = new FlagSecureReason(getWindow(), () -> MessagesController.getGlobalMainSettings().getBoolean("forceBlockScreenshots", false) || (SharedConfig.passcodeHash.length() > 0 && !SharedConfig.allowScreenCapture));
         flagSecureReason.attach();
+        it.belloworld.mercurygram.PlusStreamer.attachWindow(getWindow()); // plus f10
 
         super.onCreate(savedInstanceState);
         if (Build.VERSION.SDK_INT >= 24) {
@@ -728,6 +731,10 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 AlertsCreator.createBackgroundActivityDialog(this).show();
                 SharedConfig.BackgroundActivityPrefs.setLastCheckedBackgroundActivity(System.currentTimeMillis());
             }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            MonetHelper.registerReceiver(this);
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -2092,6 +2099,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                         } else if (!TextUtils.isEmpty(subject)) {
                             sendingText = subject;
                         }
+                        sendingText = it.belloworld.mercurygram.MgUrlCleaner.cleanText(sendingText);
 
                         Parcelable parcelable = intent.getParcelableExtra(Intent.EXTRA_STREAM);
                         if (parcelable != null) {
@@ -2709,7 +2717,14 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                 }
                                 case "tg": {
                                     String url = data.toString();
-                                    if (url.startsWith("tg:premium_offer") || url.startsWith("tg://premium_offer")) {
+                                    if (url.startsWith("tg:hanako") || url.startsWith("tg://hanako")) { // hanako: easter egg
+                                        AndroidUtilities.runOnUIThread(() -> {
+                                            BulletinFactory factory = BulletinFactory.global();
+                                            if (factory != null) {
+                                                factory.createSimpleBulletin(R.raw.info, LocaleController.getString(R.string.HanakoEasterEgg)).show();
+                                            }
+                                        }, 300);
+                                    } else if (url.startsWith("tg:premium_offer") || url.startsWith("tg://premium_offer")) {
                                         String finalUrl = url;
                                         AndroidUtilities.runOnUIThread(() -> {
                                         if (!actionBarLayout.getFragmentStack().isEmpty()) {
@@ -6415,24 +6430,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
 
     private boolean firstAppUpdateCheck = true;
     public void checkAppUpdate(boolean force, Browser.Progress progress) {
-        final int accountNum = currentAccount;
-        AppUpdater.checkNewVersion(this, getBaseContext(), (builder) -> {
-            showAlertDialog(builder);
-            return 0;
-        }, (update) -> {
-            if (update == null) {
-                return 0;
-            }
-            if (SharedConfig.pendingAppUpdate != null && SharedConfig.pendingAppUpdate.version != null
-                    && SharedConfig.pendingAppUpdate.version.equals(update.version)) {
-                return 0;
-            }
-            if (SharedConfig.setNewAppVersionAvailable(update)) {
-                ApplicationLoader.applicationLoaderInstance.showUpdateAppPopup(LaunchActivity.this, update, accountNum);
-                NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
-            }
-            return 0;
-        }, force);
+        it.belloworld.mercurygram.MgUpdateChecker.checkForUpdates(force); // [Hanako] GitHub releases updater (Forkgram AppUpdater unused)
     }
 
     // Never be called.
@@ -7191,6 +7189,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         pipActivityHandler.onPause();
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.stopAllHeavyOperations, 4096);
         ApplicationLoader.mainInterfacePaused = true;
+        MgNetworkChangeWatcher.onForegroundStateChanged(true);
         int account = currentAccount;
         Utilities.stageQueue.postRunnable(() -> {
             ApplicationLoader.mainInterfacePausedStageQueue = true;
@@ -7319,6 +7318,9 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         GramWalletStorageAuth.onActivityDestroyed(this);
         isActive = false;
         activeInstanceCount--;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            MonetHelper.unregisterReceiver(this);
+        }
         unregisterReceiver(batteryReceiver);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             MonetHelper.unregisterReceiver(this);
@@ -7360,12 +7362,16 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback((OnBackInvokedCallback) onBackInvokedCallback);
             }
         }
-        Bulletin.removeDelegate(frameLayout);
+        // onDestroy can run before the layout was ever created
+        if (frameLayout != null) {
+            Bulletin.removeDelegate(frameLayout);
+        }
         VideoAds.dropCache();
 
         clearFragments();
         super.onDestroy();
         onFinish();
+        it.belloworld.mercurygram.PlusStreamer.detachWindow(getWindow()); // plus f10
         if (flagSecureReason != null) {
             flagSecureReason.detach();
         }
@@ -7444,6 +7450,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
     protected void onResume() {
         super.onResume();
         isResumed = true;
+        it.belloworld.mercurygram.HanakoTelemetry.maybeSnapshot(); // hanako: daily feature-state snapshot (usage statistics, off by default)
         pipActivityHandler.onResume();
         if (onResumeStaticCallback != null) {
             onResumeStaticCallback.run();
@@ -7457,6 +7464,8 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.startAllHeavyOperations, 4096);
         MediaController.getInstance().setFeedbackView(feedbackView = actionBarLayout.getView(), true);
         ApplicationLoader.mainInterfacePaused = false;
+        MgNetworkChangeWatcher.onForegroundStateChanged(false);
+        MgBackgroundLocationGate.onAppForeground();
         MessagesController.getInstance(currentAccount).sortDialogs(null);
         showLanguageAlert(false);
         Utilities.stageQueue.postRunnable(() -> {

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- hanako: deleted/edited messages UX pass (retention, exceptions, chat menu, edit history) -->
+<resources>
+    <string name="HanakoKeepDeletedHeader">Keep saved messages</string>
+    <string name="HanakoKeepDeletedInfo">Saved deleted messages and old versions are removed from this device after this time, counted from when they were deleted or edited. “Don\'t save” stops saving new ones; what\'s already saved stays until you clear it.</string>
+    <string name="HanakoKeepDeletedOff">Don\'t save</string>
+    <string name="HanakoKeepDeletedDefault">Default</string>
+    <string name="HanakoKeepDeletedDefaultValue">Default (%1$s)</string>
+    <string name="HanakoKeepDeletedFor">Keep: %1$s</string>
+    <string name="HanakoKeepDeletedExceptionsInfo">These chats ignore the setting for their type. You can also set it from a chat\'s ⋮ menu → Deleted messages.</string>
+    <string name="HanakoKeepDeletedRemoveException">Remove exception</string>
+    <string name="HanakoKeepDeletedChatTitle">Keep deleted messages in this chat</string>
+    <string name="HanakoDeletedChatMenu">Deleted messages</string>
+    <string name="HanakoDeletedClearChat">Clear saved in this chat</string>
+    <string name="HanakoDeletedClearChatConfirm">Delete %1$s and %2$s saved from this chat, with their media? This can\'t be undone.</string>
+    <string name="HanakoDeletedClearChatNothing">Nothing is saved from this chat yet.</string>
+    <string name="HanakoDeletedStorageHeader">On this device</string>
+    <string name="HanakoDeletedStorageInfo">Saved copies live only on this device, apart from Telegram\'s cache.</string>
+    <string name="HanakoDeletedStorageCounts">%1$s and %2$s saved on this device, apart from Telegram\'s cache.</string>
+    <string name="HanakoDeletedStorageEmpty">Nothing saved yet.</string>
+    <string name="HanakoDeletedCount_one">%1$d deleted message</string>
+    <string name="HanakoDeletedCount_other">%1$d deleted messages</string>
+    <string name="HanakoEditedCount_one">%1$d old version</string>
+    <string name="HanakoEditedCount_other">%1$d old versions</string>
+    <string name="HanakoDeletedInChatsHeader">In chats</string>
+    <string name="HanakoDeletedInChatsInfo">Deleted messages stay in the chat, grayed out and marked “deleted”. Long-press an edited message → Edit history to see its old versions.</string>
+    <string name="HanakoEditHistoryInfo">Long-press Copy to remove a saved version from this device.</string>
+    <string name="HanakoEditHistoryChanges">Changes</string>
+    <string name="HanakoEditHistoryOriginal">Original</string>
+    <string name="HanakoEditHistoryOriginalSent">Original · sent %1$s</string>
+    <string name="HanakoEditHistoryEditN">Edit %1$d</string>
+    <string name="HanakoEditHistoryCurrentEdited">Current · edited %1$s</string>
+    <string name="HanakoEditHistoryRemove">Remove this version</string>
+    <string name="HanakoEditHistoryRemoveConfirm">Remove this saved version from this device? This can\'t be undone.</string>
+    <string name="HanakoEditHistoryReplyAdded">reply added</string>
+    <string name="HanakoEditHistoryReplyRemoved">reply removed</string>
+    <string name="HanakoEditHistoryReplyChanged">reply changed</string>
+    <string name="HanakoEditHistoryForwardAdded">forward added</string>
+    <string name="HanakoEditHistoryForwardRemoved">forward removed</string>
+    <string name="HanakoEditHistoryForwardChanged">forward changed</string>
+    <string name="HanakoEditHistoryMediaAdded">media added</string>
+    <string name="HanakoEditHistoryMediaRemoved">media removed</string>
+    <string name="HanakoEditHistoryMediaChanged">media changed</string>
+    <string name="HanakoDeletedAt">Deleted %1$s</string>
+    <string name="HanakoDeletedAtSent">Deleted %1$s · sent %2$s</string>
+</resources>

@@ -11,7 +11,6 @@ package org.telegram.ui.ActionBar;
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.dpf2;
 import static org.telegram.messenger.LocaleController.getString;
-
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -67,13 +66,11 @@ import android.util.SparseArray;
 import android.util.SparseIntArray;
 import android.util.StateSet;
 import android.view.View;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.math.MathUtils;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.telegram.messenger.AndroidUtilities;
@@ -129,7 +126,6 @@ import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.RoundVideoProgressShadow;
 import org.telegram.ui.ThemeActivity;
 import org.telegram.ui.ThemePreviewActivity;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -146,6 +142,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
+import tw.nekomimi.nekogram.helpers.MonetHelper;
 
 import tw.nekomimi.nekogram.helpers.MonetHelper;
 
@@ -1652,7 +1649,7 @@ public class Theme {
             if (isDark != UNKNOWN) {
                 return isDark == DARK;
             }
-            if ("Dark Blue".equals(name) || "Night".equals(name) || "Monet Dark".equals(name)) {
+            if ("Dark Blue".equals(name) || "Night".equals(name) || "Monet Dark".equals(name) || "Rin".equals(name)) { // hanako: Rin
                 isDark = DARK;
             } else if ("Blue".equals(name) || "Arctic Blue".equals(name) || "Day".equals(name) || "Monet Light".equals(name)) {
                 isDark = LIGHT;
@@ -4044,6 +4041,17 @@ public class Theme {
         themes.add(themeInfo);
         themesDict.put("Night", themeInfo);
 
+        // hanako: built-in dark theme "Rin" (assets/rin.attheme)
+        themeInfo = new ThemeInfo();
+        themeInfo.name = "Rin";
+        themeInfo.assetName = "rin.attheme";
+        themeInfo.previewBackgroundColor = 0xff121011;
+        themeInfo.previewInColor = 0xff242022;
+        themeInfo.previewOutColor = 0xff7a2832;
+        themeInfo.sortIndex = 9;
+        themes.add(themeInfo);
+        themesDict.put("Rin", themeInfo);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             themeInfo = new ThemeInfo();
             themeInfo.name = "Monet Light";
@@ -5702,7 +5710,7 @@ public class Theme {
                 }
                 String[] wallpaperLink = new String[1];
                 if (themeInfo.assetName != null) {
-                    currentColorsNoAccent = getThemeFileValues(null, themeInfo.assetName, null);
+                    currentColorsNoAccent = getThemeFileValues(null, themeInfo.assetName, null, "Monet AMOLED".equals(themeInfo.name));
                 } else {
                     currentColorsNoAccent = getThemeFileValues(new File(themeInfo.pathToFile), null, wallpaperLink);
                 }
@@ -7610,6 +7618,10 @@ public class Theme {
     }
 
     public static SparseIntArray getThemeFileValues(File file, String assetName, String[] wallpaperLink) {
+        return getThemeFileValues(file, assetName, wallpaperLink, false);
+    }
+
+    public static SparseIntArray getThemeFileValues(File file, String assetName, String[] wallpaperLink, boolean monetAmoled) {
         FileInputStream stream = null;
         SparseIntArray stringMap = new SparseIntArray();
         try {
@@ -7641,7 +7653,7 @@ public class Theme {
                         } else {
                             if ((idx = line.indexOf('=')) != -1) {
                                 String key = line.substring(0, idx);
-                                String param = line.substring(idx + 1);
+                                String param = line.substring(idx + 1).trim();
                                 int value;
                                 if (param.length() > 0 && param.charAt(0) == '#') {
                                     try {

@@ -141,6 +141,9 @@ import java.util.stream.Collectors;
 
 import me.vkryl.core.BitwiseUtils;
 
+import it.belloworld.mercurygram.MgPins;
+import it.belloworld.mercurygram.folders.MgFolders;
+
 public class MessagesController extends BaseController implements NotificationCenter.NotificationCenterDelegate {
 
     public int lastKnownSessionsCount;
@@ -738,13 +741,14 @@ public class MessagesController extends BaseController implements NotificationCe
     public boolean starsLocked;
 
     public boolean starsPurchaseAvailable() {
-        return !starsLocked;
+        return !starsLocked && !BuildVars.IS_BILLING_UNAVAILABLE;
     }
     public boolean premiumFeaturesBlocked() {
-        return premiumLocked && !getUserConfig().isPremium();
+        // plus: hide every Premium upsell unless the account really has Premium
+        return !getUserConfig().isPremium();
     }
     public boolean premiumPurchaseBlocked() {
-        return premiumLocked;
+        return true;
     }
 
     public List<String> directPaymentsCurrency = new ArrayList<>();
@@ -878,9 +882,10 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public void lockFiltersInternal() {
         boolean changed = false;
-        if (!getUserConfig().isPremium() && dialogFilters.size() - 1 > dialogFiltersLimitDefault) {
-            int n = dialogFilters.size() - 1 - dialogFiltersLimitDefault;
-            ArrayList<DialogFilter> filtersSortedById = new ArrayList<>(dialogFilters);
+        final int remoteCount = MgFolders.remoteCount(dialogFilters); // Mercurygram: folders with a negative id count against no limit
+        if (!getUserConfig().isPremium() && remoteCount - 1 > dialogFiltersLimitDefault) {
+            int n = remoteCount - 1 - dialogFiltersLimitDefault;
+            ArrayList<DialogFilter> filtersSortedById = MgFolders.remote(dialogFilters);
             Collections.reverse(filtersSortedById);
             for (int i = 0; i < filtersSortedById.size(); i++) {
                 if (i < n) {
@@ -1064,12 +1069,28 @@ public class MessagesController extends BaseController implements NotificationCe
     public void markAllTopicsAsRead(long did) {
         getMessagesStorage().loadTopics(did, topics -> {
             AndroidUtilities.runOnUIThread(() -> {
+                // Mercurygram: only unread topics, as Telegram Desktop does. Every topic of
+                // every forum sent a readDiscussion, and every forum then paid a full badge
+                // recount, which takes seconds on an account in hundreds of chats.
+                boolean marked = false;
+                boolean mentions = false;
                 if (topics != null) {
                     for (int i = 0; i < topics.size(); i++) {
                         TLRPC.TL_forumTopic topic = topics.get(i);
+                        if (topic.unread_count == 0 && topic.unread_mentions_count == 0) {
+                            continue;
+                        }
+                        marked = true;
+                        mentions |= topic.unread_mentions_count > 0;
                         getMessagesController().markDialogAsRead(did, topic.top_message, 0, topic.topMessage != null ? topic.topMessage.date : 0, false, isMonoForum(did) ? DialogObject.getPeerDialogId(topic.from_id) : topic.id, 0, true, 0);
                         getMessagesStorage().updateRepliesMaxReadId(-did, isMonoForum(did) ? DialogObject.getPeerDialogId(topic.from_id) : topic.id, topic.top_message, 0, true);
                     }
+                }
+                if (mentions) {
+                    markMentionsAsRead(did, 0);
+                }
+                if (!marked) {
+                    return;
                 }
                 getMessagesStorage().getStorageQueue().postRunnable(() -> {
                     getMessagesStorage().resetAllUnreadCounters(false);
@@ -1637,6 +1658,9 @@ public class MessagesController extends BaseController implements NotificationCe
         keepAliveService = mainPreferences.getBoolean("keepAliveService", true);
         backgroundConnection = mainPreferences.getBoolean("backgroundConnection", true);
         promoDialogId = mainPreferences.getLong("proxy_dialog", 0);
+        if (SharedConfig.removeAdsAndProxySponsor) {
+            promoDialogId = 0;
+        }
         nextPromoInfoCheckTime = mainPreferences.getInt("nextPromoInfoCheckTime", 0);
         promoDialogType = mainPreferences.getInt("promo_dialog_type", 0);
         promoPsaMessage = mainPreferences.getString("promo_psa_message", null);
@@ -7578,6 +7602,8 @@ public class MessagesController extends BaseController implements NotificationCe
                     }
                 }
             }
+            // array is null here, the loop above was the only lookup available
+            return null;
         }
         return array.get(uid);
     }
@@ -7595,6 +7621,8 @@ public class MessagesController extends BaseController implements NotificationCe
                     }
                 }
             }
+            // array is null here, the loop above was the only lookup available
+            return false;
         }
         final TLRPC.ChannelParticipant participant = array.get(uid);
         return participant instanceof TLRPC.TL_channelParticipantAdmin || participant instanceof TLRPC.TL_channelParticipantCreator;
@@ -7615,6 +7643,8 @@ public class MessagesController extends BaseController implements NotificationCe
                     }
                 }
             }
+            // array is null here, the loop above was the only lookup available
+            return false;
         }
         final TLRPC.ChannelParticipant participant = array.get(uid);
         return participant instanceof TLRPC.TL_channelParticipantCreator;
@@ -7625,6 +7655,11 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void loadChannelAdmins(long chatId, boolean cache) {
+        // server rejects channelParticipantsAdmins with COMMUNITY_FILTER_INVALID for non-admins of a community
+        final TLRPC.Chat adminsChat = getChat(chatId);
+        if (ChatObject.isCommunity(adminsChat) && !ChatObject.hasAdminRights(adminsChat)) {
+            return;
+        }
         int loadTime = loadingChannelAdmins.get(chatId);
         if ((SystemClock.elapsedRealtime() / 1000) - loadTime < 60) {
             return;
@@ -8278,7 +8313,15 @@ public class MessagesController extends BaseController implements NotificationCe
 
     public void didAddedNewTask(int minDate, long dialogId, SparseArray<ArrayList<Integer>> mids) {
         Utilities.stageQueue.postRunnable(() -> {
-            if (currentDeletingTaskMids == null && currentDeletingTaskMediaMids == null && !gettingNewDeleteTask || currentDeletingTaskTime != 0 && minDate < currentDeletingTaskTime) {
+            // Mercurygram: the flag also covers the "earlier task arrived" branch. A
+            // lookup already in flight either runs after the insert and sees the new
+            // row, or reports back before this runnable runs and clears the flag again.
+            // Without it every message stored with a ttl while a lookup is pending
+            // started one more independent delete loop, each re-processing the same
+            // batch (hundreds of loops after half an hour on an auto-delete account).
+            final boolean idle = currentDeletingTaskMids == null && currentDeletingTaskMediaMids == null;
+            final boolean earlier = currentDeletingTaskTime != 0 && minDate < currentDeletingTaskTime;
+            if (!gettingNewDeleteTask && (idle || earlier)) {
                 getNewDeleteTask(null, null);
             }
         });
@@ -8288,8 +8331,11 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void getNewDeleteTask(LongSparseArray<ArrayList<Integer>> oldTask, LongSparseArray<ArrayList<Integer>> oldTaskMedia) {
+        // Mercurygram: every caller is already on the stage queue, so set the flag
+        // here rather than inside the runnable, closing the window in which
+        // didAddedNewTask saw no task and no pending lookup and spawned a second loop.
+        gettingNewDeleteTask = true;
         Utilities.stageQueue.postRunnable(() -> {
-            gettingNewDeleteTask = true;
             getMessagesStorage().getNewTask(oldTask, oldTaskMedia);
         });
     }
@@ -8482,6 +8528,10 @@ public class MessagesController extends BaseController implements NotificationCe
                             putUsers(res.users, false);
                             onLoaded(offset, count, res);
                         });
+                    } else {
+                        // Mercurygram: clear paging state so a transient error does not
+                        // permanently wedge `loading` and block all further pages.
+                        AndroidUtilities.runOnUIThread(this::resetLoadState);
                     }
                 });
             } else {
@@ -8510,13 +8560,23 @@ public class MessagesController extends BaseController implements NotificationCe
                             }
                             onLoaded(offset, count, res);
                         });
+                    } else {
+                        // Mercurygram: clear paging state so a transient error does not
+                        // permanently wedge `loading` and block all further pages.
+                        AndroidUtilities.runOnUIThread(this::resetLoadState);
                     }
                 });
             }
         }
 
+        // Mercurygram: reset paging state so a failed or superseded load can be retried.
+        private void resetLoadState() {
+            loading = false;
+            lastLoadOffset = -1;
+            lastLoadCount = -1;
+        }
+
         private void onLoaded(int offset, int count, TLRPC.photos_Photos res) {
-            boolean wasLoaded = loaded;
             loading = false;
             loaded = true;
             fromCache = false;
@@ -8548,8 +8608,23 @@ public class MessagesController extends BaseController implements NotificationCe
             saveCache();
             getNotificationCenter().postNotificationName(NotificationCenter.dialogPhotosUpdate, this);
 
-            if (!wasLoaded && offset == 0 && count < photos.size() && photos.size() - count > STEP) {
-                load(photos.size() - STEP, STEP);
+            // Mercurygram: page through the remaining photos in the background so
+            // galleries with more than STEP photos fill without depending on the user
+            // swiping into each unloaded slot (upstream only prefetched head + tail,
+            // leaving 81..160-photo galleries stuck after the first STEP).
+            int firstNull = -1;
+            for (int i = 0; i < photos.size(); ++i) {
+                if (photos.get(i) == null) {
+                    firstNull = i;
+                    break;
+                }
+            }
+            if (firstNull >= 0) {
+                int run;
+                for (run = 0; run < STEP && firstNull + run < photos.size() && photos.get(firstNull + run) == null; ++run);
+                if (run > 0) {
+                    load(firstNull, run);
+                }
             }
         }
 
@@ -10890,6 +10965,9 @@ public class MessagesController extends BaseController implements NotificationCe
     private long lastCheckPromoInfoTime;
 
     private void checkPromoInfoInternal(boolean reset) {
+        if (SharedConfig.removeAdsAndProxySponsor) {
+            return;
+        }
         if (reset && checkingPromoInfo) {
             checkingPromoInfo = false;
         }
@@ -11416,6 +11494,9 @@ public class MessagesController extends BaseController implements NotificationCe
         if (action < 0 || action >= sendingTypings.length || dialogId == 0) {
             return false;
         }
+        if (it.belloworld.mercurygram.PlusEmojiInteractions.blockTyping(currentAccount, action)) { // plus f15
+            return false;
+        }
         final long selfId = UserConfig.getInstance(UserConfig.selectedAccount).getClientUserId();
         if (dialogId == selfId) {
             return false;
@@ -11757,7 +11838,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             if (!res.dialogs.isEmpty()) {
                                 TLRPC.Dialog dialog = res.dialogs.get(0);
 
-                                if (dialog.top_message != 0) {
+                                if (dialog.top_message != 0 && (chat == null || !ChatObject.isNotInChat(chat))) {
                                     TLRPC.TL_messages_dialogs dialogs = new TLRPC.TL_messages_dialogs();
                                     dialogs.chats = res.chats;
                                     dialogs.users = res.users;
@@ -12960,6 +13041,7 @@ public class MessagesController extends BaseController implements NotificationCe
             for (int a = 0; a < resetDialogsAll.dialogs.size(); a++) {
                 TLRPC.Dialog d = resetDialogsAll.dialogs.get(a);
                 DialogObject.initDialog(d);
+                it.belloworld.mercurygram.PlusReadLedger.clamp(currentAccount, d); // hanako
                 if (d.id == 0) {
                     continue;
                 }
@@ -13493,6 +13575,9 @@ public class MessagesController extends BaseController implements NotificationCe
             for (int a = 0; a < dialogsRes.dialogs.size(); a++) {
                 TLRPC.Dialog d = dialogsRes.dialogs.get(a);
                 DialogObject.initDialog(d);
+                if (loadType != DIALOGS_LOAD_TYPE_CACHE) {
+                    it.belloworld.mercurygram.PlusReadLedger.clamp(currentAccount, d); // hanako
+                }
                 if (d.id == 0) {
                     continue;
                 }
@@ -14065,6 +14150,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                     FileLog.d("checkLastDialogMessage for " + dialog.id + " current dialog top message " + currentDialog.top_message);
                                 }
                                 if (currentDialog.top_message == 0) {
+                                    it.belloworld.mercurygram.PlusDeletedDialogs.onServerRemoved(currentAccount, dialog.id, it.belloworld.mercurygram.PlusDeletedDialogs.SITE_HISTORY_GONE); // plus f07
                                     deleteDialog(dialog.id, 3);
                                 }
                             }
@@ -14710,6 +14796,7 @@ public class MessagesController extends BaseController implements NotificationCe
 
         if (threadId != 0) {
             createReadTask = maxPositiveId != Integer.MAX_VALUE;
+            it.belloworld.mercurygram.PlusReadLedger.record(currentAccount, dialogId, threadId, maxPositiveId); // hanako
         } else {
             boolean countMessages = getNotificationsController().showBadgeMessages;
             if (!DialogObject.isEncryptedDialog(dialogId)) {
@@ -14723,6 +14810,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 dialogs_read_inbox_max.put(dialogId, Math.max(value, maxPositiveId));
 
                 getMessagesStorage().processPendingRead(dialogId, maxPositiveId, maxNegativeId, scheduledCount);
+                it.belloworld.mercurygram.PlusReadLedger.record(currentAccount, dialogId, 0, maxPositiveId); // hanako
                 getMessagesStorage().getStorageQueue().postRunnable(() -> AndroidUtilities.runOnUIThread(() -> {
                     TLRPC.Dialog dialog = dialogs_dict.get(dialogId);
                     if (dialog != null) {
@@ -16230,6 +16318,7 @@ public class MessagesController extends BaseController implements NotificationCe
         if (SharedConfig.pushAuthKey == null) {
             SharedConfig.pushAuthKey = new byte[256];
             Utilities.random.nextBytes(SharedConfig.pushAuthKey);
+            SharedConfig.pushAuthKeyId = null; // Mercurygram: cached from the old key otherwise
             SharedConfig.saveConfig();
         }
         TL_account.registerDevice req = new TL_account.registerDevice();
@@ -16381,9 +16470,8 @@ public class MessagesController extends BaseController implements NotificationCe
             } else if (updateState == 1) {
                 long updatesStartWaitTime = updatesStartWaitTimeChannels.get(channelId);
                 if (updatesStartWaitTime != 0 && (anyProceed || Math.abs(System.currentTimeMillis() - updatesStartWaitTime) <= 1500)) {
-                    if (BuildVars.LOGS_ENABLED) {
-                        FileLog.d("HOLE IN CHANNEL " + channelId + " UPDATES QUEUE - will wait more time");
-                    }
+                    // Mercurygram: no "will wait more time" log line here; with server-side
+                    // auto-delete it was a quarter of the whole log.
                     if (anyProceed) {
                         updatesStartWaitTimeChannels.put(channelId, System.currentTimeMillis());
                     }
@@ -16845,6 +16933,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                 message.dialog_id = -channelId;
                                 message.unread = !(message.action instanceof TLRPC.TL_messageActionChannelCreate || channelFinal != null && channelFinal.left || (message.out ? outboxValue : inboxValue) >= message.id);
                             }
+                            it.belloworld.mercurygram.PlusReadLedger.clamp(currentAccount, ((TLRPC.TL_updates_channelDifferenceTooLong) res).dialog); // hanako
                             getMessagesStorage().overwriteChannel(channelId, (TLRPC.TL_updates_channelDifferenceTooLong) res, newDialogType, () -> AndroidUtilities.runOnUIThread(() -> {
                                 NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.onReceivedChannelDifference, channelId);
                             }));
@@ -17256,6 +17345,8 @@ public class MessagesController extends BaseController implements NotificationCe
             int size = 0;
             ArrayList<Long> dids = new ArrayList<>();
             ArrayList<Integer> pinned = new ArrayList<>();
+            // MG: All chats keeps the pins past the server limit on this device only, so the request carries just the ones the server takes - a longer list is refused whole and nothing would be synced
+            final int maxOrder = folderId == 0 ? MgPins.serverMaxPinned(currentAccount) : Integer.MAX_VALUE;
             for (int a = 0, N = dialogs.size(); a < N; a++) {
                 TLRPC.Dialog dialog = dialogs.get(a);
                 if (dialog instanceof TLRPC.TL_dialogFolder) {
@@ -17269,6 +17360,9 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
                 dids.add(dialog.id);
                 pinned.add(dialog.pinnedNum);
+                if (req.order.size() >= maxOrder) {
+                    continue;
+                }
                 if (!DialogObject.isEncryptedDialog(dialog.id)) {
                     TLRPC.InputPeer inputPeer = getInputPeer(dialog.id);
                     TLRPC.Chat chat = getMessagesController().getChat(-dialog.id);
@@ -17339,6 +17433,7 @@ public class MessagesController extends BaseController implements NotificationCe
         } else {
             dialog.pinnedNum = 0;
         }
+        MgPins.set(currentAccount, dialog, pin); // MG: remember the All chats order, the server only takes its first few
         sortDialogs(null);
         if (!pin && !dialogs.isEmpty() && dialogs.get(dialogs.size() - 1) == dialog && !dialogsEndReached.get(folderId)) {
             dialogs.remove(dialogs.size() - 1);
@@ -18878,6 +18973,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 } else {
                     markAsReadMessagesOutbox.put(update.peer.user_id, update.max_id);
                     dialogId = update.peer.user_id;
+                    it.belloworld.mercurygram.PlusActivityLog.onReadOutbox(currentAccount, update.peer.user_id, update.max_id, date, fromGetDifference); // plus f05
                     TLRPC.User user = getUser(update.peer.user_id);
                     if (user != null && user.status != null && user.status.expires <= 0 && Math.abs(getConnectionsManager().getCurrentTime() - date) < 30) {
                         onlinePrivacy.put(update.peer.user_id, date);
@@ -19385,7 +19481,9 @@ public class MessagesController extends BaseController implements NotificationCe
                     stillUnreadMessagesCount = new LongSparseIntArray();
                 }
                 markAsReadMessagesInbox.put(dialogId, update.max_id);
-                stillUnreadMessagesCount.put(dialogId, update.still_unread_count);
+                if (it.belloworld.mercurygram.PlusReadLedger.get(currentAccount, dialogId, 0) <= update.max_id) { // hanako: a stale server count must not beat a local read
+                    stillUnreadMessagesCount.put(dialogId, update.still_unread_count);
+                }
                 dialogs_read_inbox_max.put(dialogId, Math.max(value, update.max_id));
                 FileLog.d("TL_updateReadChannelInbox " + dialogId + "  new unread = " + update.still_unread_count + " max id = " + update.max_id + " from get diff " + fromGetDifference);
             } else if (
@@ -19910,6 +20008,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 for (int a = 0, size2 = messageObjects.size(); a < size2; a++) {
                     messagesRes.messages.add(messageObjects.get(a).messageOwner);
                 }
+                it.belloworld.mercurygram.MgMessageHistory.getInstance().archiveEditsBefore(currentAccount, editingMessages.keyAt(b), messagesRes.messages);
                 getMessagesStorage().putMessages(messagesRes, editingMessages.keyAt(b), -2, 0, false, 0, 0);
             }
             LongSparseArray<ArrayList<MessageObject>> editingMessagesFinal = editingMessages;
@@ -20004,6 +20103,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         } else if (update.status instanceof TLRPC.TL_userStatusLastMonth) {
                             update.status.expires = -102;
                         }
+                        it.belloworld.mercurygram.PlusActivityLog.onUserStatus(currentAccount, update.user_id, update.status); // plus f05
                         if (currentUser != null) {
                             currentUser.id = update.user_id;
                             currentUser.status = update.status;
@@ -20014,6 +20114,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         dbUsersStatus.add(toDbUser);
                         if (update.user_id == getUserConfig().getClientUserId()) {
                             getNotificationsController().setLastOnlineFromOtherDevice(update.status.expires);
+                            it.belloworld.mercurygram.PlusGhost.onSelfStatus(currentAccount, update.status); // plus: ghost "force offline"
                         }
                     } else if (baseUpdate instanceof TL_update.TL_updateMonoForumNoPaidException) {
                         TL_update.TL_updateMonoForumNoPaidException update = (TL_update.TL_updateMonoForumNoPaidException) baseUpdate;
@@ -20332,6 +20433,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             if (dialog == null && chat instanceof TLRPC.TL_channel && !chat.left) {
                                 Utilities.stageQueue.postRunnable(() -> getChannelDifference(update.channel_id, 1, 0, null));
                             } else if (ChatObject.isNotInChat(chat) && dialog != null && (promoDialog == null || promoDialog.id != dialog.id)) {
+                                it.belloworld.mercurygram.PlusDeletedDialogs.onServerRemoved(currentAccount, dialog.id, it.belloworld.mercurygram.PlusDeletedDialogs.SITE_CHANNEL_UPDATE); // plus f07
                                 deleteDialog(dialog.id, 0);
                             }
                             if (chat instanceof TLRPC.TL_channelForbidden || chat.kicked) {
@@ -20371,6 +20473,7 @@ public class MessagesController extends BaseController implements NotificationCe
                             }
                             TLRPC.Dialog dialog = dialogs_dict.get(-chat.id);
                             if (dialog != null) {
+                                it.belloworld.mercurygram.PlusDeletedDialogs.onServerRemoved(currentAccount, dialog.id, it.belloworld.mercurygram.PlusDeletedDialogs.SITE_CHAT_UPDATE); // plus f07
                                 deleteDialog(dialog.id, 0);
                             }
                         }
@@ -21099,6 +21202,11 @@ public class MessagesController extends BaseController implements NotificationCe
         LongSparseArray<ArrayList<Integer>> markContentAsReadMessagesFinal = markContentAsReadMessages;
         SparseIntArray markAsReadEncryptedFinal = markAsReadEncrypted;
         LongSparseArray<ArrayList<Integer>> deletedMessagesFinal = deletedMessages;
+        if (deletedMessages != null) {
+            for (int a = 0, size = deletedMessages.size(); a < size; a++) {
+                it.belloworld.mercurygram.MgMessageHistory.getInstance().archiveDeleted(currentAccount, deletedMessages.keyAt(a), deletedMessages.valueAt(a));
+            }
+        }
         LongSparseArray<ArrayList<Integer>> deletedQuickRepliesMessagesFinal = deletedQuickReplyMessages;
         LongSparseArray<ArrayList<Integer>> scheduledDeletedMessagesFinal = scheduledDeletedMessages;
         LongSparseArray<ArrayList<Integer>> scheduledDeletedMessagesSentFinal = scheduledDeletedMessagesSent;
@@ -21306,11 +21414,12 @@ public class MessagesController extends BaseController implements NotificationCe
             }
         }
         if (deletedMessages != null) {
+            final boolean keepFiles = getUserConfig().mg.savedMessagesHistory;
             for (int a = 0, size = deletedMessages.size(); a < size; a++) {
                 long key = deletedMessages.keyAt(a);
                 ArrayList<Integer> arrayList = deletedMessages.valueAt(a);
                 getMessagesStorage().getStorageQueue().postRunnable(() -> {
-                    ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, arrayList, false, true, 0, 0);
+                    ArrayList<Long> dialogIds = getMessagesStorage().markMessagesAsDeleted(key, arrayList, false, !keepFiles, 0, 0);
                     getMessagesStorage().updateDialogsWithDeletedMessages(key, -key, arrayList, dialogIds);
                 });
             }
@@ -21708,6 +21817,9 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public SponsoredMessagesInfo getSponsoredMessages(long dialogId) {
+        if (SharedConfig.removeAdsAndProxySponsor) {
+            return null;
+        }
         SponsoredMessagesInfo info = sponsoredMessages.get(dialogId);
         if (info != null && (info.loading || Math.abs(SystemClock.elapsedRealtime() - info.loadTime) <= 5 * 60 * 1000)) {
             return info;
@@ -22484,6 +22596,7 @@ public class MessagesController extends BaseController implements NotificationCe
             }
         }
 
+        MgPins.apply(currentAccount, allDialogs); // MG: pins past the server's limit live on this device only, put them back before sorting
         try {
             Collections.sort(allDialogs, dialogComparator);
         } catch (Exception e) {}
@@ -23183,7 +23296,12 @@ public class MessagesController extends BaseController implements NotificationCe
             loadMessagesInternal(dialogId, 0, true, count, finalMessageId, 0, true, 0, classGuid, 2, 0, 0, 0, -1, 0, 0, 0, false, 0, true, false, false, null, 0L);
         }
 
-        return () -> getConnectionsManager().cancelRequestsForGuid(classGuid);
+        return () -> {
+            // cancelling the request alone left the delegate registered forever
+            getNotificationCenter().removeObserver(delegate, NotificationCenter.messagesDidLoadWithoutProcess);
+            getNotificationCenter().removeObserver(delegate, NotificationCenter.loadingMessagesFailed);
+            getConnectionsManager().cancelRequestsForGuid(classGuid);
+        };
     }
 
     public int getChatPendingRequestsOnClosed(long chatId) {
@@ -24422,6 +24540,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean isSponsoredDisabled() {
+        if (SharedConfig.removeAdsAndProxySponsor) return true;
         TLRPC.UserFull userFull = getUserFull(getUserConfig().getClientUserId());
         if (userFull == null) return false;
         return !userFull.sponsored_enabled;

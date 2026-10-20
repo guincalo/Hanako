@@ -231,7 +231,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             MODE_CHANGE_PHONE_NUMBER = 2,
             MODE_CHANGE_LOGIN_EMAIL = 3;
 
-    private final static int VIEW_PHONE_INPUT = 0,
+    public final static int VIEW_PHONE_INPUT = 0,
             VIEW_CODE_MESSAGE = 1,
             VIEW_CODE_SMS = 2,
             VIEW_CODE_FLASH_CALL = 3,
@@ -1637,7 +1637,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         onAuthSuccess(res);
     }
 
-    private void onAuthSuccess(TLRPC.TL_auth_authorization res) {
+    public void onAuthSuccess(TLRPC.TL_auth_authorization res) {
         onAuthSuccess(res, false);
     }
 
@@ -2500,6 +2500,9 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     loadCountries();
                 });
             }
+
+            if (activityMode == MODE_LOGIN) bottomMargin -= it.belloworld.mercurygram.HanakoBackup.addLoginButton(this, LoginActivity.this); // hanako: restore a session backup
+            if (activityMode == MODE_LOGIN) bottomMargin -= it.belloworld.mercurygram.HanakoApiConfig.addLoginButton(this, LoginActivity.this); // hanako: custom api_id
 
             if (bottomMargin > 0 && !AndroidUtilities.isSmallScreen()) {
                 Space bottomSpacer = new Space(context);
@@ -10031,7 +10034,16 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
             button.setEnabled(true);
             button.setOnClickListener(null);
-            if (BuildVars.useInvoiceBilling()) {
+            if (BuildVars.IS_BILLING_UNAVAILABLE) {
+                // Paid login buys premium_days through a Telegram invoice, so it is a purchase
+                // entry point like any other. Same disabled button the no-price case below
+                // shows, instead of the "official app needed" sheet: nothing is on the fragment
+                // stack before login.
+                button.setVisibility(View.VISIBLE);
+                button.setLoading(false);
+                button.setEnabled(false);
+                button.setText(getString(R.string.Unavailable), false);
+            } else if (BuildVars.useInvoiceBilling()) {
                 if (!TextUtils.isEmpty(currency) && amount > 0) {
                     button.setVisibility(View.VISIBLE);
                     button.setLoading(false);

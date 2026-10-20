@@ -92,6 +92,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+
 public class PasscodeActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
     public final static int TYPE_MANAGE_CODE_SETTINGS = 0,
             TYPE_SETUP_CODE = 1,
@@ -297,6 +298,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
                                     SharedConfig.passcodeHash = "";
                                     SharedConfig.appLocked = false;
                                     SharedConfig.saveConfig();
+                                    HiddenAccountHelper.onAppPasscodeChanged();
                                     getMediaDataController().buildShortcuts();
                                     int count = listView.getChildCount();
                                     for (int a = 0; a < count; a++) {
@@ -1006,6 +1008,7 @@ public class PasscodeActivity extends BaseFragment implements NotificationCenter
             SharedConfig.allowScreenCapture = true;
             SharedConfig.passcodeType = currentPasswordType;
             SharedConfig.saveConfig();
+            HiddenAccountHelper.onAppPasscodeChanged();
 
             passwordEditText.clearFocus();
             AndroidUtilities.hideKeyboard(passwordEditText);

@@ -53,6 +53,7 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Currency;
@@ -61,7 +62,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TimeZone;
+
+import it.belloworld.mercurygram.HanakoSmugLanguage; // hanako: Smug language
 
 public class LocaleController {
 
@@ -433,6 +437,12 @@ public class LocaleController {
     private Locale systemDefaultLocale;
     private PluralRules currentPluralRules;
     private LocaleInfo currentLocaleInfo;
+    // [MG] Keys we re-branded in local strings.xml. The Telegram cloud language
+    // pack still serves the upstream values for these (e.g. "Telegram per Android"
+    // in it.lang), so cloud lookup must be bypassed or our local strings.xml
+    // override never wins on non-English locales.
+    private static final Set<String> MG_LOCAL_ONLY_KEYS = new HashSet<>(Arrays.asList(
+            "AppName", "TelegramVersion"));
     private String languageOverride;
     private boolean changingConfiguration = false;
     private boolean reloadLastFile;
@@ -467,6 +477,7 @@ public class LocaleController {
         public int baseVersion;
         public boolean builtIn;
         public int serverIndex;
+        public String serverLangCode; // hanako: Smug language (lang code sent to the server instead of shortName)
 
         public String getSaveString() {
             String langCode = baseLangCode == null ? "" : baseLangCode;
@@ -555,6 +566,9 @@ public class LocaleController {
         }
 
         public String getLangCode() {
+            if (serverLangCode != null) { // hanako: Smug language
+                return serverLangCode;
+            }
             return shortName.replace("_", "-");
         }
 
@@ -702,6 +716,11 @@ public class LocaleController {
         localeInfo.builtIn = true;
         languages.add(localeInfo);
         languagesDict.put(localeInfo.shortName, localeInfo);
+
+        // hanako: Smug language (bundled local language file, English fallback)
+        localeInfo = HanakoSmugLanguage.create();
+        languages.add(localeInfo);
+        languagesDict.put(localeInfo.getKey(), localeInfo);
 
         loadOtherLanguages();
         if (remoteLanguages.isEmpty()) {
@@ -1158,7 +1177,7 @@ public class LocaleController {
     }
 
     public boolean deleteLanguage(LocaleInfo localeInfo, int currentAccount) {
-        if (localeInfo.pathToFile == null || localeInfo.isRemote() && localeInfo.serverIndex != Integer.MAX_VALUE) {
+        if (localeInfo.pathToFile == null || localeInfo.isRemote() && localeInfo.serverIndex != Integer.MAX_VALUE || HanakoSmugLanguage.isSmug(localeInfo)) { // hanako: Smug language is built in
             return false;
         }
         if (currentLocaleInfo == localeInfo) {
@@ -1472,7 +1491,7 @@ public class LocaleController {
     }
 
     public static String getServerString(String key) {
-        String value = getInstance().localizationExternal.getByResName(key);
+        String value = MG_LOCAL_ONLY_KEYS.contains(key) ? null : getInstance().localizationExternal.getByResName(key);
         if (value == null) {
             value = getInstance().getLocalizedString(key);
         }
@@ -1544,6 +1563,10 @@ public class LocaleController {
         return formatPluralStringComma(key, plural, ',');
     }
 
+    public static String formatPluralStringComma(String key, int plural, Object... args) {
+        return formatPluralStringComma(key, plural, ',', args);
+    }
+
     public static String formatPluralStringSpaced(String key, int plural) {
         return formatPluralStringComma(key, plural, ' ');
     }
@@ -1552,24 +1575,9 @@ public class LocaleController {
         return formatPluralStringComma(key, plural, ' ', args);
     }
 
-    public static String formatPluralStringComma(String key, int plural, Object... args) {
-        return formatPluralStringComma(key, plural, ',', args);
-    }
-
 
     public static String formatPluralStringComma(String key, int plural, char symbol) {
         return formatPluralStringComma(key, plural, symbol, new Object[] {});
-    }
-
-    public static CharSequence bold(CharSequence text) {
-        if (text instanceof Spannable) {
-            ((Spannable) text).setSpan(new TypefaceSpan(AndroidUtilities.bold()), 0, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            return text;
-        } else {
-            SpannableStringBuilder ssb = new SpannableStringBuilder(text);
-            ssb.setSpan(new TypefaceSpan(AndroidUtilities.bold()), 0, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            return ssb;
-        }
     }
 
     public static String formatPluralStringComma(String key, int plural, char symbol, Object... args) {
@@ -1611,6 +1619,17 @@ public class LocaleController {
         } catch (Exception e) {
             FileLog.e(e);
             return "LOC_ERR: " + key;
+        }
+    }
+
+    public static CharSequence bold(CharSequence text) {
+        if (text instanceof Spannable) {
+            ((Spannable) text).setSpan(new TypefaceSpan(AndroidUtilities.bold()), 0, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            return text;
+        } else {
+            SpannableStringBuilder ssb = new SpannableStringBuilder(text);
+            ssb.setSpan(new TypefaceSpan(AndroidUtilities.bold()), 0, text.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            return ssb;
         }
     }
 
@@ -3320,6 +3339,9 @@ public class LocaleController {
         if (src == null) {
             return null;
         }
+        if (!onlyEnglish) { // Mercurygram: fold decorated Unicode "fonts" to ASCII before transliterating; onlyEnglish is the case-preserving Passport path, not search
+            src = it.belloworld.mercurygram.MgUnicodeFold.fold(src);
+        }
 
         if (ruTranslitChars == null) {
             ruTranslitChars = new HashMap<>(33);
@@ -4471,7 +4493,7 @@ public class LocaleController {
         final Context context = ApplicationLoader.applicationContext;
         String value;
 
-        if (BuildVars.USE_CLOUD_STRINGS) {
+        if (BuildVars.USE_CLOUD_STRINGS && !MG_LOCAL_ONLY_KEYS.contains(key)) {
             value = localizationExternal.getByResNameOrResId(context, key, stringRes);
             if (value != null) {
                 return value;

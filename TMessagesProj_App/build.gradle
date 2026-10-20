@@ -51,7 +51,7 @@ android {
     compileSdkVersion 36
     buildToolsVersion '36.0.0'
 
-    defaultConfig.applicationId = "org.forkgram.classic"
+    defaultConfig.applicationId = "moe.hanako.chan"
 
 
     lintOptions {
@@ -79,10 +79,10 @@ android {
     }
 
     def fdroid = Utils['isFdroid']()
-    def appSuffix = fdroid ? "" : ".beta"
+    def appSuffix = "" // hanako: same id as the existing Hanako installs
     def flavorsConfig = fdroid ? "release" : "debug"
     if (fdroid) {
-        defaultConfig.applicationId = "org.forkgram.classic"
+        defaultConfig.applicationId = "moe.hanako.chan"
     }
 
 
@@ -258,7 +258,7 @@ android {
             ndk {
                 abiFilters "arm64-v8a"
             }
-            applicationId "org.forkgram.classic.test"
+            applicationId "moe.hanako.chan.test"
             sourceSets.debug {
                 manifest.srcFile '../TMessagesProj/config/debug/AndroidManifest_SDK23.xml'
             }
@@ -305,9 +305,20 @@ android {
         externalNativeBuild {
             cmake {
                 version '3.22.1'
-                arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-21' // , '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+                arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-24' // , '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
                 targets 'tmessages.49'
             }
+        }
+    }
+
+    bundle {
+        language {
+            // Ship every locale in the base install. Telegram's own strings come
+            // from the server langpack, but the Mercurygram ones live in
+            // res/values-*, so a per-language split leaves them English for
+            // anyone whose in-app language differs from the device locale Play
+            // installed a split for.
+            enableSplit = false
         }
     }
 

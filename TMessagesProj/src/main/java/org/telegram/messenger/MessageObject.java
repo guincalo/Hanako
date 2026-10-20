@@ -244,6 +244,8 @@ public class MessageObject {
     public VideoEditedInfo videoEditedInfo;
     public ArrayList<Integer> pollMediaMapping;
     public boolean shouldRemoveVideoEditedInfo;
+    public boolean mgDeletedGhost; // Mercurygram: server-deleted message kept inline as a ghost
+    public long mgDeletedWhenMs; // Mercurygram: local archive time this ghost was saved, for "deleted at" timestamps
     public boolean viewsReloaded;
     public boolean pollVisibleOnScreen;
     public long pollLastCheckTime;
@@ -1324,6 +1326,15 @@ public class MessageObject {
             positions.clear();
             positionsArray.clear();
             captionMessage = null;
+            // These are set-only below, or reset only past the count<2 early returns, so a group
+            // that lost a member keeps the previous run's answer. isDocuments is the damaging one:
+            // its branch writes an absolute ph=100 where photos write a 0..1 fraction, so a stale
+            // flag makes the cell reserve a hundred screens.
+            isDocuments = false;
+            hasSibling = false;
+            hasCaption = false;
+            captionAbove = false;
+            cachedWidthForCaption = -1;
 
             maxSizeWidth = 800;
             int firstSpanAdditionalSize = 200;
@@ -3680,6 +3691,11 @@ public class MessageObject {
 
     public boolean translated = false;
     public boolean summarized = false;
+    // Mercurygram: language of the text currently applied to this object.
+    // Without it the early return below keeps the previously applied text when
+    // only the target language changed, which leaves messages outside the
+    // visible window in the old language after a target-language switch.
+    private String translatedAppliedLanguage;
     public boolean updateTranslation(boolean force) {
         boolean replyUpdated = replyMessageObject != null && replyMessageObject != this && replyMessageObject.updateTranslation(force);
         TranslateController translateController = MessagesController.getInstance(currentAccount).getTranslateController();
@@ -3726,11 +3742,12 @@ public class MessageObject {
             (translatedText != null || messageOwner.translatedPoll != null || messageOwner.translatedRichMessage != null) &&
             TextUtils.equals(translateController.getDialogTranslateTo(getDialogId()), messageOwner.translatedToLanguage)
         ) {
-            if (translated && !summarized) {
+            if (translated && !summarized && TextUtils.equals(translatedAppliedLanguage, messageOwner.translatedToLanguage)) {
                 return replyUpdated || false;
             }
             translated = true;
             summarized = false;
+            translatedAppliedLanguage = messageOwner.translatedToLanguage;
             if (type == TYPE_ARTICLE) {
                 generateLayout(null);
             } else if (translatedText != null) {
@@ -3741,6 +3758,7 @@ public class MessageObject {
         } else if (messageOwner != null && (force || translated || summarized)) {
             translated = false;
             summarized = false;
+            translatedAppliedLanguage = null;
             if (type == TYPE_ARTICLE) {
                 generateLayout(null);
             } else {
@@ -11265,7 +11283,14 @@ public class MessageObject {
     }
 
     public boolean isExpiredLiveLocation(int date) {
-        return messageOwner.date + getMedia(messageOwner).period <= date;
+        return isExpiredLiveLocation(messageOwner, date);
+    }
+
+    // [MG] "until stopped" is period 0x7FFFFFFF, and the int sum overflows to a negative value, so
+    // the share read as already over. Widening covers that and any other large period, and replaces
+    // the hand-written 0x7FFFFFFF special cases the callers used to carry.
+    public static boolean isExpiredLiveLocation(TLRPC.Message message, int date) {
+        return (long) message.date + getMedia(message).period <= date;
     }
 
     public boolean isGame() {

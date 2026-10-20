@@ -57,8 +57,10 @@ public class UserObject {
         if (user == null || isDeleted(user)) {
             return LocaleController.getString(R.string.HiddenName);
         }
+        final String plusName = it.belloworld.mercurygram.PlusStreamer.userName(user); // plus f10
+        if (plusName != null) return plusName; // plus f10
         String name = AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(ContactsController.formatName(user.first_name, user.last_name)));
-        return name.length() != 0 || TextUtils.isEmpty(user.phone) ? name : PhoneFormat.getInstance().format("+" + user.phone);
+        return name.length() != 0 || TextUtils.isEmpty(user.phone) ? name : it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + user.phone)); // plus f10
     }
 
     public static String getPublicUsername(TLRPC.User user, boolean editable) {
@@ -109,6 +111,8 @@ public class UserObject {
         if (user == null || isDeleted(user)) {
             return "DELETED";
         }
+        final String plusName = it.belloworld.mercurygram.PlusStreamer.userName(user); // plus f10
+        if (plusName != null) return plusName; // plus f10
         String name = user.first_name;
         if (TextUtils.isEmpty(name)) {
             name = user.last_name;

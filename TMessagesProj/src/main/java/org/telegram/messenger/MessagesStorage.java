@@ -77,6 +77,8 @@ import java.util.function.Consumer;
 
 import me.vkryl.core.BitwiseUtils;
 
+import it.belloworld.mercurygram.folders.MgFolders;
+
 public class MessagesStorage extends BaseController {
 
     private DispatchQueue storageQueue;
@@ -107,6 +109,10 @@ public class MessagesStorage extends BaseController {
     private int archiveUnreadCount;
     private volatile int pendingMainUnreadCount;
     private volatile int pendingArchiveUnreadCount;
+    // Mercurygram: guards the delayed folder badge re-sync, storage queue only.
+    private boolean pendingUnreadCountersResync;
+    private long lastUnreadCountersResync;
+    private long lastUnreadCountersResyncCost;
     private boolean databaseCreated;
 
     private final CountDownLatch openSync = new CountDownLatch(1);
@@ -2803,7 +2809,10 @@ public class MessagesStorage extends BaseController {
                 /*if (BuildVars.DEBUG_VERSION) {
                     FileLog.d("unread chat " + did + " counters = " + unread + " and " + mentions);
                 }*/
-                dialogsByFolders.put(did, folderId);
+                // a dialog storage only knows from a message has folder_id -1 until the
+                // dialog itself is fetched; count it in the main list rather than index the
+                // counter arrays with -1, the way updateFiltersReadCounter already does
+                dialogsByFolders.put(did, folderId < 0 || folderId > 1 ? 0 : folderId);
                 if (DialogObject.isEncryptedDialog(did)) {
                     int encryptedChatId = DialogObject.getEncryptedChatId(did);
                     if (!encryptedToLoad.contains(encryptedChatId)) {
@@ -3278,6 +3287,7 @@ public class MessagesStorage extends BaseController {
                 SparseArray<MessagesController.DialogFilter> filtersToDelete = new SparseArray<>();
                 for (int a = 0, N = dialogFilters.size(); a < N; a++) {
                     MessagesController.DialogFilter filter = dialogFilters.get(a);
+                    if (MgFolders.keepOnTrim(filter, dialogFilters)) continue; // Mercurygram: folders with a negative id are not on the server, never trim them
                     filtersToDelete.put(filter.id, filter);
                 }
                 ArrayList<Integer> filtersOrder = new ArrayList<>();
@@ -3607,25 +3617,9 @@ public class MessagesStorage extends BaseController {
             saveDialogFilterInternal(filtersToSave.get(a), false, true);
             anythingChanged = true;
         }
-        boolean orderChanged = false;
-        for (int a = 0, N = dialogFilters.size(); a < N; a++) {
-            MessagesController.DialogFilter filter = dialogFilters.get(a);
-            int order = filtersOrder.indexOf(filter.id);
-            if (filter.order != order) {
-                filter.order = order;
-                anythingChanged = true;
-                orderChanged = true;
-            }
-        }
-        if (orderChanged) {
-            Collections.sort(dialogFilters, (o1, o2) -> {
-                if (o1.order > o2.order) {
-                    return 1;
-                } else if (o1.order < o2.order) {
-                    return -1;
-                }
-                return 0;
-            });
+        // Mercurygram: folders with a negative id keep their slot, server folders fill the rest in server order
+        if (MgFolders.mergeRemoteOrder(dialogFilters, filtersOrder)) {
+            anythingChanged = true;
             saveDialogFiltersOrderInternal();
         }
         int remote = anythingChanged ? 1 : 2;
@@ -4767,6 +4761,8 @@ public class MessagesStorage extends BaseController {
                         message.readAttachPath(data, getUserConfig().clientUserId);
                         data.reuse();
                         if (message.media != null) {
+                            // Mercurygram: keep a copy of self-destructing media before it is emptied.
+                            it.belloworld.mercurygram.MgMessageHistory.getInstance().archiveExpiringSync(currentAccount, dialogId, message);
                             if (!addFilesToDelete(message, filesToDelete, idsToDelete, namesToDelete, true)) {
                                 continue;
                             } else {
@@ -6086,6 +6082,15 @@ public class MessagesStorage extends BaseController {
                 }
                 long did = array.keyAt(a);
                 if (read) {
+                    // Mercurygram: subtract a dialog only when it still counts towards the
+                    // badges. A read event for an already read dialog arrives more than once
+                    // (resetForumBadgeIfNeed reports every forum with no unread topic on every
+                    // batch of deleted messages, and on every topic read), and subtracting it
+                    // again each time walks the folder badges past zero into the negative
+                    // value that marks a badge as needing a full recount.
+                    if ((b == 0 ? dialogsWithUnread : dialogsWithMentions).indexOfKey(did) < 0) {
+                        continue;
+                    }
                     if (b == 0) {
                         dialogsWithUnread.remove(did);
                         /*if (BuildVars.DEBUG_VERSION) {
@@ -9975,7 +9980,7 @@ public class MessagesStorage extends BaseController {
                 runnable.run();
             };
         } else {*/
-        int finalMessagesCount = scheduled ? res.messages.size() : messagesCount;
+        int finalMessagesCount = scheduled || processMessages ? res.messages.size() : messagesCount;
         return () -> getMessagesController().processLoadedMessages(res, finalMessagesCount, dialogId, mergeDialogId, countQueryFinal, maxIdOverrideFinal, offset_date, true, classGuid, minUnreadIdFinal, lastMessageIdFinal, countUnreadFinal, maxUnreadDateFinal, load_type, isEndFinal, mode, threadMessageId, loadIndex, queryFromServerFinal, mentionsUnreadFinal, processMessages, isTopic, loaderLogger);
         //}
     }
@@ -14697,7 +14702,9 @@ public class MessagesStorage extends BaseController {
                             TLRPC.Message message = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
                             message.readAttachPath(data, getUserConfig().clientUserId);
                             data.reuse();
-                            addFilesToDelete(message, filesToDelete, idsToDelete, namesToDelete, false);
+                            if (DialogObject.isEncryptedDialog(did) || deleteFiles) {
+                                addFilesToDelete(message, filesToDelete, idsToDelete, namesToDelete, false);
+                            }
                             if (message.action instanceof TLRPC.TL_messageActionTopicCreate) {
                                 if (topicsToDelete == null) {
                                     topicsToDelete = new ArrayList<>();
@@ -14769,14 +14776,19 @@ public class MessagesStorage extends BaseController {
                     state.step();
                     state.dispose();
                     state = null;
-                    database.commitTransaction();
                     data.reuse();
                 }
+                database.commitTransaction();
 
                 deleteFromDownloadQueue(idsToDelete, true);
                 AndroidUtilities.runOnUIThread(() -> getFileLoader().cancelLoadFiles(namesToDelete));
                 getFileLoader().deleteFiles(filesToDelete, 0);
 
+                // Mercurygram: a folder badge counts dialogs, so it can only move when one of
+                // these counters does. Deleting a message that was already read leaves every
+                // badge untouched, and that is most of the traffic on an account with
+                // server-side auto-delete, so the full recount below is not worth scheduling.
+                boolean unreadCountersChanged = false;
                 for (int a = 0; a < dialogsToUpdate.size(); a++) {
                     long did = dialogsToUpdate.keyAt(a);
                     Integer[] counts = dialogsToUpdate.valueAt(a);
@@ -14791,11 +14803,15 @@ public class MessagesStorage extends BaseController {
                     cursor.dispose();
                     cursor = null;
 
+                    int new_unread_count = Math.max(0, old_unread_count - counts[0]);
+                    int new_mentions_count = Math.max(0, old_mentions_count - counts[1]);
+                    unreadCountersChanged |= new_unread_count != old_unread_count || new_mentions_count != old_mentions_count;
+
                     dialogsIds.add(did);
                     state = database.executeFast("UPDATE dialogs SET unread_count = ?, unread_count_i = ? WHERE did = ?");
                     state.requery();
-                    state.bindInteger(1, Math.max(0, old_unread_count - counts[0]));
-                    state.bindInteger(2, Math.max(0, old_mentions_count - counts[1]));
+                    state.bindInteger(1, new_unread_count);
+                    state.bindInteger(2, new_mentions_count);
                     state.bindLong(3, did);
                     state.step();
                     state.dispose();
@@ -14823,6 +14839,7 @@ public class MessagesStorage extends BaseController {
                         int newUnreadCount = Math.max(0, old_unread_count - counts[0]);
                         int newUnreadMentionsCount = Math.max(0, old_mentions_count - counts[1]);
                         int newTotalCount = Math.max(0, old_total_count - counts[2]);
+                        unreadCountersChanged |= newUnreadCount != old_unread_count || newUnreadMentionsCount != old_mentions_count;
                         if (BuildVars.DEBUG_PRIVATE_VERSION && newUnreadMentionsCount > 0) {
                             FileLog.d("(markMessagesAsDeletedInternal) new unread mentions " + newUnreadMentionsCount + " for dialog_id=" + topicKey.dialogId + " topic_id=" + topicKey.topicId);
                         }
@@ -15073,8 +15090,28 @@ public class MessagesStorage extends BaseController {
                 }
                 getMediaDataController().clearBotKeyboard(null, messages);
 
-                if (dialogsToUpdate.size() != 0) {
-                    resetAllUnreadCounters(false);
+                // Mercurygram: resetAllUnreadCounters() on every batch (every dialog with
+                // unread or flags reloaded and deserialised) saturated the storage queue on
+                // accounts with server-side auto-delete; keep at least nine times its own
+                // measured cost idle between runs, so a recount can never take more than
+                // about a tenth of the queue, and never less than 2 s apart. The first batch
+                // after a quiet spell runs straight away, so a single deletion still updates
+                // the badges at once and only a burst is spread out. A throttle, not a
+                // debounce: a runnable cancelled and reposted on every batch would never get
+                // to run here.
+                if ((unreadCountersChanged || topicsToDelete != null) && !pendingUnreadCountersResync) {
+                    pendingUnreadCountersResync = true;
+                    final long window = Math.max(2000, lastUnreadCountersResyncCost * 9);
+                    final long delay = Math.max(0, window - (SystemClock.elapsedRealtime() - lastUnreadCountersResync));
+                    if (!storageQueue.postRunnable(() -> {
+                        pendingUnreadCountersResync = false;
+                        final long started = SystemClock.elapsedRealtime();
+                        resetAllUnreadCounters(false);
+                        lastUnreadCountersResync = SystemClock.elapsedRealtime();
+                        lastUnreadCountersResyncCost = lastUnreadCountersResync - started;
+                    }, delay)) {
+                        pendingUnreadCountersResync = false;
+                    }
                 }
                 updateWidgets(dialogsIds);
 
@@ -15112,8 +15149,23 @@ public class MessagesStorage extends BaseController {
         try {
             ArrayList<Long> dialogsToUpdate = new ArrayList<>();
             if (!messages.isEmpty()) {
+                // Mercurygram: a dialog only needs its row recomputed and reloaded when its last
+                // message is among the deleted ones; the branch for originalDialogId == 0 below
+                // already filters that way. Reloading unconditionally rebuilt and re-sorted the
+                // whole dialog list on the UI thread for every single deleted message, hundreds
+                // of times per second on a large account. A deleted sibling of the last
+                // message's album is not detected (the rows are already gone from messages_v2
+                // at this point), so the album preview can stay stale until the next message.
+                if (channelId != 0 || originalDialogId != 0) {
+                    long did = channelId != 0 ? -channelId : originalDialogId;
+                    cursor = database.queryFinalized(String.format(Locale.US, "SELECT did FROM dialogs WHERE did = %d AND last_mid IN(%s)", did, TextUtils.join(",", messages)));
+                    if (cursor.next()) {
+                        dialogsToUpdate.add(did);
+                    }
+                    cursor.dispose();
+                    cursor = null;
+                }
                 if (channelId != 0) {
-                    dialogsToUpdate.add(-channelId);
                     state = database.executeFast("UPDATE dialogs SET (last_mid, last_mid_group) = (SELECT mid, group_id FROM messages_v2 WHERE uid = ? AND date = (SELECT MAX(date) FROM messages_v2 WHERE uid = ?)) WHERE did = ?");
                 } else {
                     if (originalDialogId == 0) {
@@ -15124,8 +15176,6 @@ public class MessagesStorage extends BaseController {
                         }
                         cursor.dispose();
                         cursor = null;
-                    } else {
-                        dialogsToUpdate.add(originalDialogId);
                     }
                     state = database.executeFast("UPDATE dialogs SET (last_mid, last_mid_group) = (SELECT mid, group_id FROM messages_v2 WHERE uid = ? AND date = (SELECT MAX(date) FROM messages_v2 WHERE uid = ? AND date != 0)) WHERE did = ?");
                 }
@@ -15151,6 +15201,10 @@ public class MessagesStorage extends BaseController {
                         dialogsToUpdate.add(did);
                     }
                 }
+            }
+            if (dialogsToUpdate.isEmpty()) {
+                getMessagesController().getTopicsController().updateTopicsWithDeletedMessages(originalDialogId, messages);
+                return;
             }
             String ids = TextUtils.join(",", dialogsToUpdate);
 
@@ -16316,7 +16370,10 @@ public class MessagesStorage extends BaseController {
                                     if (oldMessage.out && !message.out) {
                                         message.out = oldMessage.out;
                                     }
-                                    if (!sameMedia) {
+                                    // Mercurygram: with saved history on, the replaced media file is kept;
+                                    // MgMessageHistory.archiveEditsBefore (queued before this put) copies it
+                                    // into the edit-history entry. It is left to the normal cache cleanup.
+                                    if (!sameMedia && !getUserConfig().mg.savedMessagesHistory) {
                                         addFilesToDelete(oldMessage, filesToDelete, idsToDelete, namesToDelete, false);
                                     }
                                     NativeByteBuffer customParams = cursor.byteBufferValue(6);

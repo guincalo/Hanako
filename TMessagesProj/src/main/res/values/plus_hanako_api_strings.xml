@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- hanako: App API ID setting (HanakoApiActivity / HanakoApiConfig) -->
+<resources>
+    <string name="HanakoApiTitle">App API ID</string>
+    <string name="HanakoApiHeader">Connect as</string>
+    <string name="HanakoApiPresetBuild">Default (build)</string>
+    <string name="HanakoApiPresetGoregram">Goregram</string>
+    <string name="HanakoApiPresetMercurygram">Mercurygram</string>
+    <string name="HanakoApiPresetOfficial">Telegram Android</string>
+    <string name="HanakoApiPresetIos">Telegram iOS</string>
+    <string name="HanakoApiPresetMacos">Telegram macOS</string>
+    <string name="HanakoApiPresetDesktopSnap">Telegram Desktop (Snap)</string>
+    <string name="HanakoApiPresetTelegramX">Telegram X</string>
+    <string name="HanakoApiPresetWebK">Telegram Web K</string>
+    <string name="HanakoApiPresetWebLegacy">Telegram Web (legacy)</string>
+    <string name="HanakoApiPresetOctogram">OctoGram</string>
+    <string name="HanakoApiPresetOwlgram">OwlGram</string>
+    <string name="HanakoApiPresetCustom">Custom</string>
+    <string name="HanakoApiCustomNotSet">not set</string>
+    <string name="HanakoApiActive">Active now: api_id %1$d</string>
+    <string name="HanakoApiPending">After restart: api_id %1$d</string>
+    <string name="HanakoApiInfo">Telegram identifies the app by its api_id and api_hash. The choice is shared by all accounts on this device and takes effect when the app restarts. Signed-in accounts stay signed in. You can get your own pair at my.telegram.org.</string>
+    <string name="HanakoApiCustomTitle">Custom API ID</string>
+    <string name="HanakoApiIdHint">api_id (number)</string>
+    <string name="HanakoApiHashHint">api_hash (32 hex characters)</string>
+    <string name="HanakoApiBadId">api_id must be a positive whole number</string>
+    <string name="HanakoApiBadHash">api_hash must be exactly 32 characters: 0–9 and a–f</string>
+    <string name="HanakoApiRestartTitle">Restart Hanako?</string>
+    <string name="HanakoApiRestartText">api_id %1$d will be used after a restart. Restart now?</string>
+    <string name="HanakoApiRestartLater">Later</string>
+    <string name="HanakoApiSummaryPending">%1$d → %2$d after restart</string>
+    <string name="HanakoApiLoginButton">API ID: %1$s</string>
+</resources>

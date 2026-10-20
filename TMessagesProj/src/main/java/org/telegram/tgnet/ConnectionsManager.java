@@ -265,6 +265,7 @@ public class ConnectionsManager extends BaseController {
             userPremium = getUserConfig().getCurrentUser().premium;
         }
         init(SharedConfig.buildVersion(), TLRPC.LAYER, BuildVars.APP_ID, deviceModel, systemVersion, appVersion, langCode, systemLangCode, configPath, FileLog.getNetworkLogPath(), pushString, fingerprint, timezoneOffset, getUserConfig().getClientUserId(), userPremium, enablePushConnection);
+        it.belloworld.mercurygram.HanakoApiConfig.afterNativeInit(this, currentAccount, getUserConfig().getClientUserId()); // hanako: push a changed api_id to the server
     }
 
     private String getRegId() {
@@ -390,7 +391,12 @@ public class ConnectionsManager extends BaseController {
         return requestToken;
     }
 
-    private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
+    private void sendRequestInternal(TLObject object, RequestDelegate onCompleteIn, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
+        if (it.belloworld.mercurygram.folders.MgFolders.dropIfMercurygram(object, onCompleteIn)) return; // Mercurygram: folders with a negative id never reach the server
+        if (it.belloworld.mercurygram.PlusPeek.intercept(currentAccount, object, onCompleteIn)) return; // plus f12: a peeked chat sends no read-type requests
+        if (it.belloworld.mercurygram.PlusGhost.intercept(currentAccount, object, onCompleteIn)) return; // plus: ghost mode (dropped requests get a fake empty result)
+        final RequestDelegate onComplete = it.belloworld.mercurygram.PlusGhost.wrapCompletion(currentAccount, object, onCompleteIn); // plus: go back offline after write requests
+        it.belloworld.mercurygram.PlusGhostSilent.apply(currentAccount, object); // plus f09: silent sends in ghost mode
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("send request " + object + " with token = " + requestToken);
         }
@@ -640,10 +646,19 @@ public class ConnectionsManager extends BaseController {
         native_setPushConnectionEnabled(currentAccount, value);
     }
 
+    public void rotateTempAuthKeys() {
+        native_rotateTempAuthKeys(currentAccount);
+    }
+
+    public void setReducedTempKeyMode(boolean enabled) {
+        native_setReducedTempKeyMode(currentAccount, enabled);
+    }
+
     public void init(int version, int layer, int apiId, String deviceModel, String systemVersion, String appVersion, String langCode, String systemLangCode, String configPath, String logPath, String regId, String cFingerprint, int timezoneOffset, long userId, boolean userPremium, boolean enablePushConnection) {
         final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
         final ProxySettings proxySettings = ProxySettings.fromSharedPreferences(preferences);
-        if (preferences.getBoolean("proxy_enabled", false) && proxySettings.isValid()) {
+        if (preferences.getBoolean("proxy_enabled", false) && proxySettings.isValid()
+                ) {
             if (proxySettings.getType() == ProxySettings.Type.WEB) {
                 int localPort = WebProxyTransport.start(proxySettings.getAddress(), proxySettings.getSecret());
                 native_setProxySettings(currentAccount, "127.0.0.1", localPort != 0 ? localPort : 9, "", "",
@@ -864,6 +879,44 @@ public class ConnectionsManager extends BaseController {
         });
     }
 
+    // MG: native side calls this when the reduced-temp-key TTL ladder
+    // exhausts (server rejected even the 24h fallback) for ONE account.
+    // Disable native reduced mode only for that account so the other
+    // accounts keep their TTL reduction. The user-facing SharedConfig flag
+    // stays on — non-temp-key mitigations (FileLoadOperation CDN refusal,
+    // MgNetworkChangeWatcher rotations) are unrelated to the temp-key
+    // server policy and remain in effect. Persist a per-account flag and
+    // surface a one-time toast so the user is not silently downgraded;
+    // the Privacy screen reads the flag and shows a footer enumerating
+    // exhausted accounts.
+    public static void onReducedTempKeyExhausted(final int currentAccount) {
+        AndroidUtilities.runOnUIThread(() -> {
+            try {
+                ConnectionsManager.getInstance(currentAccount).setReducedTempKeyMode(false);
+                UserConfig uc = UserConfig.getInstance(currentAccount);
+                if (uc.mg.mgReducedTrackingExhausted) {
+                    return;
+                }
+                uc.mg.mgReducedTrackingExhausted = true;
+                uc.saveConfig(false);
+                Context ctx = ApplicationLoader.applicationContext;
+                if (ctx == null) return;
+                String name = uc.getCurrentUser() != null
+                        ? org.telegram.messenger.UserObject.getFirstName(uc.getCurrentUser())
+                        : "#" + (currentAccount + 1);
+                android.widget.Toast.makeText(
+                        ctx,
+                        LocaleController.formatString(
+                                "MercurygramReduceTrackingFingerprintExhaustedToast",
+                                org.telegram.messenger.R.string.MercurygramReduceTrackingFingerprintExhaustedToast,
+                                name),
+                        android.widget.Toast.LENGTH_LONG).show();
+            } catch (Throwable t) {
+                FileLog.e(t);
+            }
+        });
+    }
+
     public static int getInitFlags() {
         int flags = 0;
         EmuDetector detector = EmuDetector.with(ApplicationLoader.applicationContext);
@@ -1001,6 +1054,7 @@ public class ConnectionsManager extends BaseController {
         } else {
             WebProxyTransport.stop();
         }
+
 
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             if (a != 0 && !UserConfig.getInstance(a).isClientActivated()) {
@@ -1395,6 +1449,8 @@ public class ConnectionsManager extends BaseController {
     public static native void native_setSystemLangCode(int currentAccount, String langCode);
     public static native void native_setJava(boolean useJavaByteBuffers);
     public static native void native_setPushConnectionEnabled(int currentAccount, boolean value);
+    public static native void native_rotateTempAuthKeys(int currentAccount);
+    public static native void native_setReducedTempKeyMode(int currentAccount, boolean enabled);
     public static native void native_applyDnsConfig(int currentAccount, long address, String phone, int date);
     public static native long native_checkProxy(int currentAccount, String address, int port, String username, String password, String secret, RequestTimeDelegate requestTimeDelegate);
     public static native void native_onHostNameResolved(String host, long address, String ip);

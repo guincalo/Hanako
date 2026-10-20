@@ -66,7 +66,7 @@
     <string name="QRLoginStep3">Aponte o celular para esta tela para confirmar o login</string>
     <string name="QRLoginSubtitle">Abra o Telegram em outro dispositivo e escaneie este código QR para entrar na sua conta.</string>
     <string name="QRLoginTitle">Entrar com código QR</string>
-    <string name="AppNameFdroid">Forkgram</string>
+    <string name="AppNameFdroid">Hanako</string>
     <string name="UnifiedPush">UnifiedPush</string>
     <string name="ForkSectionAppearance">Aparência</string>
     <string name="ForkSectionMedia">Fotos e vídeos</string>
@@ -250,8 +250,8 @@
     <string name="LinkReplacementReplaceWith">Substituir por</string>
     <string name="LinkReplacementInvalid">Expressão inválida</string>
     <string name="LinkReplacedOnPaste">Link substituído</string>
-    <string name="AppName">Forkgram Classic</string>
-    <string name="AppNameBeta">Forkgram Classic</string>
+    <string name="AppName">Hanako</string>
+    <string name="AppNameBeta">Hanako Beta</string>
     <string name="LanguageName">Português (Brasil)</string>
     <string name="English">Inglês</string>
     <string name="LanguageNameInEnglish">Portuguese (Brazil)</string>
@@ -826,7 +826,7 @@
     <string name="DirectShareInfo">Mostra chats recentes no menu compartilhar.</string>
     <string name="Emoji">Emoji</string>
     <string name="LargeEmoji">Emoji Grande</string>
-    <string name="TelegramVersion">Telegram para Android %1$s</string>
+    <string name="TelegramVersion">Hanako para Android %1$s</string>
     <string name="DebugMenu">Menu de Depuração</string>
     <string name="DebugMenuLongPress">Segure de novo para ver o menu de depuração</string>
     <string name="DebugSendLogs">Enviar Logs</string>

@@ -188,9 +188,9 @@
     <string name="ForkSettingsLockChangeCode">Change code</string>
     <string name="ForkSettingsLockRemoveCode">Remove code</string>
     <string name="ForkSettingsLockRemoveCodeConfirm">Fork Client Settings will open without a code.</string>
-    <string name="AppName">Forkgram Classic</string>
-    <string name="AppNameBeta">Forkgram Classic</string>
-    <string name="AppNameFdroid">Forkgram Classic</string>
+    <string name="AppName">Hanako</string>
+    <string name="AppNameBeta">Hanako Beta</string>
+    <string name="AppNameFdroid">Hanako</string>
     <string name="LanguageName">English</string>
     <string name="English">English</string>
     <string name="LanguageNameInEnglish">English</string>
@@ -2833,7 +2833,7 @@
     <string name="DirectShareInfo">Show recent chats in Android share menu</string>
     <string name="Emoji">Emoji</string>
     <string name="LargeEmoji">Large Emoji</string>
-    <string name="TelegramVersion">Telegram for Android %1$s</string>
+    <string name="TelegramVersion">Hanako for Android %1$s</string>
     <string name="DebugMenu">Debug Menu</string>
     <string name="DebugMenuLongPress">Long press again for debug menu</string>
     <string name="DebugSendLogs">Send Logs</string>

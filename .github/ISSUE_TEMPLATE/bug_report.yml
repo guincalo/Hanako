@@ -1,0 +1,61 @@
+name: Bug report
+description: Something in Hanako is broken or behaves unexpectedly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Hanako is an unofficial, fully vibecoded fork. Please report Hanako bugs **here**, not to Telegram or upstream Mercurygram.
+        If the bug also happens in upstream [Mercurygram](https://github.com/Mercurygram/Mercurygram) or official Telegram, it belongs there instead.
+  - type: input
+    id: version
+    attributes:
+      label: Hanako version
+      description: Release tag (e.g. v1.0.0), or Settings → bottom of the screen ("Hanako for Android …")
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android version and device
+      placeholder: Android 15, Pixel 8
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Ghost mode / read receipts / online status
+        - Chat lock / hidden chats
+        - Deleted & edited messages / deleted media
+        - Activity log
+        - Streamer mode
+        - Message filters
+        - Plugins
+        - OpenPGP
+        - Network (DoH, proxy, transfer boost)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Turn on …
+        2. Open …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots (optional)
+      description: Remove names, phone numbers and message content first.

@@ -1218,6 +1218,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     public final static int OPTION_OPEN_PROFILE = 104;
     public final static int OPTION_FACT_CHECK = 106;
     public final static int OPTION_EDIT_PRICE = 107;
+    public final static int OPTION_DETAILS = 200;
+    public final static int OPTION_EDIT_HISTORY = 201;
     public final static int OPTION_GIFT = 108;
     public final static int OPTION_EDIT_TODO = 109;
     public final static int OPTION_ADD_TO_TODO = 110;
@@ -1787,6 +1789,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     private final static int deleteAllYourMessages = 75;
     private final static int deleteAllUnpinnedMessages = 76;
     private final static int deleteAllYourMessagesInAllTopics = 77;
+    // Mercurygram / Hanako chat menu ids
+    private final static int mg_go_to_first_message = 9175; // Forkgram has goToFirstMessage too; kept for merged MG code
+    private final static int plus_ghost_exceptions = 9101; // plus f01
+    private final static int plus_f08_lock_chat = 9081; // plus f08
 
     private final static int id_chat_compose_panel = 1000;
 
@@ -3387,6 +3393,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        it.belloworld.mercurygram.PlusPeek.onDestroy(this); // plus f12
         if (chatActivityEnterView != null) {
             chatActivityEnterView.onDestroy();
         }
@@ -3851,6 +3858,15 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         undoView.showWithAction(0, UndoView.ACTION_TEXT_COPIED, null);
                     }
                     clearSelectionMode();
+                } else if (id == it.belloworld.mercurygram.PlusMessageShot.MENU_ID) { // plus f13
+                    ArrayList<MessageObject> shotMessages = new ArrayList<>();
+                    for (int a = 1; a >= 0; a--) {
+                        for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
+                            shotMessages.add(selectedMessagesIds[a].valueAt(b));
+                        }
+                    }
+                    clearSelectionMode();
+                    it.belloworld.mercurygram.PlusMessageShot.show(ChatActivity.this, shotMessages);
                 } else if (id == delete) {
                     if (getParentActivity() == null) {
                         return;
@@ -3945,6 +3961,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                             BulletinFactory.of(ChatActivity.this).createDownloadBulletin(isMusic ? BulletinFactory.FileType.AUDIOS : BulletinFactory.FileType.UNKNOWNS, count, themeDelegate).show();
                         }
                     });
+                } else if (id == plus_f08_lock_chat) { // plus f08
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_LOCK); // hanako: usage statistics (off by default)
+                    it.belloworld.mercurygram.PlusChatLock.onChatMenuItemClick(headerItem, currentAccount, dialog_id);
                 } else if (id == chat_enc_timer) {
                     if (getParentActivity() == null) {
                         return;
@@ -4110,6 +4129,26 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     org.telegram.messenger.forkgram.ForkDialogs.createDeleteAllUnpinnedMessagesAlert(currentAccount, dialog_id, getParentActivity());
                 } else if (id == deleteAllYourMessagesInAllTopics) {
                     org.telegram.messenger.forkgram.ForkDialogs.createDeleteAllYourMessagesInAllTopicsAlert(currentAccount, dialog_id, getParentActivity());
+                } else if (id == plus_ghost_exceptions) { // plus f01
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_GHOST_EXCEPTIONS); // hanako: usage statistics (off by default)
+                    it.belloworld.mercurygram.PlusGhostExceptions.showDialog(ChatActivity.this, dialog_id, null);
+                } else if (id == it.belloworld.mercurygram.PlusGhostQuick.MENU_SEND_READ) { // plus f02
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_SEND_READ); // hanako: usage statistics (off by default)
+                    it.belloworld.mercurygram.PlusGhostQuick.sendReadReceipt(ChatActivity.this);
+                } else if (id == it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.CHAT_MENU_ID) { // hanako: deleted messages in this chat
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_DELETED); // hanako: usage statistics (off by default)
+                    it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.showChatMenu(ChatActivity.this, headerItem, currentAccount, dialog_id);
+                } else if (id == it.belloworld.mercurygram.PlusDeletedMedia.MENU_ID) { // plus f20
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_DELETED_MEDIA); // hanako: usage statistics (off by default)
+                    presentFragment(new it.belloworld.mercurygram.ui.PlusDeletedMediaActivity(dialog_id));
+                } else if (id == it.belloworld.mercurygram.ui.HanakoChatExportActivity.CHAT_MENU_ID) { // hanako: chat export
+                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_EXPORT); // hanako: usage statistics (off by default)
+                    presentFragment(new it.belloworld.mercurygram.ui.HanakoChatExportActivity(dialog_id));
+                } else if (id == mg_go_to_first_message) {
+                    // Mercurygram: jump to the oldest message by reusing the calendar
+                    // jump with a date before any chat can exist (Telegram's launch,
+                    // August 2013). Idea from Forkgram.
+                    jumpToDate(1375350800);
                 } else if (id == translate) {
                     getMessagesController().getTranslateController().setHideTranslateDialog(getDialogId(), false, true);
                     if (!getMessagesController().getTranslateController().toggleTranslatingDialog(getDialogId(), true)) {
@@ -4511,6 +4550,24 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             if (searchItem != null) {
                 headerItem.lazilyAddSubItem(search, R.drawable.msg_search, LocaleController.getString(R.string.Search));
             }
+            if (!DialogObject.isEncryptedDialog(dialog_id)) {
+                headerItem.lazilyAddSubItem(mg_go_to_first_message, R.drawable.msg_go_up, LocaleController.getString(R.string.MercurygramGoToFirstMessage));
+            }
+            if (chatMode == 0 && dialog_id != getUserConfig().getClientUserId() && it.belloworld.mercurygram.PlusGhost.isEnabled(currentAccount)) { // plus f01
+                headerItem.lazilyAddSubItem(plus_ghost_exceptions, R.drawable.plus_ghost, LocaleController.getString(R.string.PlusGhostExcMenu));
+            }
+            if (it.belloworld.mercurygram.PlusGhostQuick.canSendReadReceipt(ChatActivity.this)) { // plus f02
+                headerItem.lazilyAddSubItem(it.belloworld.mercurygram.PlusGhostQuick.MENU_SEND_READ, R.drawable.msg_markread, it.belloworld.mercurygram.PlusGhostQuick.sendReadReceiptLabel());
+            }
+            if (it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.showChatMenuItem(currentAccount, dialog_id, chatMode)) { // hanako: deleted messages in this chat
+                headerItem.lazilyAddSubItem(it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.CHAT_MENU_ID, R.drawable.msg_delete_auto, LocaleController.getString(R.string.HanakoDeletedChatMenu));
+            }
+            if (it.belloworld.mercurygram.PlusDeletedMedia.showChatMenu(currentAccount, dialog_id)) { // plus f20
+                headerItem.lazilyAddSubItem(it.belloworld.mercurygram.PlusDeletedMedia.MENU_ID, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title));
+            }
+            if (chatMode == 0 && it.belloworld.mercurygram.ui.HanakoChatExportActivity.showChatMenu(dialog_id)) { // hanako: chat export
+                headerItem.lazilyAddSubItem(it.belloworld.mercurygram.ui.HanakoChatExportActivity.CHAT_MENU_ID, R.drawable.msg_download, LocaleController.getString(R.string.HanakoChatExportMenu));
+            }
             if (ChatObject.isBoostSupported(currentChat) && (getUserConfig().isPremium() || ChatObject.isBoosted(chatInfo) || ChatObject.hasAdminRights(currentChat))) {
                 RLottieDrawable drawable = new RLottieDrawable(R.raw.boosts, dp(24), dp(24));
                 headerItem.lazilyAddSubItem(boost_group, drawable, LocaleController.getString(ChatObject.isChannelAndNotMegaGroup(currentChat) ? R.string.BoostingBoostChannelMenu : R.string.BoostingBoostGroupMenu));
@@ -4537,6 +4594,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             }
             if (!isTopic && !ChatObject.isMonoForum(currentChat)) {
                 clearHistoryItem = headerItem.lazilyAddSubItem(clear_history, R.drawable.msg_clear, LocaleController.getString(R.string.ClearHistory));
+            }
+            if (chatMode == 0 && !isTopic) { // plus f08
+                it.belloworld.mercurygram.PlusChatLock.addChatMenuItem(headerItem, plus_f08_lock_chat, currentAccount, dialog_id);
             }
             boolean addedSettings = false;
             if (!isTopic) {
@@ -5061,6 +5121,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         MessageObject message = slidingView.getMessageObject();
                         boolean allowReplyOnOpenTopic = canSendMessageToTopic(message);
                         if (
+                                message.mgDeletedGhost || // Mercurygram: cannot reply to a kept-after-delete ghost
                                 chatMode != 0 && chatMode != MODE_QUICK_REPLIES && chatMode != MODE_SUGGESTIONS && (chatMode != MODE_SAVED || threadMessageId != getUserConfig().getClientUserId()) ||
                                 threadMessageObjects != null && threadMessageObjects.contains(message) ||
                                 getMessageType(message) == 1 && (message.getDialogId() == mergeDialogId || message.needDrawBluredPreview()) ||
@@ -6765,6 +6826,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         wasManualScroll = true;
                         scrollingChatListView = true;
                     } else if (newState == RecyclerView.SCROLL_STATE_DRAGGING) {
+                        if (getUserConfig().mg.hideChatKeyboard) {
+                            AndroidUtilities.hideKeyboard(getParentActivity().getCurrentFocus());
+                        }
                         pollHintCell = null;
                         wasManualScroll = true;
                         scrollingFloatingDate = true;
@@ -7445,7 +7509,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     if (chatMode == MODE_SCHEDULED) {
                         AlertsCreator.createScheduleDatePickerDialog(getParentActivity(), dialog_id, (notify, scheduleDate, scheduleRepeatPeriod) -> SendMessagesHelper.getInstance(currentAccount).sendSticker(document, query, dialog_id, replyingMessageObject, getThreadMessage(), null, replyingQuote, null, notify, scheduleDate, 0, false, parent, getMessageChatSendParams(), 0, getSendMonoForumPeerId(), getSendMessageSuggestionParams()), themeDelegate);
                     } else {
-                        getSendMessagesHelper().sendSticker(document, query, dialog_id, replyingMessageObject, getThreadMessage(), null, replyingQuote, sendAnimationData, true, 0, 0, false, parent, getMessageChatSendParams(), price, getSendMonoForumPeerId(), getSendMessageSuggestionParams());
+                        it.belloworld.mercurygram.PlusSendPrompts.runSend(getParentActivity(), it.belloworld.mercurygram.PlusSendPrompts.stickerKind(document), 0, price, themeDelegate, () -> getSendMessagesHelper().sendSticker(document, query, dialog_id, replyingMessageObject, getThreadMessage(), null, replyingQuote, sendAnimationData, true, 0, 0, false, parent, getMessageChatSendParams(), price, getSendMonoForumPeerId(), getSendMessageSuggestionParams())); // plus f16
                     }
                     hideFieldPanel(false);
                     chatActivityEnterView.addStickerToRecent(document);
@@ -7470,7 +7534,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     if (UserObject.getPublicUsername(user) != null && !mentionByName) {
                         chatActivityEnterView.replaceWithText(start, len, "@" + UserObject.getPublicUsername(user) + " ", false);
                     } else {
-                        String name = UserObject.getFirstName(user, false);
+                        String name = it.belloworld.mercurygram.PlusStreamer.realFirstName(user); // plus f10: mention text is sent, never mask it
                         Spannable spannable = new SpannableString(name + " ");
                         spannable.setSpan(new URLSpanUserMention("" + user.id, 3), 0, spannable.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                         chatActivityEnterView.replaceWithText(start, len, spannable, false);
@@ -10243,18 +10307,22 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         translateButton = new TranslateButton(getContext(), this, themeDelegate) {
             @Override
             protected void onButtonClick() {
-                if (getUserConfig().isPremium() || currentChat != null && currentChat.autotranslation) {
-                    getMessagesController().getTranslateController().toggleTranslatingDialog(getDialogId());
-                } else {
-                    MessagesController.getNotificationsSettings(currentAccount).edit().putInt("dialog_show_translate_count" + getDialogId(), 14).commit();
-                    showDialog(new PremiumFeatureBottomSheet(ChatActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_TRANSLATIONS, false));
-                }
+                // Mercurygram: Premium is a Telegram monetization gate, not a
+                // technical requirement. The chat translate bar is available for
+                // every user — see commit "[MG] unlock premium account limits".
+                getMessagesController().getTranslateController().toggleTranslatingDialog(getDialogId());
                 updateTopPanel(true);
             }
 
             @Override
             protected void onCloseClick() {
+                // Mercurygram: the unlocked translate bar gate (isDialogTranslatableMg)
+                // ignores the upstream dialog_show_translate_count counter, so the
+                // non-premium close button must mark the dialog hidden the same way
+                // the premium "Hide" menu item does — otherwise the bar would
+                // instantly reappear. Keep the counter write for upstream parity.
                 MessagesController.getNotificationsSettings(currentAccount).edit().putInt("dialog_show_translate_count" + getDialogId(), 140).commit();
+                getMessagesController().getTranslateController().setHideTranslateDialog(getDialogId(), true);
                 updateTopPanel(true);
             }
         };
@@ -10690,6 +10758,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             actionModeViews.add(actionMode.addItemWithWidth(star, R.drawable.msg_fave, AndroidUtilities.dp(54), LocaleController.getString(R.string.AddToFavorites)));
             actionModeViews.add(actionMode.addItemWithWidth(copy, R.drawable.msg_copy, AndroidUtilities.dp(54), LocaleController.getString(R.string.Copy)));
             actionModeViews.add(actionMode.addItemWithWidth(delete, R.drawable.msg_delete, AndroidUtilities.dp(54), LocaleController.getString(R.string.Delete)));
+        }
+        if (it.belloworld.mercurygram.PlusMessageShot.isEnabled()) { // plus f13
+            actionModeViews.add(actionMode.addItemWithWidth(it.belloworld.mercurygram.PlusMessageShot.MENU_ID, R.drawable.msg_photos, dp(48), LocaleController.getString(R.string.PlusMessageShot)));
         }
         actionMode.setItemVisibility(edit, canEditMessagesCount == 1 && selectedMessagesIds[0].size() + selectedMessagesIds[1].size() == 1 ? View.VISIBLE : View.GONE);
         actionMode.setItemVisibility(copy, !getMessagesController().isChatNoForwards(currentChat) && selectedMessagesCanCopyIds[0].size() + selectedMessagesCanCopyIds[1].size() != 0 ? View.VISIBLE : View.GONE);
@@ -11830,7 +11901,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         if (translateItem == null) {
             return;
         }
-        translateItem.setVisibility(getMessagesController().getTranslateController().isTranslateDialogHidden(getDialogId()) && getMessagesController().getTranslateController().isDialogTranslatable(getDialogId()) ? View.VISIBLE : View.GONE);
+        translateItem.setVisibility(getMessagesController().getTranslateController().isTranslateDialogHidden(getDialogId()) && getMessagesController().getTranslateController().isDialogTranslatableMg(getDialogId()) ? View.VISIBLE : View.GONE);
     }
 
     private Animator infoTopViewAnimator;
@@ -14876,6 +14947,15 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         if (forkExtractMediaFrozenWebPage != null) {
             return;
         }
+        // Mercurygram: chat-field chokepoint for the "disable link previews"
+        // toggle. Every preview-fetch entry point here (onTextChanged,
+        // onTextSpansChanged, the internal re-search) funnels through this, so
+        // gating it suppresses the account.getWebPagePreview RPC URL leak
+        // regardless of entry point (#26). Other compose surfaces gate at their
+        // own call sites — see it.belloworld.mercurygram.MgLinkPreview.
+        if (it.belloworld.mercurygram.MgLinkPreview.suppressed(currentAccount)) {
+            return;
+        }
         if (currentEncryptedChat != null && getMessagesController().secretWebpagePreview == 0 || editingMessageObject != null && (!editingMessageObject.isWebpage() || editingMessageObject.messageOwner.media.webpage instanceof TLRPC.TL_webPagePending)) {
             return;
         }
@@ -16702,7 +16782,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 }
 
                 // [classic] #95: a visible unvoted poll clears itself, same as an unread reaction does.
-                if (messageObject != null && fragmentOpened && openAnimationEnded && (chatListItemAnimator == null || !chatListItemAnimator.isRunning()) && messageCell.checkUnreadPollVotes()) {
+                if (messageObject != null && fragmentOpened && openAnimationEnded && !it.belloworld.mercurygram.PlusPeek.frozen(ChatActivity.this.isInPreviewMode()) /* plus f12 */ && (chatListItemAnimator == null || !chatListItemAnimator.isRunning()) && messageCell.checkUnreadPollVotes()) {
                     pollVotesMentionCount--;
                     getMessagesStorage().markMessagePollVotesAsRead(getDialogId(), getTopicId(), messageObject.getId());
                     if (pollVotesMentionCount <= 0) {
@@ -16716,7 +16796,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     }
                     updatePollVotesMentionButton(true);
                 }
-                if (messageObject != null && fragmentOpened && openAnimationEnded && (chatListItemAnimator == null || !chatListItemAnimator.isRunning()) && messageCell.checkUnreadReactions(clipTop, chatListView.getMeasuredHeight() - blurredViewBottomOffset)) {
+                if (messageObject != null && fragmentOpened && openAnimationEnded && !it.belloworld.mercurygram.PlusPeek.frozen(ChatActivity.this.isInPreviewMode()) /* plus f12 */ && (chatListItemAnimator == null || !chatListItemAnimator.isRunning()) && messageCell.checkUnreadReactions(clipTop, chatListView.getMeasuredHeight() - blurredViewBottomOffset)) {
                     reactionsMentionCount--;
                     getMessagesStorage().markMessageReactionsAsRead(getDialogId(), getTopicId(), messageObject.getId());
                     if (reactionsMentionCount <= 0) {
@@ -16750,7 +16830,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     maxVisibleId = Math.max(maxVisibleId, messageObject.getId());
                 }
                 hasTopicSeparator = cell.topicSeparator != null;
-                if (messageObject != null && fragmentOpened && openAnimationEnded && (chatListItemAnimator == null || !chatListItemAnimator.isRunning()) && cell.checkUnreadReactions(clipTop, chatListView.getMeasuredHeight() - blurredViewBottomOffset)) {
+                if (messageObject != null && fragmentOpened && openAnimationEnded && !it.belloworld.mercurygram.PlusPeek.frozen(ChatActivity.this.isInPreviewMode()) /* plus f12 */ && (chatListItemAnimator == null || !chatListItemAnimator.isRunning()) && cell.checkUnreadReactions(clipTop, chatListView.getMeasuredHeight() - blurredViewBottomOffset)) {
                     reactionsMentionCount--;
                     getMessagesStorage().markMessageReactionsAsRead(getDialogId(), getTopicId(), messageObject.getId());
                     if (reactionsMentionCount <= 0) {
@@ -19761,6 +19841,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                                 canSave = true;
                             }
                         }
+                        if (!canSave && it.belloworld.mercurygram.MgLocalMedia.cachedFile(messageObject) != null) {
+                            canSave = true;
+                        }
                         if (canSave) {
                             if (messageObject.getDocument() != null && !messageObject.isMusic()) {
                                 String mime = messageObject.getDocument().mime_type;
@@ -19827,6 +19910,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         if (f.exists()) {
                             canSave = true;
                         }
+                    }
+                    if (!canSave && it.belloworld.mercurygram.MgLocalMedia.cachedFile(messageObject) != null) {
+                        canSave = true;
                     }
                     if (canSave) {
                         if (messageObject.getDocument() != null) {
@@ -20352,9 +20438,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     if (currentChat.linked_monoforum_id != 0) {
                         TLRPC.Chat chat = getMessagesController().getChat(currentChat.linked_monoforum_id);
                         if (chat == null) chat = currentChat;
-                        avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(chat.title)), chat.scam, chat.fake, chat.verified, false, chat.emoji_status, animated);
+                        avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(it.belloworld.mercurygram.PlusStreamer.chatTitle(chat))), chat.scam, chat.fake, chat.verified, false, chat.emoji_status, animated); // plus f10
                     } else {
-                        avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(currentChat.title)), currentChat.scam, currentChat.fake, currentChat.verified, false, currentChat.emoji_status, animated);
+                        avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(it.belloworld.mercurygram.PlusStreamer.chatTitle(currentChat))), currentChat.scam, currentChat.fake, currentChat.verified, false, currentChat.emoji_status, animated); // plus f10
                     }
                 } else if (threadMessageId > 0) {
                     final TLRPC.User user = getMessagesController().getUser(threadMessageId);
@@ -20362,10 +20448,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 } else {
                     TLRPC.Chat chat = getMessagesController().getChat(-threadMessageId);
                     if (chat == null) chat = currentChat;
-                    avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(chat.title)), chat.scam, chat.fake, chat.verified, false, chat.emoji_status, animated);
+                    avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(it.belloworld.mercurygram.PlusStreamer.chatTitle(chat))), chat.scam, chat.fake, chat.verified, false, chat.emoji_status, animated); // plus f10
                 }
             } else {
-                avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(currentChat.title)), currentChat.scam, currentChat.fake, currentChat.verified, false, currentChat.emoji_status, animated);
+                avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(it.belloworld.mercurygram.PlusStreamer.chatTitle(currentChat))), currentChat.scam, currentChat.fake, currentChat.verified, false, currentChat.emoji_status, animated); // plus f10
             }
         } else if (chatMode == MODE_QUICK_REPLIES) {
             if (QuickRepliesController.GREETING.equalsIgnoreCase(quickReplyShortcut)) {
@@ -20399,7 +20485,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             } else if (user != null) {
                 avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(user))));
             } else if (chat != null) {
-                avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(chat.title)));
+                avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(it.belloworld.mercurygram.PlusStreamer.chatTitle(chat)))); // plus f10
             } else {
                 avatarContainer.setTitle("");
             }
@@ -20434,7 +20520,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 avatarContainer.setTitle(LocaleController.getString(R.string.SavedMessages));
             } else if (!MessagesController.isSupportUser(currentUser) && getContactsController().contactsDict.get(currentUser.id) == null && (getContactsController().contactsDict.size() != 0 || !getContactsController().isLoadingContacts())) {
                 if (!TextUtils.isEmpty(currentUser.phone)) {
-                    avatarContainer.setTitle(PhoneFormat.getInstance().format("+" + currentUser.phone), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated);
+                    avatarContainer.setTitle(it.belloworld.mercurygram.PlusStreamer.phone(PhoneFormat.getInstance().format("+" + currentUser.phone)), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated); // plus f10
                 } else {
                     avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(currentUser))), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated);
                 }
@@ -21433,6 +21519,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             }
             ArrayList<MessageObject> messArr = (ArrayList<MessageObject>) args[2];
 
+        mgGhost.prime();
+        mgGhost.applyFlags(messArr);
+
             boolean universalNotify = false;
             HashMap<Integer, MessageObject> oldMessages = null;
             if (clearOnLoad && (mode == MODE_DEFAULT || mode == MODE_SUGGESTIONS)) {
@@ -21506,7 +21595,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
                 resumeDelayedFragmentAnimation();
                 MessageObject messageObject = messArr.get(0);
-                getMessagesController().markDialogAsRead(dialog_id, messageObject.getId(), messageObject.getId(), messageObject.messageOwner.date, false, 0, 0, true, 0);
+                if (!it.belloworld.mercurygram.PlusPeek.frozen(inPreviewMode)) { // plus f12: a peek leaves the chat unread
+                    getMessagesController().markDialogAsRead(dialog_id, messageObject.getId(), messageObject.getId(), messageObject.messageOwner.date, false, 0, 0, true, 0);
+                }
                 AndroidUtilities.cancelRunOnUIThread(fragmentTransitionRunnable);
                 fragmentTransitionRunnable.run();
                 return;
@@ -22246,6 +22337,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 }
             }
             checkGroupMessagesOrder();
+            AndroidUtilities.runOnUIThread(mgGhost::inject); // Mercurygram: posted, not inline (see MgChatGhostController)
             if (createUnreadLoading) {
                 createUnreadMessageAfterId = 0;
             }
@@ -23168,7 +23260,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 scheduleNowDialog.dismiss();
                 scheduleNowDialog = null;
             }
-            processDeletedMessages(markAsDeletedMessages, channelId, sent, !movedToScheduled);
+            final ArrayList<Integer> mgDeleteList = mgGhost.divertDeletes(markAsDeletedMessages, messages, channelId, movedToScheduled);
+            processDeletedMessages(mgDeleteList, channelId, sent, !movedToScheduled);
+            mgGhost.updateDivertedRows();
             if (movedToScheduled && chatMode != ChatActivity.MODE_SCHEDULED) {
                 getMessagesController().forceNoReload(dialog_id, ChatActivity.MODE_SCHEDULED);
                 openScheduledMessages(scheduledMessageId, true);
@@ -23959,14 +24053,14 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 int msgId = (Integer) args[1];
                 if (filteredMessagesDict != null) {
                     MessageObject messageObject = filteredMessagesDict.get(msgId);
-                    if (messageObject != null) {
+                    if (messageObject != null && !it.belloworld.mercurygram.PlusDeletedReactions.isFrozen(messageObject)) { // plus f07
                         MessageObject.updateReactions(messageObject.messageOwner, (TLRPC.TL_messageReactions) args[2]);
                         messageObject.forceUpdate = true;
                         messageObject.reactionsChanged = true;
                     }
                 }
                 MessageObject messageObject = messagesDict[did == dialog_id ? 0 : 1].get(msgId);
-                if (messageObject != null) {
+                if (messageObject != null && !it.belloworld.mercurygram.PlusDeletedReactions.isFrozen(messageObject)) { // plus f07
                     MessageObject.updateReactions(messageObject.messageOwner, (TLRPC.TL_messageReactions) args[2]);
                     messageObject.forceUpdate = true;
                     messageObject.reactionsChanged = true;
@@ -24158,6 +24252,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         } else if (id == NotificationCenter.replaceMessagesObjects) {
             long did = (long) args[0];
             final ArrayList<MessageObject> messageObjects = (ArrayList<MessageObject>) args[1];
+            mgGhost.onReplaceMessages(did, messageObjects);
             if (replyingMessageObject != null) {
                 for (int i = 0; i < messageObjects.size(); ++i) {
                     MessageObject messageObject = messageObjects.get(i);
@@ -26789,6 +26884,97 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     private void processDeletedMessages(ArrayList<Integer> markAsDeletedMessages, long channelId, boolean sent) {
         processDeletedMessages(markAsDeletedMessages, channelId, sent, true);
     }
+
+    // Mercurygram: saved-message-history ghost machinery lives in
+    // MgChatGhostController; these accessors expose the private structures its
+    // inject path must read or mutate (the adapter is package-private, so the
+    // adapter operations are wrapped rather than exposed).
+    public final it.belloworld.mercurygram.ui.MgChatGhostController mgGhost = new it.belloworld.mercurygram.ui.MgChatGhostController(this);
+
+    public void mgProcessDeletedMessages(ArrayList<Integer> ids) {
+        processDeletedMessages(ids, ChatObject.isChannel(currentChat) ? -dialog_id : 0, false);
+    }
+
+    public SparseArray<MessageObject> mgMessagesDict0() {
+        return messagesDict[0];
+    }
+
+    public HashMap<String, ArrayList<MessageObject>> mgMessagesByDays() {
+        return messagesByDays;
+    }
+
+    public SparseArray<ArrayList<MessageObject>> mgMessagesByDaysSorted() {
+        return messagesByDaysSorted;
+    }
+
+    public LongSparseArray<MessageObject.GroupedMessages> mgGroupedMessagesMap() {
+        return groupedMessagesMap;
+    }
+
+    public int mgGhostWindowMin() {
+        return endReached[0] ? Integer.MIN_VALUE : minDate[0];
+    }
+
+    public int mgGhostWindowMax() {
+        return forwardEndReached[0] ? Integer.MAX_VALUE : maxDate[0];
+    }
+
+    public boolean mgHasAdapter() {
+        return chatAdapter != null;
+    }
+
+    public boolean mgAdapterUsable() {
+        return chatAdapter != null && !chatAdapter.isFiltered;
+    }
+
+    public void mgNotifyAdapter() {
+        if (chatAdapter == null) {
+            return;
+        }
+        // Mercurygram: ghost injection inserts rows anywhere inside the loaded window,
+        // and in this reversed list a lower index sits lower on screen, so a ghost landing
+        // below the viewport drags the visible content out from under the user. Pin the
+        // first visible message across the rebuild; running last, this also supersedes any
+        // scroll position a caller computed before the insert. saveScrollPosition() cannot
+        // do it - it re-anchors by adapter position, which is what the insert invalidates.
+        MessageObject anchor = null;
+        int top = 0;
+        if (chatListView != null && chatLayoutManager != null) {
+            for (int i = 0; i < chatListView.getChildCount(); i++) {
+                View v = chatListView.getChildAt(i);
+                if (v instanceof ChatMessageCell) {
+                    anchor = ((ChatMessageCell) v).getMessageObject();
+                } else if (v instanceof ChatActionCell) {
+                    anchor = ((ChatActionCell) v).getMessageObject();
+                } else {
+                    continue;
+                }
+                top = getScrollingOffsetForView(v);
+                break;
+            }
+        }
+        chatAdapter.notifyDataSetChanged(false);
+        if (anchor != null) {
+            // Pins unconditionally: a ghost newer than the bottom message leaves a list
+            // that was at the bottom slightly scrolled up. Add an at-bottom guard if
+            // that turns out to be noticeable.
+            int index = messages.indexOf(anchor);
+            if (index >= 0) {
+                chatLayoutManager.scrollToPositionWithOffset(chatAdapter.messagesStartRow + index, top);
+            }
+        }
+    }
+
+    public void mgUpdateRow(MessageObject mo) {
+        if (chatAdapter != null) {
+            chatAdapter.updateRowWithMessageObject(mo, true, false);
+        }
+    }
+
+    public int mgStableIdForDate(int dateKeyInt) {
+        return getStableIdForDateObject(dateKeyInt);
+    }
+
     private void processDeletedMessages(ArrayList<Integer> markAsDeletedMessages, long channelId, boolean sent, boolean thanos) {
         ArrayList<Integer> removedIndexes = new ArrayList<>();
         ArrayList<Integer> thanosMessagesIndexes = new ArrayList<>();
@@ -30698,6 +30884,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     @Override
     public void setInPreviewMode(boolean value) {
         super.setInPreviewMode(value);
+        it.belloworld.mercurygram.PlusPeek.onPreviewMode(this, currentAccount, dialog_id, value); // plus f12
         if (currentUser != null && audioCallIconItem != null) {
             TLRPC.UserFull userFull = getMessagesController().getUserFull(currentUser.id);
             if (userFull != null && userFull.phone_calls_available) {
@@ -30782,6 +30969,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     @Override
     public void onResume() {
         super.onResume();
+        if (!inPreviewMode) it.belloworld.mercurygram.PlusGhostExceptions.onChatResumed(currentAccount, dialog_id); // plus f01 (not for long-press previews)
         checkShowBlur(false);
         activityResumeTime = System.currentTimeMillis();
         if (openImport && getSendMessagesHelper().getImportingHistory(dialog_id) != null) {
@@ -31002,6 +31190,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     @Override
     public void onPause() {
         super.onPause();
+        it.belloworld.mercurygram.PlusGhostExceptions.onChatPaused(currentAccount, dialog_id); // plus f01
         scrolling = false;
         if (scrimPopupWindow != null) {
             scrimPopupWindow.setPauseNotifications(false);
@@ -31617,6 +31806,11 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
     private void createDeleteMessagesAlert(final MessageObject finalSelectedObject, final MessageObject.GroupedMessages finalSelectedGroup, boolean hideDimAfter) {
         if (finalSelectedObject == null && (selectedMessagesIds[0].size() + selectedMessagesIds[1].size()) == 0) {
+            return;
+        }
+        if (mgGhost.deleteGhosts(finalSelectedObject, finalSelectedGroup, selectedMessagesIds)) {
+            hideActionMode();
+            if (hideDimAfter) dimBehindView(false);
             return;
         }
         AlertsCreator.createDeleteMessagesAlert(this, currentUser, currentChat, currentEncryptedChat, chatInfo, mergeDialogId, finalSelectedObject, selectedMessagesIds, finalSelectedGroup, (int) getTopicId(), chatMode, null, () -> {
@@ -32405,7 +32599,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     popupLayout.addView(messagePrivateSeenView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 36));
                     addGap = true;
                 }
-                boolean showRateTranscription = selectedObject != null && selectedObject.isVoice() && selectedObject.messageOwner != null && getUserConfig().isPremium() && !TextUtils.isEmpty(selectedObject.messageOwner.voiceTranscription) && selectedObject.messageOwner != null && !selectedObject.messageOwner.voiceTranscriptionRated && selectedObject.messageOwner.voiceTranscriptionId != 0 && selectedObject.messageOwner.voiceTranscriptionOpen;
+                boolean showRateTranscription = selectedObject != null && selectedObject.isVoice() && selectedObject.messageOwner != null && getUserConfig().isPremium() && !TextUtils.isEmpty(selectedObject.messageOwner.voiceTranscription) && selectedObject.messageOwner != null && !selectedObject.messageOwner.voiceTranscriptionRated && selectedObject.messageOwner.voiceTranscriptionId > 0 && selectedObject.messageOwner.voiceTranscriptionOpen;
 
                 if (!showRateTranscription && message.probablyRingtone() && currentEncryptedChat == null) {
                     ActionBarMenuSubItem cell = new ActionBarMenuSubItem(getParentActivity(), !showPrivateMessageSeen && !showPrivateMessageEdit && !showPrivateMessageFwdOriginal, false, themeDelegate);
@@ -32738,6 +32932,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         processSelectedOption(options.get(i));
                     });
                     if (option == OPTION_TRANSLATE) {
+                        // Mercurygram: in a secret chat the alert must translate on-device
+                        // only (dispatchSecret) — pass the encrypted flag so TranslateAlert2
+                        // never reaches a network translate path.
+                        final boolean encrypted = currentEncryptedChat != null;
                         final boolean translateEnabled = getMessagesController().getTranslateController().isContextTranslateEnabled();
                         String toLangDefault = LocaleController.getInstance().getCurrentLocale().getLanguage();
                         String toLang = TranslateAlert2.getToLanguage();
@@ -32774,7 +32972,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                             String fromLang = selectedObject.messageOwner.originalLanguage;
                             cell.setVisibility(
                                 fromLang != null && (!fromLang.equals(toLang) || !fromLang.equals(toLangDefault) || fromLang.equals(TranslateController.UNKNOWN_LANGUAGE)) && (
-                                    translateEnabled && !RestrictedLanguagesSelectActivity.getRestrictedLanguages().contains(fromLang) ||
+                                    (translateEnabled || encrypted) && !RestrictedLanguagesSelectActivity.getRestrictedLanguages().contains(fromLang) ||
                                     (currentChat != null && (currentChat.has_link || ChatObject.isPublic(currentChat)) || selectedObject.messageOwner.fwd_from != null) && ("uk".equals(fromLang) || "ru".equals(fromLang))
                                 ) ? View.VISIBLE : View.GONE
                             );
@@ -32805,7 +33003,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                                 (String lang) -> {
                                     fromLang[0] = lang;
                                     if (fromLang[0] != null && (!fromLang[0].equals(toLang) || !fromLang[0].equals(toLangDefault) || fromLang[0].equals(TranslateController.UNKNOWN_LANGUAGE)) && (
-                                        translateEnabled && !RestrictedLanguagesSelectActivity.getRestrictedLanguages().contains(fromLang[0]) ||
+                                        (translateEnabled || encrypted) && !RestrictedLanguagesSelectActivity.getRestrictedLanguages().contains(fromLang[0]) ||
                                         (currentChat != null && (currentChat.has_link || ChatObject.isPublic(currentChat)) || selectedObject.messageOwner.fwd_from != null) && ("uk".equals(fromLang[0]) || "ru".equals(fromLang[0]))
                                     )) {
                                         cell.setVisibility(View.VISIBLE);
@@ -32817,7 +33015,13 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                                     }
                                 },
                                 (Exception e) -> {
-                                    FileLog.e("mlkit: failed to detect language in message");
+                                    FileLog.e("hanako: failed to detect language in message");
+                                    // Hanako: detection failing must never hide Translate;
+                                    // fall back to "und" (provider auto-detects the source).
+                                    fromLang[0] = TranslateController.UNKNOWN_LANGUAGE;
+                                    if (translateEnabled || encrypted) {
+                                        cell.setVisibility(View.VISIBLE);
+                                    }
                                     waitForLangDetection.set(false);
                                     if (onLangDetectionDone.get() != null) {
                                         onLangDetectionDone.get().run();
@@ -32848,7 +33052,13 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                                     onLangDetectionDone.getAndSet(null).run();
                                 }
                             }, 250);
-                        } else if (translateEnabled) {
+                        } else if (translateEnabled || encrypted) {
+                            // Mercurygram: secret-chat translate has no detected source
+                            // language (MLKit is removed, originalLanguage is null) and must
+                            // not depend on the "Show Translate button" context setting —
+                            // otherwise the secret-chat Translate item silently hits the
+                            // final else below and is set GONE. encrypted forces the
+                            // on-device alert ("und" → provider auto-detects the source).
                             cell.setOnClickListener(e -> {
                                 if (selectedObject == null || i >= options.size() || getParentActivity() == null) {
                                     return;
@@ -33639,6 +33849,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         if (isInScheduleMode() || primaryMessage == null) {
             return;
         }
+        if (it.belloworld.mercurygram.PlusDeletedReactions.blockInteraction(getParentActivity(), primaryMessage)) { // plus f07: ghost reactions are read-only
+            return;
+        }
         if (getMessagesController().isFrozen()) {
             AccountFrozenAlert.show(currentAccount);
             return;
@@ -34079,31 +34292,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     }
 
     private void saveMessageToGallery(MessageObject messageObject) {
-        String path = messageObject.messageOwner.attachPath;
-        if (!TextUtils.isEmpty(path)) {
-            File temp = new File(path);
-            if (!temp.exists()) {
-                path = null;
-            }
-        }
-        if (TextUtils.isEmpty(path)) {
-            File f = FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner);
-            if (f != null && f.exists()) {
-                path = f.getPath();
-            }
-        }
-        if (TextUtils.isEmpty(path) && messageObject.cachedQuality != null && messageObject.cachedQuality.isCached()) {
-            File f = new File(messageObject.cachedQuality.uri.getPath());
-            if (f != null && f.exists()) {
-                path = f.getPath();
-            }
-        }
-        if (TextUtils.isEmpty(path) && messageObject.qualityToSave != null) {
-            File f = FileLoader.getInstance(currentAccount).getPathToAttach(messageObject.qualityToSave, null, false, true);
-            if (f != null && f.exists()) {
-                path = f.getPath();
-            }
-        }
+        File mgFile = it.belloworld.mercurygram.MgLocalMedia.cachedFile(messageObject);
+        String path = mgFile != null ? mgFile.getPath() : null;
         if (TextUtils.isEmpty(path)) {
             return;
         }
@@ -34323,16 +34513,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 break;
             }
             case OPTION_SHARE: {
-                String path = selectedObject.messageOwner.attachPath;
-                if (path != null && path.length() > 0) {
-                    File temp = new File(path);
-                    if (!temp.exists()) {
-                        path = null;
-                    }
-                }
-                if (path == null || path.length() == 0) {
-                    path = getFileLoader().getPathToMessage(selectedObject.messageOwner).toString();
-                }
+                File mgFile = it.belloworld.mercurygram.MgLocalMedia.cachedFile(selectedObject);
+                String path = mgFile != null ? mgFile.getPath() : getFileLoader().getPathToMessage(selectedObject.messageOwner).toString();
                 Intent intent = new Intent(Intent.ACTION_SEND);
                 intent.setType(selectedObject.getDocument().mime_type);
                 File f = new File(path);
@@ -34354,31 +34536,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 break;
             }
             case OPTION_SAVE_TO_GALLERY2: {
-                String path = selectedObject.messageOwner.attachPath;
-                if (path != null && path.length() > 0) {
-                    File temp = new File(path);
-                    if (!temp.exists()) {
-                        path = null;
-                    }
-                }
-                if (TextUtils.isEmpty(path)) {
-                    File f = FileLoader.getInstance(currentAccount).getPathToMessage(selectedObject.messageOwner);
-                    if (f != null && f.exists()) {
-                        path = f.getPath();
-                    }
-                }
-                if (TextUtils.isEmpty(path) && selectedObject.cachedQuality != null && selectedObject.cachedQuality.isCached()) {
-                    File f = new File(selectedObject.cachedQuality.uri.getPath());
-                    if (f != null && f.exists()) {
-                        path = f.getPath();
-                    }
-                }
-                if (TextUtils.isEmpty(path) && selectedObject.qualityToSave != null) {
-                    File f = FileLoader.getInstance(currentAccount).getPathToAttach(selectedObject.qualityToSave, null, false, true);
-                    if (f != null && f.exists()) {
-                        path = f.getPath();
-                    }
-                }
+                File mgFile = it.belloworld.mercurygram.MgLocalMedia.cachedFile(selectedObject);
+                String path = mgFile != null ? mgFile.getPath() : null;
                 if (Build.VERSION.SDK_INT >= 23 && (Build.VERSION.SDK_INT <= 28 || BuildVars.NO_SCOPED_STORAGE) && getParentActivity().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     getParentActivity().requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 4);
                     selectedObject = null;
@@ -34394,6 +34553,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 break;
             }
             case OPTION_REPLY: {
+                if (selectedObject != null && selectedObject.mgDeletedGhost) {
+                    return;
+                }
                 if (selectedObject != null && selectedObject.messageOwner != null && selectedObject.messageOwner.noforwards) {
                     return;
                 }
@@ -34468,31 +34630,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     if (TextUtils.isEmpty(fileName)) {
                         fileName = selectedObject.getFileName();
                     }
-                    String path = selectedObject.messageOwner.attachPath;
-                    if (path != null && path.length() > 0) {
-                        File temp = new File(path);
-                        if (!temp.exists()) {
-                            path = null;
-                        }
-                    }
-                    if (TextUtils.isEmpty(path)) {
-                        File f = FileLoader.getInstance(currentAccount).getPathToMessage(selectedObject.messageOwner);
-                        if (f != null && f.exists()) {
-                            path = f.getPath();
-                        }
-                    }
-                    if (TextUtils.isEmpty(path) && selectedObject.cachedQuality != null && selectedObject.cachedQuality.isCached()) {
-                        File f = new File(selectedObject.cachedQuality.uri.getPath());
-                        if (f != null && f.exists()) {
-                            path = f.getPath();
-                        }
-                    }
-                    if (TextUtils.isEmpty(path) && selectedObject.qualityToSave != null) {
-                        File f = FileLoader.getInstance(currentAccount).getPathToAttach(selectedObject.qualityToSave, null, false, true);
-                        if (f != null && f.exists()) {
-                            path = f.getPath();
-                        }
-                    }
+                    File mgFile = it.belloworld.mercurygram.MgLocalMedia.cachedFile(selectedObject);
+                    String path = mgFile != null ? mgFile.getPath() : null;
                     MediaController.saveFile(path, getParentActivity(), 2, fileName, selectedObject.getDocument() != null ? selectedObject.getDocument().mime_type : "", uri -> {
                         if (getParentActivity() == null) {
                             return;
@@ -34986,6 +35125,23 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             case OPTION_FACT_CHECK: {
                 MessageObject msg = selectedObjectGroup != null ? selectedObjectGroup.findPrimaryMessageObject() : selectedObject;
                 FactCheckController.getInstance(currentAccount).openFactCheckEditor(getContext(), getResourceProvider(), msg, false);
+                break;
+            }
+            case OPTION_DETAILS: {
+                presentFragment(new it.belloworld.mercurygram.ui.MessageDetailsActivity(selectedObject));
+                break;
+            }
+            case OPTION_EDIT_HISTORY: {
+                presentFragment(new it.belloworld.mercurygram.ui.MgMessageEditHistoryActivity(selectedObject));
+                break;
+            }
+            case it.belloworld.mercurygram.PlusMessageFilters.OPTION_MESSAGE_FILTERS: { // plus f04
+                it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.MSG_MENU_FILTERS); // hanako: usage statistics (off by default)
+                it.belloworld.mercurygram.PlusMessageFilters.showChatMenu(this, selectedObject, dialog_id, () -> {
+                    if (chatAdapter != null) {
+                        chatAdapter.notifyDataSetChanged();
+                    }
+                });
                 break;
             }
             case OPTION_SUGGESTION_ADD_OFFER:
@@ -36398,6 +36554,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     private int commentMessagesRequestId;
     private int commentLoadingMessageId;
     private boolean hideCommentLoading;
+    private NotificationCenter.NotificationCenterDelegate commentsMessagesObserver;
     private long commentLoadingStartedAt;
     private TLRPC.TL_messages_discussionMessage savedDiscussionMessage;
     private TLRPC.messages_Messages savedHistory;
@@ -36495,9 +36652,13 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                                     chatActivity.didReceivedNotification(id, account, args);
                                 }, 50);
                                 NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.messagesDidLoad);
+                                if (commentsMessagesObserver == this) {
+                                    commentsMessagesObserver = null;
+                                }
                             }
                         }
                     };
+                    commentsMessagesObserver = observer;
                     NotificationCenter.getInstance(currentAccount).addObserver(observer, NotificationCenter.messagesDidLoad);
                     Utilities.stageQueue.postRunnable(() -> {
                         getMessagesController().processLoadedMessages(historyFinal, historyFinal.messages.size(), dialogId, 0, 30, (highlightMsgId > 0 ? highlightMsgId : maxReadId), 0, false, commentsClassGuid, fnidFinal, 0, 0, 0, (highlightMsgId > 0 ? 3 : 2), true, 0, arrayList.get(arrayList.size() - 1).getId(), 1, false, 0, true, isTopic, null);
@@ -37171,12 +37332,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         }
         boolean noforwards = getMessagesController().isChatNoForwards(currentChat) || (messageObject != null && messageObject.messageOwner != null && messageObject.messageOwner.noforwards);
         if (url instanceof URLSpanMono) {
-            if (!noforwards || getDialogId() == UserObject.VERIFY) {
-                ((URLSpanMono) url).copyToClipboard();
-                UndoView undoView = getUndoView();
-                if (undoView != null) {
-                    undoView.showWithAction(0, UndoView.ACTION_TEXT_COPIED, null);
-                }
+            ((URLSpanMono) url).copyToClipboard();
+            UndoView undoView = getUndoView();
+            if (undoView != null) {
+                undoView.showWithAction(0, UndoView.ACTION_TEXT_COPIED, null);
             }
             if (longPress && cell != null) {
                 cell.resetPressedLink(-1);
@@ -37283,7 +37442,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     }
                     forceAlert = true;
                 } else {
-                    if (messageObject != null && messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaWebPage && messageObject.messageOwner.media.webpage != null && messageObject.messageOwner.media.webpage.cached_page != null) {
+                    if (!getUserConfig().mg.disableInstantView && messageObject != null && messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaWebPage && messageObject.messageOwner.media.webpage != null && messageObject.messageOwner.media.webpage.cached_page != null) {
                         String lowerUrl = urlFinal.toLowerCase();
                         String lowerUrl2 = messageObject.messageOwner.media.webpage.url.toLowerCase();
                         if ((lowerUrl.contains("telegram.org/blog") || Browser.isTelegraphUrl(lowerUrl, false) || lowerUrl.contains("t.me/iv")) && (lowerUrl.contains(lowerUrl2) || lowerUrl2.contains(lowerUrl))) {
@@ -37301,7 +37460,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 if (Browser.urlMustNotHaveConfirmation(urlFinal)) {
                     forceAlert = false;
                 }
-                processExternalUrl(2, urlFinal, url, cell, forceAlert, false);
+                processExternalUrl(2, urlFinal, url, cell, forceAlert, getUserConfig().mg.disableInstantView);
             }
         }
     }
@@ -37984,6 +38143,8 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     }
                 };
                 view.setBackgroundColor(0xFF00FF00);
+            } else if (it.belloworld.mercurygram.PlusMessageFilters.isOwnViewType(viewType)) { // plus f04
+                view = it.belloworld.mercurygram.PlusMessageFilters.createView(mContext, viewType, themeDelegate);
             }
             view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
             return new RecyclerListView.Holder(view);
@@ -38552,6 +38713,12 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     if (createUnreadMessageAfterId != 0) {
                         createUnreadMessageAfterId = 0;
                     }
+                } else { // plus f04
+                    it.belloworld.mercurygram.PlusMessageFilters.bindView(view, message, () -> {
+                        if (chatAdapter != null) {
+                            chatAdapter.notifyDataSetChanged();
+                        }
+                    });
                 }
             }
         }
@@ -38575,6 +38742,15 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 } else {
                     messages = ChatActivity.this.messages;
                 }
+                // plus f04 begin
+                if (chatMode != MODE_SCHEDULED) {
+                    final MessageObject plusMsg = messages.get(position - messagesStartRow);
+                    final int plusType = it.belloworld.mercurygram.PlusMessageFilters.getViewType(plusMsg, plusMsg.getGroupId() != 0 ? getValidGroupedMessage(plusMsg) : null);
+                    if (plusType != 0) {
+                        return plusType;
+                    }
+                }
+                // plus f04 end
                 return messages.get(position - messagesStartRow).contentType;
             } else if (position == botInfoRow) {
                 return 3;
@@ -40078,7 +40254,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 if (username != null) {
                     sb.append("@").append(username).append(" ");
                 } else {
-                    String name = UserObject.getFirstName(user, false);
+                    String name = it.belloworld.mercurygram.PlusStreamer.realFirstName(user); // plus f10: mention text is sent, never mask it
                     Spannable spannable = new SpannableString(name + " ");
                     spannable.setSpan(new URLSpanUserMention("" + user.id, 3), 0, spannable.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     sb.append(spannable);
@@ -41183,9 +41359,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 }
             };
             if (!safe && !Browser.isInternalUri(uri, null)) {
-                AlertsCreator.showOpenUrlAlert(ChatActivity.this, url, true, true, true, !safe, progressDialogCurrent, themeDelegate);
+                AlertsCreator.showOpenUrlAlert(ChatActivity.this, url, true, !getUserConfig().mg.disableInstantView, true, !safe, progressDialogCurrent, themeDelegate);
             } else {
-                Browser.openUrl(getContext(), uri, true, true, false, progressDialogCurrent, null, false, true, false);
+                Browser.openUrl(getContext(), uri, true, !getUserConfig().mg.disableInstantView, false, progressDialogCurrent, null, false, true, false);
             }
         }
 
@@ -45408,6 +45584,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             return;
         }
         if (messageObject == null) return;
+        if (it.belloworld.mercurygram.PlusDeletedReactions.blockInteraction(getParentActivity(), messageObject)) return; // plus f07: ghost reactions are read-only
         if (getUserConfig().getClientUserId() == getDialogId() && messageObject.areTags() && !getUserConfig().isPremium()) {
             if (longpress) return;
             new PremiumFeatureBottomSheet(ChatActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_SAVED_TAGS, true).show();
@@ -46011,7 +46188,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     icons.add(R.drawable.msg_report);
                 }
             } else {
-                if (selectedObject.getId() > 0 && allowChatActions && !isInsideContainer) {
+                if (selectedObject.getId() > 0 && allowChatActions && !isInsideContainer && !selectedObject.mgDeletedGhost) {
                     items.add(LocaleController.getString(R.string.Reply));
                     options.add(OPTION_REPLY);
                     icons.add(R.drawable.menu_reply);
@@ -46057,7 +46234,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         icons.add(R.drawable.msg_fave);
                     }
                 }
-                if ((allowChatActions || !noforwardsOrPaidMedia && ChatObject.isChannelAndNotMegaGroup(currentChat) && !selectedObject.isSponsored() && selectedObject.contentType == 0 && chatMode == MODE_DEFAULT) && !isInsideContainer) {
+                if ((allowChatActions || !noforwardsOrPaidMedia && ChatObject.isChannelAndNotMegaGroup(currentChat) && !selectedObject.isSponsored() && selectedObject.contentType == 0 && chatMode == MODE_DEFAULT) && !isInsideContainer && !selectedObject.mgDeletedGhost) {
                     items.add(LocaleController.getString(R.string.Reply));
                     options.add(OPTION_REPLY);
                     icons.add(R.drawable.menu_reply);
@@ -46329,6 +46506,23 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     options.add(OPTION_DELETE);
                     icons.add(deleteIconRes);
                 }
+                if (mgGhost.isEditHistoryCandidate(selectedObject)) {
+                    items.add(LocaleController.getString(R.string.MercurygramEditHistory));
+                    options.add(OPTION_EDIT_HISTORY);
+                    icons.add(R.drawable.msg_edit);
+                }
+                if (getUserConfig().mg.messageDetailsMenu) {
+                    items.add(LocaleController.getString(R.string.MessageDetails));
+                    options.add(OPTION_DETAILS);
+                    icons.add(R.drawable.menu_info);
+                }
+                // plus f04 begin
+                if (it.belloworld.mercurygram.PlusMessageFilters.canShowMenu(selectedObject, chatMode)) {
+                    items.add(LocaleController.getString(R.string.PlusF04MenuItem));
+                    options.add(it.belloworld.mercurygram.PlusMessageFilters.OPTION_MESSAGE_FILTERS);
+                    icons.add(R.drawable.msg_archive_hide);
+                }
+                // plus f04 end
             } else {
                 if (allowChatActions && !isInsideContainer) {
                     items.add(LocaleController.getString(R.string.Reply));
@@ -46339,6 +46533,18 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     items.add(LocaleController.getString(R.string.Copy));
                     options.add(OPTION_COPY);
                     icons.add(R.drawable.msg_copy);
+                }
+                // Mercurygram: single-message translate in secret chats — only when the
+                // on-device offline translator is selected and usable (passesSecretTranslateGate),
+                // so secret text is translated entirely on-device (dispatchSecret) and never
+                // hits the network. The OPTION_TRANSLATE handler passes encrypted=true.
+                if (selectedObject != null && selectedObject.contentType == 0
+                        && !TextUtils.isEmpty(selectedObject.getMessageTextToTranslate(selectedObjectGroup, null))
+                        && !selectedObject.isAnimatedEmoji() && !selectedObject.isDice()
+                        && TranslateController.passesSecretTranslateGate(dialog_id)) {
+                    items.add(LocaleController.getString(R.string.TranslateMessage));
+                    options.add(OPTION_TRANSLATE);
+                    icons.add(R.drawable.msg_translate);
                 }
                 if (!isThreadChat() && chatMode != MODE_SCHEDULED && currentChat != null && primaryMessage != null && (currentChat.has_link || primaryMessage.hasReplies()) && currentChat.megagroup && primaryMessage.canViewThread()) {
                     if (primaryMessage.hasReplies()) {

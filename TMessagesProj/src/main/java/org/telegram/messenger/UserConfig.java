@@ -23,6 +23,7 @@ import org.telegram.messenger.forkgram.HiddenAccountHelper;
 import java.io.File;
 import java.util.Arrays;
 
+
 public class UserConfig extends BaseController {
 
     public static int selectedAccount;
@@ -69,6 +70,7 @@ public class UserConfig extends BaseController {
     // this per-account prefs file, which clearConfig() wipes wholesale, so clearConfig() has to carry
     // it across -- see the comment there.
     private static final String CLASSIC_MAIN_TABS_MIGRATED = "classic_mainTabsHidden_migrated_v1";
+    public final it.belloworld.mercurygram.MgAccountConfig mg = new it.belloworld.mercurygram.MgAccountConfig();
     public boolean hasSecureData;
     public int loginTime;
     public TLRPC.TL_help_termsOfService unacceptedTermsOfService;
@@ -185,6 +187,7 @@ public class UserConfig extends BaseController {
                     editor.putBoolean("showCallsTab", showCallsTab);
                     editor.putBoolean("mainTabsHiddenFork", mainTabsHiddenFork);
                     editor.putBoolean("suggestContacts", suggestContacts);
+                    mg.save(editor);
                     editor.putBoolean("hasSecureData", hasSecureData);
                     editor.putBoolean("notificationsSettingsLoaded4", notificationsSettingsLoaded);
                     editor.putBoolean("notificationsSignUpSettingsLoaded", notificationsSignUpSettingsLoaded);
@@ -345,6 +348,7 @@ public class UserConfig extends BaseController {
                         .apply();
             }
             suggestContacts = preferences.getBoolean("suggestContacts", true);
+            mg.load(preferences);
             hasSecureData = preferences.getBoolean("hasSecureData", false);
             notificationsSettingsLoaded = preferences.getBoolean("notificationsSettingsLoaded4", false);
             notificationsSignUpSettingsLoaded = preferences.getBoolean("notificationsSignUpSettingsLoaded", false);
@@ -529,6 +533,7 @@ public class UserConfig extends BaseController {
         showCallsTab = false;
         mainTabsHiddenFork = true;
         suggestContacts = true;
+        mg.reset();
         unreadDialogsLoaded = true;
         hasValidDialogLoadIds = true;
         unacceptedTermsOfService = null;

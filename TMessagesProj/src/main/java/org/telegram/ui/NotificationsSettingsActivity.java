@@ -84,6 +84,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+
 public class NotificationsSettingsActivity extends BaseFragment implements NotificationCenter.NotificationCenterDelegate {
 
     public static class NotificationException {
@@ -768,17 +769,21 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                 editor.commit();
                 getNotificationsController().updateBadge();
             } else if (position == notificationsServiceConnectionRow) {
-                SharedPreferences preferences = MessagesController.getNotificationsSettings(currentAccount);
+                // Device-wide: ConnectionsManager.isPushConnectionEnabled and ApplicationLoader.startPushService
+                // read the first account's file, so writing this per account made the toggle a no-op elsewhere.
+                SharedPreferences preferences = MessagesController.getGlobalNotificationsSettings();
                 enabled = preferences.getBoolean("pushConnection", getMessagesController().backgroundConnection);
                 SharedPreferences.Editor editor = preferences.edit();
                 editor.putBoolean("pushConnection", !enabled);
                 enabled = preferences.getBoolean("pushService", getMessagesController().keepAliveService);
                 editor.putBoolean("pushService", !enabled);
                 editor.commit();
-                if (!enabled) {
-                    ConnectionsManager.getInstance(currentAccount).setPushConnectionEnabled(true);
-                } else {
-                    ConnectionsManager.getInstance(currentAccount).setPushConnectionEnabled(false);
+                // The pref is device-wide, so apply it to every logged-in account right away instead of
+                // leaving the others on their old state until the next launch re-reads the pref.
+                for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                    if (UserConfig.getInstance(a).isClientActivated()) {
+                        ConnectionsManager.getInstance(a).setPushConnectionEnabled(!enabled);
+                    }
                 }
                 ApplicationLoader.startPushService();
             } else if (position == accountsAllRow) {

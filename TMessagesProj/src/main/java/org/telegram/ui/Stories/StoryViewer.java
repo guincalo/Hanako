@@ -385,6 +385,18 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
             doOnAnimationReadyRunnables.clear();
             return;
         }
+        // plus f06: ask before opening when the view would be visible (or always)
+        if (it.belloworld.mercurygram.PlusStoryGuard.confirmOpen(context, account, storyItem, peerIds, position, storiesList,
+                () -> open(account, context, storyItem, peerIds, position, storiesList, userStories, placeProvider, reversed),
+                () -> {
+                    ArrayList<Runnable> pending = new ArrayList<>(doOnAnimationReadyRunnables);
+                    doOnAnimationReadyRunnables.clear();
+                    for (int i = 0; i < pending.size(); i++) {
+                        pending.get(i).run();
+                    }
+                })) {
+            return;
+        }
         setSpeed(1f);
         ATTACH_TO_FRAGMENT = !AndroidUtilities.isTablet() && !fromBottomSheet;
         USE_SURFACE_VIEW = SharedConfig.useSurfaceInStories && ATTACH_TO_FRAGMENT;
@@ -2889,7 +2901,9 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
                         fragment.getParentActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
                         AndroidUtilities.logFlagSecure();
                     } else {
-                        fragment.getParentActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                        if (!SharedConfig.disableSecureFlags) {
+                            fragment.getParentActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                        }
                         AndroidUtilities.logFlagSecure();
                     }
                 }
@@ -2898,7 +2912,9 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
                     windowLayoutParams.flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
                     AndroidUtilities.logFlagSecure();
                 } else {
-                    windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
+                    if (!SharedConfig.disableSecureFlags) {
+                        windowLayoutParams.flags |= WindowManager.LayoutParams.FLAG_SECURE;
+                    }
                     AndroidUtilities.logFlagSecure();
                 }
                 try {

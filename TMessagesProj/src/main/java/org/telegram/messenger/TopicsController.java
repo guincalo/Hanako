@@ -239,6 +239,11 @@ public class TopicsController extends BaseController {
     }
 
     public void processTopics(long chatId, ArrayList<TLRPC.TL_forumTopic> newTopics, LongSparseArray<TLRPC.Message> messagesMap, boolean fromCache, int loadType, int totalCount) {
+        if (!fromCache && newTopics != null) { // hanako: keep topics read under ghost mode read
+            for (int i = 0; i < newTopics.size(); i++) {
+                it.belloworld.mercurygram.PlusReadLedger.clampTopic(currentAccount, -chatId, newTopics.get(i));
+            }
+        }
         if (loadType == LOAD_TYPE_HASH_CHECK && getMessagesController().isMonoForum(-chatId)) {
             getUserConfig().getPreferences().edit().remove("topics_end_reached_" + chatId).apply();
             topicsByChatId.remove(chatId);

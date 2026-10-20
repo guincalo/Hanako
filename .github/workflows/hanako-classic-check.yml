@@ -1,0 +1,65 @@
+name: Hanako Classic compile check
+
+# Fast Java/Kotlin compile of TMessagesProj without native deps, for the
+# rebase work branch. Gives every javac error in ~15 minutes.
+
+on:
+  push:
+    branches: [hanako-classic-wip]
+  workflow_dispatch:
+
+concurrency:
+  group: hanako-classic-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Gradle-config submodules only
+        run: git submodule update --init --depth 1 TMessagesProj/lib/jlatexmath TMessagesProj_Modules/media
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+      - name: Android SDK pieces
+        run: |
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "build-tools;36.0.0" "platforms;android-36" "ndk;27.2.12479018" >/dev/null
+      - name: Configure
+        run: |
+          sed -i -e '/com\.google\.android\.play/d' -e '/play-services/d' TMessagesProj/build.gradle
+          sed -i -e '/gms/d' TMessagesProj/src/main/java/org/telegram/messenger/CaptchaController.java || true
+          sed -i -e 's/^APP_ID=.*/APP_ID=105810/' -e 's/^APP_HASH=.*/APP_HASH=3e7a52498eec003c5896a330e5d29397/' \
+                 -e 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g/' gradle.properties
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/maxerrs.gradle <<'G'
+          allprojects {
+            tasks.withType(JavaCompile).configureEach { options.compilerArgs += ['-Xmaxerrs', '3000', '-Xmaxwarns', '0'] }
+          }
+          G
+      - name: Compile
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon --continue -x buildNativeDeps :TMessagesProj:compileReleaseJavaWithJavac :TMessagesProj_App:compileAfatFd_v8aReleaseJavaWithJavac 2>&1 | tee compile.log
+      - name: Errors
+        if: always()
+        run: |
+          grep -E '\.java:[0-9]+: error:|^e: |error:|What went wrong' -A2 compile.log > errors.txt || true
+          grep -cE '\.java:[0-9]+: error:' compile.log || true
+          head -c 60000 errors.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compile-log
+          path: |
+            compile.log
+            errors.txt
+          retention-days: 5

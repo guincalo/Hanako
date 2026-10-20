@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="PlusF03ScheduledSend">Send messages as scheduled</string>
+    <string name="PlusF03ScheduledSendInfo">Needs Stay offline. The server posts your messages about 12 s later, so sending never shows you online.</string>
+    <string name="PlusF03ScheduledSendBulletin">Sending in %1$d s without going online</string>
+</resources>

@@ -1337,6 +1337,11 @@ public class FileLoader extends BaseController {
      * Return real file name. Used before file.exist()
      */
     public File getPathToAttach(TLObject attach, String size, String ext, boolean forceCache, boolean useFileDatabaseQueue) {
+        // Mercurygram: saved-history media copy (deleted / pre-edit / expired message), see MgHistoryMedia.apply.
+        File mgSaved = it.belloworld.mercurygram.MgHistoryMedia.redirect(attach);
+        if (mgSaved != null) {
+            return mgSaved;
+        }
         File dir = null;
         long documentId = 0;
         int dcId = 0;

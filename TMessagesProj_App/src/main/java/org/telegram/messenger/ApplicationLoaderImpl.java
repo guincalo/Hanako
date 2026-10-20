@@ -18,10 +18,20 @@ import org.telegram.ui.IUpdateLayout;
 
 import java.io.File;
 
+import org.telegram.ui.Components.MgUpdateLayout;
+import it.belloworld.mercurygram.MgUpdateChecker;
+import it.belloworld.mercurygram.MgUpdateInfo;
+import it.belloworld.mercurygram.ui.MgUpdateAlertDialog;
+
 public class ApplicationLoaderImpl extends ApplicationLoader {
     @Override
     protected String onGetApplicationId() {
         return BuildConfig.APPLICATION_ID;
+    }
+
+    @Override
+    protected void checkForUpdatesInternal() {
+        MgUpdateChecker.checkForUpdates(false);
     }
 
     @Override
@@ -35,42 +45,32 @@ public class ApplicationLoaderImpl extends ApplicationLoader {
 
     @Override
     public boolean openApkInstall(Activity activity, TLRPC.Document document) {
-        boolean exists = false;
-        try {
-            File f = FileLoader.getInstance(UserConfig.selectedAccount).getPathToAttach(document, true);
-            if (exists = f.exists()) {
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    intent.setDataAndType(FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", f), "application/vnd.android.package-archive");
-                } else {
-                    intent.setDataAndType(Uri.fromFile(f), "application/vnd.android.package-archive");
-                }
-                try {
-                    activity.startActivityForResult(intent, 500);
-                } catch (Exception e) {
-                    FileLog.e(e);
-                }
-            }
-        } catch (Exception e) {
-            FileLog.e(e);
+        File apk = MgUpdateChecker.getUpdateApkFile();
+        if (apk != null) {
+            MgUpdateChecker.installUpdate(activity, apk);
+            return true;
         }
-        return exists;
+        return false;
     }
 
     @Override
     public boolean showUpdateAppPopup(Context context, TLRPC.TL_help_appUpdate update, int account) {
-        try {
-            (new UpdateAppAlertDialog(context, update, account)).show();
-        } catch (Exception e) {
-            FileLog.e(e);
+        if (SharedConfig.isMgUpdateAvailable()) {
+            try {
+                MgUpdateInfo info = SharedConfig.getMgPendingUpdate();
+                if (info != null) {
+                    new MgUpdateAlertDialog(context, info).show();
+                    return true;
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
         }
-        return true;
+        return false;
     }
 
     @Override
     public IUpdateLayout takeUpdateLayout(Activity activity, ViewGroup sideMenuContainer) {
-        return new UpdateLayout(activity, sideMenuContainer);
+        return new MgUpdateLayout(activity, sideMenuContainer);
     }
 }

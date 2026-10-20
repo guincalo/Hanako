@@ -238,6 +238,14 @@ public class ApplicationLoader extends Application {
 
         SharedConfig.loadConfig();
         SharedPrefsHelper.init(applicationContext);
+        // Clear stale Orbot proxy entries from the pre-embedded-Tor era so
+        // upgrades don't silently keep routing MTProto through 127.0.0.1:9050.
+        // Pin the proxy entry to the unreachable loopback stub BEFORE the
+        // ConnectionsManager singletons below read proxy_port via their
+        // init() path. Without this, the first native_setProxySettings()
+        // call on a Tor-enabled cold start targets the previous session's
+        // persisted ephemeral SOCKS port (now dead, possibly rebound by
+        // another app) until MgTorController.init() further down runs.
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) { //TODO improve account
             if (a != 0 && !UserConfig.hasStoredConfig(a)) {
                 continue;
@@ -262,6 +270,10 @@ public class ApplicationLoader extends Application {
                 SendMessagesHelper.getInstance(a).checkUnsentMessages();
             }
         }
+        // After per-account loadConfig: clear any stale mgReducedTrackingExhausted
+        // flag on app upgrade so a transient server rejection from a prior
+        // release doesn't permanently lock the user at the upstream 24h TTL.
+        SharedConfig.maybeClearReducedTrackingExhaustedOnUpgrade();
 
         ApplicationLoader app = (ApplicationLoader) ApplicationLoader.applicationContext;
         app.initPushServices();
@@ -279,6 +291,7 @@ public class ApplicationLoader extends Application {
         }
 
         Utilities.globalQueue.postRunnable(ApplicationLoader::cleanupUnusedAccountDirs);
+        it.belloworld.mercurygram.folders.MgFolderSync.startAll(); // Mercurygram: folder sync via Saved Messages
     }
 
     private static void cleanupUnusedAccountDirs() {
@@ -368,6 +381,13 @@ public class ApplicationLoader extends Application {
             applicationContext = getApplicationContext();
         }
 
+        // hanako: apply a staged session restore before anything reads the
+        // account configs or the native ConnectionsManager opens tgnet.dat
+        it.belloworld.mercurygram.HanakoBackup.applyPendingAtStartup(applicationContext);
+        // hanako: custom api_id / api_hash, before the native ConnectionsManager reads BuildVars.APP_ID
+        it.belloworld.mercurygram.HanakoApiConfig.applyAtStartup(applicationContext);
+        it.belloworld.mercurygram.HanakoTelemetry.init(); // hanako: crash hook + daily upload (off by default)
+
         NativeLoader.initNativeLibs(ApplicationLoader.applicationContext);
 
         try {
@@ -400,6 +420,8 @@ public class ApplicationLoader extends Application {
         LauncherIconController.tryFixLauncherIconIfNeeded();
         ProxyRotationController.init();
 
+        it.belloworld.mercurygram.MgNetworkChangeWatcher.init(applicationContext);
+        SharedConfig.applyReduceTrackingFingerprintToNative();
         //if (BuildConfig.DEBUG_PRIVATE_VERSION) {
         //    Choreographer60FpsContent.getInstance().addFrameCallback(debugEverySecondChecks, 1);
         //}

@@ -251,6 +251,7 @@ public class FileLoadOperation {
     private byte[] cdnToken;
     private int cdnDatacenterId;
     private boolean reuploadingCdn;
+    private boolean mgRefusedCdnRedirect;  // MG: prevents infinite redirect loop when server insists on CDN
     protected boolean requestingReference;
     private boolean requestedReference;
     private RandomAccessFile fileReadStream;
@@ -308,6 +309,12 @@ public class FileLoadOperation {
             maxDownloadRequests = 4;
             maxDownloadRequestsBig = 4;
         }
+        if (!forceSmallChunk && it.belloworld.mercurygram.PlusTransferBoost.downloadBoosted()) { // plus f19
+            downloadChunkSize = it.belloworld.mercurygram.PlusTransferBoost.downloadChunkSizeSmall(); // plus f19
+            downloadChunkSizeBig = it.belloworld.mercurygram.PlusTransferBoost.downloadChunkSizeBig(); // plus f19
+            maxDownloadRequests = it.belloworld.mercurygram.PlusTransferBoost.maxDownloadRequestsSmall(); // plus f19
+            maxDownloadRequestsBig = it.belloworld.mercurygram.PlusTransferBoost.maxDownloadRequestsBig(); // plus f19
+        } // plus f19
         maxCdnParts = (int) (FileLoader.DEFAULT_MAX_FILE_SIZE / downloadChunkSizeBig);
     }
 
@@ -649,6 +656,8 @@ public class FileLoadOperation {
                             writingToFilePartsStream = false;
                             if (closeFilePartsStreamOnWriteEnd) {
                                 try {
+                                    // the stream is unbuffered ("rw"), so flush the parts index once here
+                                    filePartsStream.getFD().sync();
                                     filePartsStream.getChannel().close();
                                 } catch (Exception e) {
                                     FileLog.e(e);
@@ -1169,7 +1178,7 @@ public class FileLoadOperation {
                     cacheFileParts.delete();
                 }
                 try {
-                    filePartsStream = new RandomAccessFile(cacheFileParts, "rws");
+                    filePartsStream = new RandomAccessFile(cacheFileParts, "rw");
                     long len = filePartsStream.length();
                     if (len % 8 == 4) {
                         len -= 4;
@@ -1235,7 +1244,7 @@ public class FileLoadOperation {
             if (fileNameIv != null) {
                 cacheIvTemp = new File(tempPath, fileNameIv);
                 try {
-                    fiv = new RandomAccessFile(cacheIvTemp, "rws");
+                    fiv = new RandomAccessFile(cacheIvTemp, "rwd");
                     if (downloadedBytes != 0 && !newKeyGenerated) {
                         long len = cacheIvTemp.length();
                         if (len > 0 && len % 64 == 0) {
@@ -1262,7 +1271,7 @@ public class FileLoadOperation {
             }
             updateProgress();
             try {
-                fileOutputStream = new RandomAccessFile(cacheFileTemp, "rws");
+                fileOutputStream = new RandomAccessFile(cacheFileTemp, "rwd");
                 if (downloadedBytes != 0) {
                     fileOutputStream.seek(downloadedBytes);
                 }
@@ -1522,6 +1531,8 @@ public class FileLoadOperation {
                 synchronized (FileLoadOperation.this) {
                     if (!writingToFilePartsStream) {
                         try {
+                            // the stream is unbuffered ("rw"), so flush the parts index once here
+                            filePartsStream.getFD().sync();
                             filePartsStream.getChannel().close();
                         } catch (Exception e) {
                             FileLog.e(e);
@@ -2563,15 +2574,6 @@ public class FileLoadOperation {
                 }
                 if (response instanceof TLRPC.TL_upload_fileCdnRedirect) {
                     TLRPC.TL_upload_fileCdnRedirect res = (TLRPC.TL_upload_fileCdnRedirect) response;
-                    if (!res.file_hashes.isEmpty()) {
-                        if (cdnHashes == null) {
-                            cdnHashes = new HashMap<>();
-                        }
-                        for (int a1 = 0; a1 < res.file_hashes.size(); a1++) {
-                            TLRPC.TL_fileHash hash = res.file_hashes.get(a1);
-                            cdnHashes.put(hash.offset, hash);
-                        }
-                    }
                     if (res.encryption_iv == null || res.encryption_key == null || res.encryption_iv.length != 16 || res.encryption_key.length != 32) {
                         if (requestInfo.whenCancelled != null) {
                             requestInfo.whenCancelled.run();
@@ -2580,7 +2582,38 @@ public class FileLoadOperation {
                         error.text = "bad redirect response";
                         error.code = 400;
                         processRequestResult(requestInfo, error);
+                    } else if (!mgRefusedCdnRedirect) {
+                        // MG: CDN nodes always use the long-lived perm key (PFS off),
+                        // exposing a stable auth_key_id on the wire — the exact
+                        // identifier OCCRP / Symbolic Software (May 2026) showed is
+                        // recoverable from the outer obfuscation stream. The leak is
+                        // universal (every CDN frame carries it) while the cost is
+                        // conditional (one wasted round-trip per large file the server
+                        // tries to offload), so CDN refusal is unconditional rather
+                        // than gated behind the reduce-tracking toggle.
+                        // mgRefusedCdnRedirect caps refusals at one to avoid an
+                        // infinite loop if the server insists on CDN: a second
+                        // redirect on the same operation falls through to the CDN
+                        // branch below (privacy degrades but the download succeeds).
+                        // Skip the file_hashes population: those hashes are tied to
+                        // chunks we won't actually download from this CDN; leaving
+                        // them in cdnHashes would cause stale-offset entries to be
+                        // consulted by a later genuine redirect with different
+                        // offsets, leading to a hash verification mismatch.
+                        mgRefusedCdnRedirect = true;
+                        isCdn = false;
+                        clearOperation(requestInfo, false, false);
+                        startDownloadRequest(connectionType);
                     } else {
+                        if (!res.file_hashes.isEmpty()) {
+                            if (cdnHashes == null) {
+                                cdnHashes = new HashMap<>();
+                            }
+                            for (int a1 = 0; a1 < res.file_hashes.size(); a1++) {
+                                TLRPC.TL_fileHash hash = res.file_hashes.get(a1);
+                                cdnHashes.put(hash.offset, hash);
+                            }
+                        }
                         isCdn = true;
                         if (notCheckedCdnRanges == null) {
                             notCheckedCdnRanges = new ArrayList<>();

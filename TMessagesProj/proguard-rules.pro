@@ -8,6 +8,10 @@
 -keep @androidx.annotation.Keep class * { *; }
 -keepclasseswithmembers class * { @androidx.annotation.Keep *; }
 
+-keep class it.belloworld.mercurygram.** { *; }
+# hanako: sherpa-onnx JNI reads config fields by name and builds result objects natively
+-keep class com.k2fsa.sherpa.onnx.** { *; }
+-dontwarn com.k2fsa.sherpa.onnx.**
 -keep class org.webrtc.* { *; }
 -keep class org.webrtc.audio.* { *; }
 -keep class org.webrtc.voiceengine.* { *; }
@@ -25,6 +29,8 @@
 -keep class org.telegram.tgnet.RequestTimeDelegate { *; }
 -keep class org.telegram.tgnet.RequestDelegate { *; }
 -keep class org.telegram.ui.Stories.recorder.FfmpegAudioWaveformLoader { *; }
+# ThemeDescription looks up view fields by name via reflection
+-keepclassmembernames,allowoptimization class org.telegram.ui.** { <fields>; }
 -keep class androidx.mediarouter.app.MediaRouteButton { *; }
 -keepclassmembers class ** {
     @android.webkit.JavascriptInterface <methods>;

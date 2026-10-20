@@ -8,6 +8,13 @@ local.properties
 TMessagesProj/.cxx/
 TMessagesProj/jniLibs/
 TMessagesProj/jniRes/
+TMessagesProj/jni.bak/
+# Pluggable-transport binaries built by jni/build_snowflake.sh / build_lyrebird.sh
+# into the plugin's jniLibs root (jni/<abi>/). Built from source, never committed.
+TMessagesProj_PluginTor/jni/arm64-v8a/
+TMessagesProj_PluginTor/jni/armeabi-v7a/
+TMessagesProj_PluginTor/jni/x86/
+TMessagesProj_PluginTor/jni/x86_64/
 **/.DS_Store
 TMessagesProj/afat/
 TMessagesProj_App/afat/
@@ -23,3 +30,12 @@ TMessagesProj/jni/prebuild/lib/
 TMessagesProj/jni/prebuild/include/
 TMessagesProj/jni/prebuild/pkgconfig/
 TMessagesProj/jni/prebuild/build_env.txt
+TMessagesProj/jni/prebuild/build/
+# Call core wasm module as a C array, built by jni/build_wasm_core.sh.
+TMessagesProj/jni/voip/ReferenceCoreEmbedded.cpp
+API_KEYS
+.env
+# Written at the repo root by .github/actions/jni-cache-fingerprint, hashed
+# into the native-cache keys by the job that generated it. Never committed.
+.jni-cache-fingerprint
+.jni-cache-fingerprint.tmp

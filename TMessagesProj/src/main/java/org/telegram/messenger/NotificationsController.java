@@ -102,6 +102,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
+
 public class NotificationsController extends BaseController implements NotificationCenter.NotificationCenterDelegate {
 
     public static final String EXTRA_VOICE_REPLY = "extra_voice_reply";
@@ -570,7 +571,7 @@ public class NotificationsController extends BaseController implements Notificat
                 }
                 popupArray.add(0, messageObject);
             }
-            if (!popupArray.isEmpty() && isShowContent()) {
+            if (!popupArray.isEmpty() && isShowContent() && !it.belloworld.mercurygram.PlusStreamer.hideNotifications()) { // plus f10
                 AndroidUtilities.runOnUIThread(() -> {
                     popupReplyMessages = popupArray;
                     Intent popupIntent = new Intent(ApplicationLoader.applicationContext, PopupNotificationActivity.class);
@@ -1334,7 +1335,7 @@ public class NotificationsController extends BaseController implements Notificat
                 notifyCheck = isLast;
             }
 
-            if (!popupArrayAdd.isEmpty() && isShowContent()) {
+            if (!popupArrayAdd.isEmpty() && isShowContent() && !it.belloworld.mercurygram.PlusStreamer.hideNotifications()) { // plus f10
                 int popupFinal = popup;
                 AndroidUtilities.runOnUIThread(() -> {
                     popupMessages.addAll(0, popupArrayAdd);
@@ -1869,7 +1870,7 @@ public class NotificationsController extends BaseController implements Notificat
     }
 
     public String getShortStringForMessage(MessageObject messageObject, String[] userName, boolean[] preview) {
-        if (!isShowContent()) {
+        if (!isShowContent() || it.belloworld.mercurygram.PlusChatLock.hideNotificationContent(currentAccount, messageObject) || it.belloworld.mercurygram.PlusStreamer.hideNotifications()) { // plus f08/f10
             return LocaleController.getString(R.string.NotificationHiddenMessage);
         }
         long dialogId = messageObject.messageOwner.dialog_id;
@@ -2557,7 +2558,7 @@ public class NotificationsController extends BaseController implements Notificat
     }
 
     private String getStringForMessage(MessageObject messageObject, boolean shortMessage, boolean[] text, boolean[] preview) {
-        if (!isShowContent()) {
+        if (!isShowContent() || it.belloworld.mercurygram.PlusChatLock.hideNotificationContent(currentAccount, messageObject) || it.belloworld.mercurygram.PlusStreamer.hideNotifications()) { // plus f08/f10
             return LocaleController.getString(R.string.YouHaveNewMessage);
         }
         if (messageObject.isStoryPush || messageObject.isStoryMentionPush) {
@@ -4317,7 +4318,7 @@ public class NotificationsController extends BaseController implements Notificat
             } else {
                 chatName = UserObject.getUserName(user);
             }
-            boolean passcode = !isShowContent();
+            boolean passcode = !isShowContent() || it.belloworld.mercurygram.PlusStreamer.hideNotifications(); // plus f10
             // boolean passcode = AndroidUtilities.needShowPasscode() || SharedConfig.isWaitingForPasscodeEnter;
             final boolean allowSummary = !"samsung".equalsIgnoreCase(Build.MANUFACTURER);
             if (DialogObject.isEncryptedDialog(dialog_id) || allowSummary && pushDialogs.size() > 1 || passcode) {
@@ -4632,7 +4633,7 @@ public class NotificationsController extends BaseController implements Notificat
                         intent.putExtra("userId", userId);
                     }
                 }
-                if (!isShowContent()) {
+                if (!isShowContent() || it.belloworld.mercurygram.PlusStreamer.hideNotifications()) { // plus f10
                     photoPath = null;
                 } else {
                     if (pushDialogs.size() == 1 && Build.VERSION.SDK_INT < 28) {
@@ -4796,7 +4797,7 @@ public class NotificationsController extends BaseController implements Notificat
             }
 
             boolean hasCallback = false;
-            if (isShowContent() && lastMessageObject.getDialogId() == 777000) {
+            if (isShowContent() && !it.belloworld.mercurygram.PlusStreamer.hideNotifications() && lastMessageObject.getDialogId() == 777000) { // plus f10
                 if (lastMessageObject.messageOwner.reply_markup instanceof TLRPC.TL_replyInlineMarkup) {
                     final TLRPC.TL_replyInlineMarkup replyInlineMarkup = (TLRPC.TL_replyInlineMarkup) lastMessageObject.messageOwner.reply_markup;
                     ArrayList<TL_keyboard.KeyboardInlineButtonRow> rows = replyInlineMarkup.rows;
@@ -4993,11 +4994,12 @@ public class NotificationsController extends BaseController implements Notificat
         }
 
         long selfUserId = getUserConfig().getClientUserId();
-        boolean waitingForPasscode = !isShowContent();
+        boolean waitingForPasscode = !isShowContent() || it.belloworld.mercurygram.PlusStreamer.hideNotifications(); // plus f10
         boolean passcode = SharedConfig.passcodeHash.length() > 0;
         FileLog.d("showExtraNotifications: passcode="+passcode+" waitingForPasscode=" + waitingForPasscode + " selfUserId=" + selfUserId + " useSummaryNotification=" + useSummaryNotification);
 
         int maxCount = 7;
+        boolean anyChildAlerts = false;
         LongSparseArray<Person> personCache = new LongSparseArray<>();
         for (int b = 0, size = sortedDialogs.size(); b < size; b++) {
             if (holders.size() >= maxCount) {
@@ -5746,7 +5748,7 @@ public class NotificationsController extends BaseController implements Notificat
                 builder.setLargeIcon(avatarBitmap);
             }
 
-            if (isShowContent(false)) {
+            if (isShowContent(false) && !it.belloworld.mercurygram.PlusStreamer.hideNotifications()) { // plus f10
                 if (rows != null) {
                     for (int r = 0, rc = rows.size(); r < rc; r++) {
                         TL_keyboard.KeyboardInlineButtonRow row = rows.get(r);
@@ -5773,7 +5775,28 @@ public class NotificationsController extends BaseController implements Notificat
             }
 
             if (Build.VERSION.SDK_INT >= 26) {
-                setNotificationChannel(mainNotification, builder, useSummaryNotification);
+                // Mercurygram: when a summary is used, every child sits on the silent
+                // OTHER_NOTIFICATIONS_CHANNEL and only the summary may alert, so the heads-up
+                // is the summary and lists every unread chat. Alert on the newest chat's own
+                // notification (which already carries that chat's channel) instead.
+                // Other children keep OTHER_NOTIFICATIONS_CHANNEL, as before; they never
+                // alert, so their per-chat sound settings are moot. Give each child its own
+                // channel only if the system per-notification settings ever need to be exact.
+                final boolean alerts = useSummaryNotification && !isSilent && (dialogKey.story
+                        ? chatType == TYPE_STORIES
+                        : chatType != TYPE_STORIES && dialogId == lastDialogId && topicId == lastTopicId);
+                if (alerts) {
+                    builder.setChannelId(mainNotification.getChannelId());
+                    builder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN);
+                    anyChildAlerts = true;
+                } else {
+                    setNotificationChannel(mainNotification, builder, useSummaryNotification);
+                    if (useSummaryNotification) {
+                        // without a summary this child IS the alerting notification, so it must keep
+                        // alerting on every new message in the chat
+                        builder.setOnlyAlertOnce(true);
+                    }
+                }
             }
             FileLog.d("showExtraNotifications: holders.add " + dialogId);
             holders.add(new NotificationHolder(internalId, dialogId, dialogKey.story, topicId, name, user, chat, builder));
@@ -5783,6 +5806,14 @@ public class NotificationsController extends BaseController implements Notificat
         if (useSummaryNotification) {
             if (BuildVars.LOGS_ENABLED) {
                 FileLog.d("show summary with id " + notificationId);
+            }
+            // Mercurygram: silence the summary only when a child took over the alert; the newest
+            // chat can be dropped from the holder loop (unknown user, maxCount), and then the
+            // summary is the only notification left that may make a sound.
+            if (Build.VERSION.SDK_INT >= 26 && anyChildAlerts) {
+                notificationBuilder.setChannelId(OTHER_NOTIFICATIONS_CHANNEL);
+                notificationBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN);
+                mainNotification = notificationBuilder.build();
             }
             try {
                 notificationManager.notify(notificationId, mainNotification);

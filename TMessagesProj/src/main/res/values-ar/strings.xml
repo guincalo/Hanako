@@ -66,7 +66,7 @@
     <string name="QRLoginStep3">وجّه هاتفك نحو هذه الشاشة لتأكيد تسجيل الدخول</string>
     <string name="QRLoginSubtitle">افتح تيليجرام على جهاز آخر وامسح رمز QR هذا لتسجيل الدخول إلى حسابك.</string>
     <string name="QRLoginTitle">تسجيل الدخول عبر رمز QR</string>
-    <string name="AppNameFdroid">Forkgram</string>
+    <string name="AppNameFdroid">Hanako</string>
     <string name="UnifiedPush">UnifiedPush</string>
     <string name="ForkSectionAppearance">المظهر</string>
     <string name="ForkSectionMedia">الصور والفيديو</string>
@@ -251,8 +251,8 @@
     <string name="LinkReplacementInvalid">تعبير غير صالح</string>
     <string name="LinkReplacedOnPaste">تم استبدال الرابط</string>
 
-    <string name="AppName">Forkgram Classic</string>
-    <string name="AppNameBeta">Forkgram Classic</string>
+    <string name="AppName">Hanako</string>
+    <string name="AppNameBeta">Hanako Beta</string>
     <string name="LanguageName">العربية</string>
     <string name="English">الإنجليزية</string>
     <string name="LanguageNameInEnglish">Arabic</string>
@@ -807,7 +807,7 @@
     <string name="DirectShareInfo">إظهار آخر المحادثات في قائمة المشاركة</string>
     <string name="Emoji">الرموز التعبيرية</string>
     <string name="LargeEmoji">رموز تعبيرية كبيرة</string>
-    <string name="TelegramVersion">تيليجرام للأندرويد %1$s</string>
+    <string name="TelegramVersion">ميركوريجرام للأندرويد %1$s</string>
     <string name="ChangeLanguageLater">يمكنك تغيير لغة التطبيق لاحقًا من الإعدادات.</string>
     <string name="ChooseYourLanguage">اختيار اللغة</string>
     <string name="ChooseYourLanguageOther">أخرى</string>

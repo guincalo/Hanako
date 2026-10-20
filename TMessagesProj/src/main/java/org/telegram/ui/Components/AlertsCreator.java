@@ -179,6 +179,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+
 public class AlertsCreator {
     public final static int PERMISSIONS_REQUEST_TOP_ICON_SIZE = 72;
     public final static int NEW_DENY_DIALOG_TOP_ICON_SIZE = 52;
@@ -1638,10 +1639,10 @@ public class AlertsCreator {
         ArrayList<String> arrayList = new ArrayList<>();
         ArrayList<Integer> types = new ArrayList<>();
         int providers = MessagesController.getInstance(currentAccount).availableMapProviders;
-        if ((providers & 1) != 0) {
-            arrayList.add(LocaleController.getString(R.string.MapPreviewProviderTelegram));
-            types.add(0);
-        }
+        // Mercurygram: always offer Telegram (server-rendered, no third party from the client),
+        // independent of the server-advertised provider set.
+        arrayList.add(LocaleController.getString(R.string.MapPreviewProviderTelegram));
+        types.add(0);
         if ((providers & 2) != 0) {
             arrayList.add(LocaleController.getString(R.string.MapPreviewProviderGoogle));
             types.add(1);
@@ -1650,6 +1651,9 @@ public class AlertsCreator {
             arrayList.add(LocaleController.getString(R.string.MapPreviewProviderYandex));
             types.add(3);
         }
+        // Mercurygram: on-device OpenStreetMap (OpenFreeMap) preview, always available.
+        arrayList.add(LocaleController.getString(R.string.MercurygramMapPreviewProviderOpenStreetMap));
+        types.add(4);
         arrayList.add(LocaleController.getString(R.string.MapPreviewProviderNobody));
         types.add(2);
 
@@ -1742,7 +1746,7 @@ public class AlertsCreator {
     public static void showOpenUrlAlert(Context context, String url, boolean punycode, boolean tryTelegraph, boolean ask, boolean forceNotInternalForApps, long inlineReturn, Browser.Progress progress, @Nullable TLRPC.WebPage webPage, Theme.ResourcesProvider resourcesProvider) {
         if (!AndroidUtilities.isContextSafe(context)) return;
         final String scheme = url == null ? null : Uri.parse(url).getScheme();
-        if (Browser.isInternalUrl(url, null) || !ask || "mailto".equalsIgnoreCase(scheme)) {
+        if (Browser.isInternalUrl(url, null) && !UserConfig.getInstance(UserConfig.selectedAccount).mg.confirmInternalLinks || !ask || "mailto".equalsIgnoreCase(scheme)) {
             Browser.openUrl(context, Uri.parse(url), inlineReturn == 0, tryTelegraph, forceNotInternalForApps && checkInternalBotApp(url), progress, null, false, true, false);
             return;
         }
@@ -1760,7 +1764,9 @@ public class AlertsCreator {
             urlFinal = url;
         }
 
-        final Runnable open = () -> Browser.openUrl(context, Uri.parse(url), inlineReturn == 0, tryTelegraph, progress);
+        // same call as the no-confirmation path above: internal links reach the dialog once the
+        // "Confirm Telegram links" toggle is on, and they still need forceNotInternalForApps
+        final Runnable open = () -> Browser.openUrl(context, Uri.parse(url), inlineReturn == 0, tryTelegraph, forceNotInternalForApps && checkInternalBotApp(url), progress, null, false, true, false);
         final AlertDialog[] dialog = new AlertDialog[1];
 
         final AlertDialog.Builder builder = new AlertDialog.Builder(context, resourcesProvider);
@@ -8015,6 +8021,10 @@ public class AlertsCreator {
                     cell.setText(LocaleController.getString(R.string.DeleteMessagesOption), "", false, false);
                 }
                 cell.setPadding(LocaleController.isRTL ? dp(16) : dp(8), 0, LocaleController.isRTL ? dp(8) : dp(16), 0);
+                // Mercurygram: pre-tick "delete for everyone" by default when the user opted in (per-account).
+                if (UserConfig.getInstance(fragment.getCurrentAccount()).mg.deleteForAllByDefault) {
+                    cell.setChecked(deleteForAll[0] = true, false);
+                }
                 frameLayout.addView(cell, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.TOP | Gravity.LEFT, 0, 0, 0, 0));
                 deleteForAll[0] = true;
                 cell.setChecked(deleteForAll[0], true); // Mark "delete for user" as default.
@@ -8076,6 +8086,10 @@ public class AlertsCreator {
                     cell.setText(LocaleController.getString(R.string.DeleteMessagesOption), "", false, false);
                 }
                 cell.setPadding(LocaleController.isRTL ? dp(16) : dp(8), 0, LocaleController.isRTL ? dp(8) : dp(16), 0);
+                // Mercurygram: pre-tick "also delete for X / delete for everyone" by default when opted in (per-account).
+                if (UserConfig.getInstance(fragment.getCurrentAccount()).mg.deleteForAllByDefault) {
+                    cell.setChecked(deleteForAll[0] = true, false);
+                }
                 frameLayout.addView(cell, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.TOP | Gravity.LEFT, 0, 0, 0, 0));
                 deleteForAll[0] = true;
                 cell.setChecked(deleteForAll[0], true); // Mark "delete for user" as default.

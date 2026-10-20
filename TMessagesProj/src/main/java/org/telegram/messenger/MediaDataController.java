@@ -207,6 +207,7 @@ public class MediaDataController extends BaseController {
         loadRepliesOfDraftReplies(replyMessageOwners);
 
         loadStickersByEmojiOrName(AndroidUtilities.STICKERS_PLACEHOLDER_PACK_NAME, false, true);
+        loadStickersByEmojiOrName(it.belloworld.mercurygram.emoji.MgLegacyEmojiAnimations.PACK, false, true);
         loadEmojiThemes();
         loadRecentAndTopReactions(false);
         loadAvatarConstructor(false);
@@ -280,7 +281,8 @@ public class MediaDataController extends BaseController {
     private ConcurrentHashMap<String, TLRPC.TL_messages_stickerSet> stickerSetsByName = new ConcurrentHashMap<>(100, 1.0f, 1);
     private TLRPC.TL_messages_stickerSet stickerSetDefaultStatuses = null;
     private TLRPC.TL_messages_stickerSet stickerSetDefaultChannelStatuses = null;
-    private HashMap<String, TLRPC.TL_messages_stickerSet> diceStickerSetsByEmoji = new HashMap<>();
+    // Mercurygram: read from the MessageObject constructor on background queues, written on the UI thread.
+    private ConcurrentHashMap<String, TLRPC.TL_messages_stickerSet> diceStickerSetsByEmoji = new ConcurrentHashMap<>();
     private LongSparseArray<String> diceEmojiStickerSetsById = new LongSparseArray<>();
     private HashSet<String> loadingDiceStickerSets = new HashSet<>();
     private LongSparseArray<Runnable> removingStickerSetsUndos = new LongSparseArray<>();
@@ -1751,7 +1753,8 @@ public class MediaDataController extends BaseController {
                 }
             }
         }
-        return null;
+        // Mercurygram: fall back to our own pack for the big emoji the server dropped.
+        return it.belloworld.mercurygram.emoji.MgLegacyEmojiAnimations.legacyDocument(currentAccount, emoji);
     }
 
     public boolean canAddStickerToFavorites() {
@@ -2969,9 +2972,12 @@ public class MediaDataController extends BaseController {
                     data.reuse();
                     state.dispose();
                 } else {
-                    SQLitePreparedStatement state = getMessagesStorage().getDatabase().executeFast("UPDATE stickers_dice SET date = ?");
+                    // Mercurygram: without the WHERE clause one failed fetch restamped every
+                    // cached dice pack as fresh, blocking their 24h refresh for a day.
+                    SQLitePreparedStatement state = getMessagesStorage().getDatabase().executeFast("UPDATE stickers_dice SET date = ? WHERE emoji = ?");
                     state.requery();
                     state.bindInteger(1, date);
+                    state.bindString(2, emoji);
                     state.step();
                     state.dispose();
                 }
@@ -3748,6 +3754,7 @@ public class MediaDataController extends BaseController {
     private SparseArray<MessageObject>[] searchServerResultMessagesMap = new SparseArray[]{new SparseArray<>(), new SparseArray<>()};
     private ArrayList<MessageObject> deletedFromResultMessages = new ArrayList<>();
     private String lastSearchQuery;
+    private it.belloworld.mercurygram.search.MgSearchQuery mgChatSearchQuery = it.belloworld.mercurygram.search.MgSearchQuery.EMPTY;
     private int lastReturnedNum;
     private boolean loadingMoreSearchMessages;
     private boolean loadingSearchLocal;
@@ -3919,6 +3926,9 @@ public class MediaDataController extends BaseController {
         int max_id = 0;
         long queryWithDialog = dialogId;
         boolean firstQuery = !internal;
+        if (query != null && !internal) {
+            query = (mgChatSearchQuery = it.belloworld.mercurygram.search.MgSearchQuery.parse(query, getMessagesController())).q;
+        }
         if (reqId != 0) {
             loadingMoreSearchMessages = false;
             getConnectionsManager().cancelRequest(reqId, true);
@@ -4022,6 +4032,7 @@ public class MediaDataController extends BaseController {
                     req.flags |= 8;
                 }
                 req.filter = new TLRPC.TL_inputMessagesFilterEmpty();
+                mgChatSearchQuery.applyTo(req);
                 mergeReqId = getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
                     if (lastMergeDialogId == mergeDialogId) {
                         mergeReqId = 0;
@@ -4070,7 +4081,7 @@ public class MediaDataController extends BaseController {
         loadedPredirectedSearchLocal = false;
         int currentReqId = ++lastReqId;
         final boolean isSaved = dialogId == getUserConfig().getClientUserId();
-        if (isSaved && reaction != null && firstQuery) {
+        if (isSaved && reaction != null && firstQuery && !mgChatSearchQuery.hasOperators()) {
             lastReturnedNum = 0;
             searchServerResultMessages.clear();
             searchServerResultMessagesMap[0].clear();
@@ -4107,6 +4118,7 @@ public class MediaDataController extends BaseController {
             req.flags |= 8;
         }
         req.filter = new TLRPC.TL_inputMessagesFilterEmpty();
+        mgChatSearchQuery.applyTo(req);
         lastSearchQuery = query;
         long queryWithDialogFinal = queryWithDialog;
         String finalQuery = query;
@@ -8104,7 +8116,7 @@ public class MediaDataController extends BaseController {
         saveDraft(dialogId, threadId, draftMessage, replyToMessage, false);
 
         if (threadId == 0 || ChatObject.isForum(chat) || ChatObject.isMonoForum(chat)) {
-            if (!DialogObject.isEncryptedDialog(dialogId)) {
+            if (!DialogObject.isEncryptedDialog(dialogId) && getUserConfig().mg.allowsCloudSync(draftMessage)) {
                 TLRPC.TL_messages_saveDraft req = new TLRPC.TL_messages_saveDraft();
                 req.peer = getMessagesController().getInputPeer(dialogId);
                 if (req.peer == null) {

@@ -53,7 +53,7 @@
     <string name="QRLoginStep3">Наведите телефон на этот экран, чтобы подтвердить вход</string>
     <string name="QRLoginSubtitle">Откройте Telegram на другом устройстве и отсканируйте этот QR-код, чтобы войти в аккаунт.</string>
     <string name="QRLoginTitle">Вход по QR-коду</string>
-    <string name="AppNameFdroid">Forkgram</string>
+    <string name="AppNameFdroid">Hanako</string>
     <string name="UnifiedPush">UnifiedPush</string>
     <string name="ForkSectionAppearance">Внешний вид</string>
     <string name="ForkSectionMedia">Фото и видео</string>
@@ -251,8 +251,8 @@
     <string name="ForkSettingsLockChangeCode">Изменить код</string>
     <string name="ForkSettingsLockRemoveCode">Удалить код</string>
     <string name="ForkSettingsLockRemoveCodeConfirm">Настройки Fork Client будут открываться без кода.</string>
-    <string name="AppName">Forkgram Classic</string>
-    <string name="AppNameBeta">Forkgram Classic</string>
+    <string name="AppName">Hanako</string>
+    <string name="AppNameBeta">Hanako Beta</string>
     <string name="LanguageName">Русский</string>
     <string name="English">Английский</string>
     <string name="LanguageNameInEnglish">Russian</string>
