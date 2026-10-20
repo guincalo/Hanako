@@ -45,6 +45,12 @@
     <string name="HanakoChatExportVideos">Videos and GIFs</string>
     <string name="HanakoChatExportVoice">Voice and video messages</string>
     <string name="HanakoChatExportFiles">Files, music and stickers</string>
+    <string name="HanakoChatExportTypeVideos">Videos</string>
+    <string name="HanakoChatExportTypeVoice">Voice messages</string>
+    <string name="HanakoChatExportTypeRound">Video messages</string>
+    <string name="HanakoChatExportTypeStickers">Stickers</string>
+    <string name="HanakoChatExportTypeGifs">GIFs</string>
+    <string name="HanakoChatExportTypeFiles">Files</string>
     <string name="HanakoChatExportSizeLimit">Size limit per file</string>
     <string name="HanakoChatExportNoLimit">No limit</string>
     <string name="HanakoChatExportFormatHeader">Format</string>

@@ -1,6 +1,9 @@
 package it.belloworld.mercurygram;
 
 import android.content.ContentResolver;
+import android.content.res.AssetManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
@@ -8,6 +11,7 @@ import android.provider.DocumentsContract;
 import android.provider.OpenableColumns;
 import android.text.TextUtils;
 import android.util.JsonWriter;
+import android.webkit.MimeTypeMap;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
@@ -23,6 +27,8 @@ import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -31,9 +37,11 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -46,11 +54,14 @@ import java.util.regex.Pattern;
  *
  * <p>History is read oldest-first with messages.getHistory (offset_id + negative add_offset,
  * 100 per page), FLOOD_WAIT honoured; media is fetched with upload.getFile straight from the
- * file's DC (no CDN), so nothing lands in the app cache. Output goes into a new
- * "ChatExport_&lt;date&gt;" folder inside a SAF tree the user picked: result.json (Telegram
- * Desktop's single-chat export schema, https://core.telegram.org/import-export) and/or a simple
- * self-contained messages.html, plus photos/, video_files/, voice_messages/,
- * round_video_messages/, stickers/ and files/ folders.
+ * file's DC (no CDN), so nothing lands in the app cache. Output follows Telegram Desktop's
+ * single-chat export (tdesktop Telegram/SourceFiles/export, checked against dev @ d5b208cd):
+ * a "ChatExport_YYYY-MM-DD" folder (" (N)" on a clash) inside the SAF tree the user picked,
+ * result.json (https://core.telegram.org/import-export) and/or messages.html, messages2.html, ...
+ * (1000 messages each) with tdesktop's css/, js/ and images/, media in photos/, video_files/,
+ * animations/, stickers/, voice_messages/, round_video_messages/, files/ and contacts/, named
+ * photo_N / audio_N / video_N / file_N @DD-MM-YYYY_HH-MM-SS per kind, document thumbnails as
+ * "&lt;file&gt;_thumb.jpg", the same seven media types and per-file size limit.
  */
 public final class HanakoChatExport {
 
@@ -60,10 +71,11 @@ public final class HanakoChatExport {
         public int fromDate;
         /** unix seconds, 0 = until now */
         public int toDate;
-        public boolean photos = true;
-        public boolean videos = true;
-        public boolean voice = true;
-        public boolean files = true;
+        /** Export::MediaSettings::Type bits. */
+        public static final int PHOTO = 0x01, VIDEO = 0x02, VOICE_MESSAGE = 0x04, VIDEO_MESSAGE = 0x08,
+                STICKER = 0x10, GIF = 0x20, FILE = 0x40;
+        /** Telegram Desktop's default: photos only. */
+        public int types = PHOTO;
         /** bytes, 0 = no limit */
         public long sizeLimit = 8L * 1024 * 1024;
         public boolean html = true;
@@ -120,10 +132,9 @@ public final class HanakoChatExport {
     private int failedCount;
     private int totalCount;
     private volatile int waitSeconds;
-    private String lastHtmlDay;
     private final SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
     private final SimpleDateFormat fileFormat = new SimpleDateFormat("dd-MM-yyyy_HH-mm-ss", Locale.US);
-    private final SimpleDateFormat dayFormat = new SimpleDateFormat("d MMMM yyyy", Locale.getDefault());
+    private final SimpleDateFormat zoneFormat = new SimpleDateFormat("xxx", Locale.US);
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.US);
     private final SimpleDateFormat fullFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.US);
 
@@ -184,7 +195,7 @@ public final class HanakoChatExport {
             }
             Uri root = DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri));
             exportDir = DocumentsContract.createDocument(resolver, root, DocumentsContract.Document.MIME_TYPE_DIR,
-                    "ChatExport_" + new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date()));
+                    exportFolderName());
             if (exportDir == null) {
                 throw new IOException("cannot create export folder");
             }
@@ -450,6 +461,23 @@ public final class HanakoChatExport {
         return dir;
     }
 
+    /** Output::NormalizePath: "ChatExport_YYYY-MM-DD", then " (1)", " (2)", ... if taken. */
+    private String exportFolderName() {
+        String base = "ChatExport_" + new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        HashSet<String> taken = new HashSet<>();
+        try {
+            Uri children = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri));
+            try (Cursor c = resolver.query(children, new String[]{DocumentsContract.Document.COLUMN_DISPLAY_NAME}, null, null, null)) {
+                while (c != null && c.moveToNext()) taken.add(c.getString(0));
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        String name = base;
+        for (int i = 1; taken.contains(name); i++) name = base + " (" + i + ")";
+        return name;
+    }
+
     private String displayName(Uri uri, String fallback) {
         try (Cursor c = resolver.query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
             if (c != null && c.moveToFirst()) {
@@ -472,8 +500,36 @@ public final class HanakoChatExport {
         return s;
     }
 
+    // =====================================================================================
+    // output writers (Telegram Desktop layout: result.json, messages.html, messages2.html, ...)
+
+    /** Telegram Desktop's kMessagesInFile (export_output_html.cpp). */
+    private static final int MESSAGES_IN_FILE = 1000;
+    /** export_output_html.cpp kHistoryUserpicSize. */
+    private static final int USERPIC_SIZE = 42;
+    /** export_output_html.cpp kJoinWithinSeconds. */
+    private static final int JOIN_WITHIN_SECONDS = 900;
+    private static final int PHOTO_MAX = 520, PHOTO_MIN = 80, STICKER_MAX = 384;
+    private static final String ASSETS = "hanako/export_html";
+
+    private String chatTitle;
+    private int htmlFileIndex;
+    private int htmlMessages;
+    private final ArrayList<Integer> lastIdPerFile = new ArrayList<>();
+    private int lastHtmlId;
+    private int dateMessageId;
+    private HtmlPrev prev;
+
+    /** What messageNeedsWrap() in export_output_html.cpp compares against. */
+    private static final class HtmlPrev {
+        boolean service;
+        String fromKey;
+        int date;
+        String fwdKey;
+    }
+
     private void openWriters(MessagesController mc) throws IOException {
-        String name = chatName(mc);
+        chatTitle = chatName(mc);
         if (options.json) {
             Uri uri = DocumentsContract.createDocument(resolver, exportDir, "application/json", "result.json");
             if (uri == null) throw new IOException("cannot create result.json");
@@ -482,25 +538,75 @@ public final class HanakoChatExport {
             json = new JsonWriter(new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8)));
             json.setIndent(" ");
             json.beginObject();
-            json.name("name").value(name);
+            json.name("name").value(chatTitle);
             json.name("type").value(chatType(mc));
             json.name("id").value(Math.abs(rawId(options.dialogId)));
             json.name("messages").beginArray();
         }
         if (options.html) {
-            Uri uri = DocumentsContract.createDocument(resolver, exportDir, "text/html", "messages.html");
-            if (uri == null) throw new IOException("cannot create messages.html");
-            OutputStream os = resolver.openOutputStream(uri, "w");
-            if (os == null) throw new IOException("cannot open messages.html");
-            html = new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8));
-            html.write("<!DOCTYPE html>\n<html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>");
-            html.write(esc(name));
-            html.write("</title>\n<style>\n" + CSS + "</style></head><body>\n<div class=\"page_header\"><h1>");
-            html.write(esc(name));
-            html.write("</h1><div class=\"sub\">Exported by Hanako · ");
-            html.write(esc(fullFormat.format(new Date())));
-            html.write("</div></div>\n<div class=\"history\">\n");
+            copyHtmlAssets();
+            openHtmlFile(0);
         }
+    }
+
+    /** HtmlWriter::start: css/style.css, js/script.js and images/*.png (+ @2x) next to the pages. */
+    private void copyHtmlAssets() {
+        try {
+            AssetManager am = ApplicationLoader.applicationContext.getAssets();
+            for (String sub : new String[]{"css", "js", "images"}) {
+                String[] names = am.list(ASSETS + "/" + sub);
+                if (names == null) continue;
+                for (String n : names) {
+                    String mime = n.endsWith(".png") ? "image/png" : n.endsWith(".css") ? "text/css" : "application/javascript";
+                    Uri out = DocumentsContract.createDocument(resolver, subdir(sub), mime, n);
+                    if (out == null) continue;
+                    try (InputStream in = am.open(ASSETS + "/" + sub + "/" + n); OutputStream os = resolver.openOutputStream(out, "w")) {
+                        if (os == null) continue;
+                        byte[] buf = new byte[16384];
+                        int r;
+                        while ((r = in.read(buf)) > 0) os.write(buf, 0, r);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            FileLog.e(e); // pages still open without the styling
+        }
+    }
+
+    private static String messagesFile(int index) {
+        return "messages" + (index > 0 ? Integer.toString(index + 1) : "") + ".html";
+    }
+
+    private void openHtmlFile(int index) throws IOException {
+        String file = messagesFile(index);
+        Uri uri = DocumentsContract.createDocument(resolver, exportDir, "text/html", file);
+        if (uri == null) throw new IOException("cannot create " + file);
+        OutputStream os = resolver.openOutputStream(uri, "w");
+        if (os == null) throw new IOException("cannot open " + file);
+        html = new BufferedWriter(new OutputStreamWriter(os, StandardCharsets.UTF_8));
+        htmlFileIndex = index;
+        html.write("<!DOCTYPE html>\n<html>\n <head>\n  <meta charset=\"utf-8\"/>\n  <title>Exported Data</title>\n"
+                + "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"/>\n"
+                + "  <link href=\"css/style.css\" rel=\"stylesheet\"/>\n"
+                + "  <script src=\"js/script.js\" type=\"text/javascript\"></script>\n </head>\n"
+                + " <body onload=\"CheckLocation();\">\n  <div class=\"page_wrap\">\n"
+                + "   <div class=\"page_header\">\n    <div class=\"content\">\n     <div class=\"text bold\">\n");
+        html.write(ser(chatTitle));
+        html.write("\n     </div>\n    </div>\n   </div>\n   <div class=\"page_body chat_page\">\n    <div class=\"history\">\n");
+        if (index > 0) {
+            html.write("     <a class=\"pagination block_link\" href=\"" + messagesFile(index - 1) + "\">Previous messages</a>\n");
+        }
+        prev = null;
+    }
+
+    private void closeHtmlFile(boolean hasNext) throws IOException {
+        if (hasNext) {
+            html.write("     <a class=\"pagination block_link\" href=\"" + messagesFile(htmlFileIndex + 1) + "\">Next messages</a>\n");
+        }
+        html.write("    </div>\n   </div>\n  </div>\n </body>\n</html>\n");
+        html.flush();
+        html.close();
+        html = null;
     }
 
     private void closeWriters() {
@@ -520,37 +626,17 @@ public final class HanakoChatExport {
         }
         if (html != null) {
             try {
-                html.write("</div>\n</body></html>\n");
-                html.flush();
+                closeHtmlFile(false);
             } catch (Exception e) {
                 FileLog.e(e);
             }
             try {
-                html.close();
+                if (html != null) html.close();
             } catch (Exception ignore) {
             }
             html = null;
         }
     }
-
-    private static final String CSS =
-            "body{margin:0;background:#e7ebf0;font:14px/1.45 -apple-system,Roboto,'Segoe UI',sans-serif;color:#000}\n"
-            + ".page_header{background:#fff;padding:14px 20px;border-bottom:1px solid #d6dbe1;position:sticky;top:0}\n"
-            + ".page_header h1{font-size:18px;margin:0}.sub{color:#70777b;font-size:12px}\n"
-            + ".history{max-width:760px;margin:0 auto;padding:10px}\n"
-            + ".day{text-align:center;margin:14px 0 8px}.day span{background:rgba(0,0,0,.25);color:#fff;border-radius:12px;padding:3px 10px;font-size:13px}\n"
-            + ".message{background:#fff;border-radius:10px;padding:8px 12px;margin:6px 0;box-shadow:0 1px 1px rgba(0,0,0,.08)}\n"
-            + ".message.out{background:#effdde}\n"
-            + ".service{text-align:center;color:#70777b;font-size:13px;margin:8px 0}\n"
-            + ".from{font-weight:600;color:#3e88c7}.date{float:right;color:#a0acb6;font-size:12px}\n"
-            + ".fwd,.reply{color:#70777b;font-size:13px;border-left:2px solid #3e88c7;padding-left:6px;margin:3px 0}\n"
-            + ".text{white-space:pre-wrap;word-wrap:break-word}\n"
-            + ".media{margin:4px 0}.media img{max-width:100%;max-height:420px;border-radius:6px}\n"
-            + ".media video{max-width:100%;max-height:420px}.missing{color:#a0acb6;font-style:italic}\n"
-            + ".spoiler{background:#ccc;color:#ccc}.spoiler:hover{color:inherit}\n"
-            + "pre,code{background:#f2f4f6;border-radius:4px;padding:1px 4px;font-family:monospace}\n"
-            + "blockquote{margin:4px 0;padding-left:8px;border-left:3px solid #c3cbd2}\n"
-            + "a{color:#168acd;text-decoration:none}\n";
 
     // =====================================================================================
     // naming
@@ -605,6 +691,24 @@ public final class HanakoChatExport {
         return c != null ? c.title : null;
     }
 
+    /** First and last name for the HTML initials (FillUserpicNames). */
+    private String[] peerNames(TLRPC.Peer peer, String fallback) {
+        if (peer != null && peer.user_id != 0) {
+            TLRPC.User u = users.get(peer.user_id);
+            if (u == null) u = MessagesController.getInstance(account).getUser(peer.user_id);
+            if (u != null) return new String[]{u.first_name != null ? u.first_name : "", u.last_name != null ? u.last_name : ""};
+        }
+        String n = peer != null ? peerName(peer) : null;
+        return new String[]{n != null ? n : (fallback != null ? fallback : ""), ""};
+    }
+
+    private static long bareId(TLRPC.Peer peer) {
+        if (peer == null) return 0;
+        if (peer.user_id != 0) return peer.user_id;
+        if (peer.channel_id != 0) return peer.channel_id;
+        return peer.chat_id;
+    }
+
     private static String peerJsonId(TLRPC.Peer peer) {
         if (peer == null) return null;
         if (peer.user_id != 0) return "user" + peer.user_id;
@@ -616,16 +720,27 @@ public final class HanakoChatExport {
     // =====================================================================================
     // messages
 
+    /** Data::File::SkipReason. */
+    private enum Skip { NONE, UNAVAILABLE, FILE_SIZE, FILE_TYPE }
+
+    /** Data::Document classification plus where the file ended up. */
     private static final class MediaInfo {
-        String jsonKey;         // "photo" or "file"
-        String mediaType;       // TD media_type, null for photos
-        String path;            // relative path or a TD placeholder
-        boolean downloaded;
+        boolean photo;
+        boolean isSticker, isAnimated, isVideoFile, isVideoMessage, isVoiceMessage, isAudioFile;
+        String path;            // relative path when written
+        Skip skip = Skip.NONE;
         long size;
         int width, height;
         double duration;
         String fileName, mime, performer, title, emoji;
-        String folder;
+        // document thumbnail (<file>_thumb.jpg)
+        boolean hasThumb;
+        String thumbPath;
+        Skip thumbSkip = Skip.NONE;
+        long thumbSize;
+        // HTML-only scaled preview (WriteImageThumb)
+        String previewPath;
+        int previewW, previewH;
     }
 
     private void writeMessage(TLRPC.Message m) throws Exception {
@@ -638,6 +753,7 @@ public final class HanakoChatExport {
         String text = m.message != null ? m.message : "";
         ArrayList<Part> parts = parts(text, m.entities);
         MediaInfo media = service ? null : media(m);
+        Contact contact = service ? null : contact(m.media);
 
         if (json != null) {
             json.beginObject();
@@ -669,43 +785,102 @@ public final class HanakoChatExport {
                 json.name("reply_to_message_id").value(m.reply_to.reply_to_msg_id);
             }
             if (media != null) writeJsonMedia(media);
-            if (!service) writeJsonContactGeo(m.media);
+            if (!service) writeJsonContactGeo(m.media, contact);
             writeJsonText(parts);
             json.endObject();
         }
         if (html != null) {
-            writeHtml(m, service, fromName, parts, media);
+            writeHtml(m, service, fromName, parts, media, contact);
         }
     }
 
+    private static String skipText(Skip s) {
+        switch (s) {
+            case UNAVAILABLE:
+                return FAILED;
+            case FILE_SIZE:
+                return TOO_BIG;
+            case FILE_TYPE:
+                return NOT_INCLUDED;
+            default:
+                return "";
+        }
+    }
+
+    private static String pathOrSkip(String path, Skip skip) {
+        return skip == Skip.NONE && path != null ? path : skipText(skip == Skip.NONE ? Skip.UNAVAILABLE : skip);
+    }
+
+    /** export_output_json.cpp: pushPhoto / the Document branch. */
     private void writeJsonMedia(MediaInfo media) throws IOException {
-        if ("photo".equals(media.jsonKey)) {
-            json.name("photo").value(media.path);
-            if (media.size > 0) json.name("photo_file_size").value(media.size);
+        if (media.photo) {
+            json.name("photo").value(pathOrSkip(media.path, media.skip));
+            json.name("photo_file_size").value(media.size);
             if (media.width > 0) json.name("width").value(media.width);
             if (media.height > 0) json.name("height").value(media.height);
             return;
         }
-        json.name("file").value(media.path);
+        json.name("file").value(pathOrSkip(media.path, media.skip));
         if (!TextUtils.isEmpty(media.fileName)) json.name("file_name").value(media.fileName);
-        if (media.size > 0) json.name("file_size").value(media.size);
-        if (media.mediaType != null) json.name("media_type").value(media.mediaType);
-        if (!TextUtils.isEmpty(media.emoji)) json.name("sticker_emoji").value(media.emoji);
-        if (!TextUtils.isEmpty(media.performer)) json.name("performer").value(media.performer);
-        if (!TextUtils.isEmpty(media.title)) json.name("title").value(media.title);
+        json.name("file_size").value(media.size);
+        if (media.hasThumb) {
+            json.name("thumbnail").value(pathOrSkip(media.thumbPath, media.thumbSkip));
+            json.name("thumbnail_file_size").value(media.thumbSize);
+        }
+        if (media.isSticker) {
+            json.name("media_type").value("sticker");
+            if (!TextUtils.isEmpty(media.emoji)) json.name("sticker_emoji").value(media.emoji);
+        } else if (media.isVideoMessage) {
+            json.name("media_type").value("video_message");
+        } else if (media.isVoiceMessage) {
+            json.name("media_type").value("voice_message");
+        } else if (media.isAnimated) {
+            json.name("media_type").value("animation");
+        } else if (media.isVideoFile) {
+            json.name("media_type").value("video_file");
+        } else if (media.isAudioFile) {
+            json.name("media_type").value("audio_file");
+            if (!TextUtils.isEmpty(media.performer)) json.name("performer").value(media.performer);
+            if (!TextUtils.isEmpty(media.title)) json.name("title").value(media.title);
+        }
         if (!TextUtils.isEmpty(media.mime)) json.name("mime_type").value(media.mime);
         if (media.duration > 0) json.name("duration_seconds").value((long) Math.round(media.duration));
-        if (media.width > 0) json.name("width").value(media.width);
-        if (media.height > 0) json.name("height").value(media.height);
+        if (media.width > 0 && media.height > 0) {
+            json.name("width").value(media.width);
+            json.name("height").value(media.height);
+        }
     }
 
-    private void writeJsonContactGeo(TLRPC.MessageMedia mm) throws IOException {
+    /** Data::SharedContact: the vCard goes to contacts/contact_N.vcard. */
+    private static final class Contact {
+        String vcardPath;
+        long vcardSize;
+    }
+
+    private Contact contact(TLRPC.MessageMedia mm) throws IOException {
+        if (!(mm instanceof TLRPC.TL_messageMediaContact)) return null;
+        Contact c = new Contact();
+        if (!TextUtils.isEmpty(mm.vcard)) {
+            byte[] data = mm.vcard.getBytes(StandardCharsets.UTF_8);
+            c.vcardSize = data.length;
+            String name = uniqueName("contacts", "contact_" + (++ctxContacts) + ".vcard");
+            c.vcardPath = writeBytes("contacts", name, "text/vcard", data);
+            if (c.vcardPath.startsWith("(")) c.vcardPath = null;
+        }
+        return c;
+    }
+
+    private void writeJsonContactGeo(TLRPC.MessageMedia mm, Contact contact) throws IOException {
         if (mm instanceof TLRPC.TL_messageMediaContact) {
             json.name("contact_information").beginObject();
             json.name("first_name").value(mm.first_name != null ? mm.first_name : "");
             json.name("last_name").value(mm.last_name != null ? mm.last_name : "");
             json.name("phone_number").value(mm.phone_number != null ? mm.phone_number : "");
             json.endObject();
+            if (contact != null && contact.vcardSize > 0) {
+                json.name("contact_vcard").value(contact.vcardPath != null ? contact.vcardPath : FAILED);
+                json.name("contact_vcard_file_size").value(contact.vcardSize);
+            }
         } else if (mm instanceof TLRPC.TL_messageMediaGeo && mm.geo != null) {
             json.name("location_information").beginObject();
             json.name("latitude").value(mm.geo.lat);
@@ -713,45 +888,6 @@ public final class HanakoChatExport {
             json.endObject();
         }
     }
-
-    private void writeJsonText(ArrayList<Part> parts) throws IOException {
-        boolean plain = true;
-        for (Part p : parts) {
-            if (!"plain".equals(p.type)) {
-                plain = false;
-                break;
-            }
-        }
-        if (plain) {
-            StringBuilder sb = new StringBuilder();
-            for (Part p : parts) sb.append(p.text);
-            json.name("text").value(sb.toString());
-        } else {
-            json.name("text").beginArray();
-            for (Part p : parts) {
-                if ("plain".equals(p.type)) {
-                    json.value(p.text);
-                } else {
-                    writeEntity(p);
-                }
-            }
-            json.endArray();
-        }
-        json.name("text_entities").beginArray();
-        for (Part p : parts) writeEntity(p);
-        json.endArray();
-    }
-
-    private void writeEntity(Part p) throws IOException {
-        json.beginObject();
-        json.name("type").value(p.type);
-        json.name("text").value(p.text);
-        if (p.href != null) json.name("href").value(p.href);
-        if (p.userId != 0) json.name("user_id").value(p.userId);
-        if (p.language != null) json.name("language").value(p.language);
-        json.endObject();
-    }
-
     private static String actionName(TLRPC.MessageAction a) {
         if (a instanceof TLRPC.TL_messageActionChatCreate) return "create_group";
         if (a instanceof TLRPC.TL_messageActionChannelCreate) return "create_channel";
@@ -846,160 +982,314 @@ public final class HanakoChatExport {
         return "unknown";
     }
 
+
     // =====================================================================================
-    // media
+    // media (export_data_types.cpp ParsePhoto / ParseDocument, export_api_wrap.cpp processFileLoad)
+
+    /** ParseMediaContext counters: one sequence per kind, as Telegram Desktop numbers files. */
+    private int ctxPhotos, ctxAudios, ctxVideos, ctxFiles, ctxContacts;
+    private final HashMap<String, HashSet<String>> usedNames = new HashMap<>();
+
+    /** Output::File::PrepareRelativePath: "name (1).ext", counting from the first dot. */
+    private String uniqueName(String folder, String suggested) {
+        HashSet<String> used = usedNames.get(folder);
+        if (used == null) {
+            used = new HashSet<>();
+            usedNames.put(folder, used);
+        }
+        String result = suggested;
+        if (used.contains(result)) {
+            int dot = suggested.indexOf('.');
+            String base = dot >= 0 ? suggested.substring(0, dot) : suggested;
+            String ext = dot >= 0 ? suggested.substring(dot) : "";
+            int attempt = 0;
+            do {
+                result = base + " (" + (++attempt) + ")" + ext;
+            } while (used.contains(result));
+        }
+        used.add(result);
+        return result;
+    }
+
+    /** "@DD-MM-YYYY_HH-MM-SS" (PrepareFileNameDatePart), empty without a date. */
+    private String datePart(int date) {
+        return date != 0 ? "@" + fileFormat.format(new Date(date * 1000L)) : "";
+    }
+
+    private static int area(TLRPC.PhotoSize s) {
+        if (s == null || s instanceof TLRPC.TL_photoStrippedSize || s instanceof TLRPC.TL_photoPathSize
+                || s instanceof TLRPC.TL_photoSizeEmpty) return 0;
+        return s.w * s.h;
+    }
+
+    private static TLRPC.PhotoSize largest(ArrayList<TLRPC.PhotoSize> sizes) {
+        TLRPC.PhotoSize best = null;
+        if (sizes == null) return null;
+        for (TLRPC.PhotoSize s : sizes) {
+            if (area(s) > 0 && (best == null || area(s) > area(best))) best = s;
+        }
+        return best;
+    }
+
+    private Skip typeOrSizeSkip(int type, long fullSize) {
+        if ((options.types & type) != type) return Skip.FILE_TYPE;
+        if (options.sizeLimit > 0 && fullSize > options.sizeLimit) return Skip.FILE_SIZE;
+        return Skip.NONE;
+    }
+
+    /** export_api_wrap.cpp DocumentMediaType. */
+    private static int documentType(MediaInfo d) {
+        if (d.isSticker) return Options.STICKER;
+        if (d.isVideoMessage) return Options.VIDEO_MESSAGE;
+        if (d.isVoiceMessage) return Options.VOICE_MESSAGE;
+        if (d.isAnimated) return Options.GIF;
+        if (d.isVideoFile) return Options.VIDEO;
+        return Options.FILE;
+    }
+
+    /** export_data_types.cpp DocumentFolder. */
+    private static String documentFolder(MediaInfo d) {
+        if (d.isVideoFile) return "video_files";
+        if (d.isAnimated) return "animations";
+        if (d.isSticker) return "stickers";
+        if (d.isVoiceMessage) return "voice_messages";
+        if (d.isVideoMessage) return "round_video_messages";
+        return "files";
+    }
+
+    /** ComputeDocumentName: the document's own name, else audio_N / video_N / file_N + date. */
+    private String documentName(MediaInfo d, int date) {
+        if (!TextUtils.isEmpty(d.fileName)) return d.fileName;
+        String mime = d.mime != null ? d.mime : "";
+        String ext = mime.isEmpty() ? null : MimeTypeMap.getSingleton().getExtensionFromMimeType(mime.toLowerCase(Locale.US));
+        if (d.isVoiceMessage) {
+            return "audio_" + (++ctxAudios) + datePart(date) + ("audio/mp3".equalsIgnoreCase(mime) ? ".mp3" : ".ogg");
+        } else if (d.isVideoFile) {
+            return "video_" + (++ctxVideos) + datePart(date) + (TextUtils.isEmpty(ext) ? ".mov" : "." + ext);
+        }
+        return "file_" + (++ctxFiles) + datePart(date) + (TextUtils.isEmpty(ext) ? ".unknown" : "." + ext);
+    }
 
     private MediaInfo media(TLRPC.Message m) throws Exception {
         TLRPC.MessageMedia mm = m.media;
         if (mm instanceof TLRPC.TL_messageMediaPhoto && mm.photo != null) {
             TLRPC.Photo photo = mm.photo;
-            TLRPC.PhotoSize size = FileLoader.getClosestPhotoSizeWithSize(photo.sizes, 2560);
+            TLRPC.PhotoSize size = largest(photo.sizes);
             MediaInfo info = new MediaInfo();
-            info.jsonKey = "photo";
-            info.folder = "photos";
+            info.photo = true;
             if (size != null) {
                 info.width = size.w;
                 info.height = size.h;
-                info.size = size.size;
+                info.size = size.size > 0 ? size.size : (size.bytes != null ? size.bytes.length : 0);
             }
-            if (!options.photos || size == null) {
-                info.path = NOT_INCLUDED;
-            } else if (options.sizeLimit > 0 && info.size > options.sizeLimit) {
-                info.path = TOO_BIG;
+            String name = "photo_" + (++ctxPhotos) + datePart(m.date) + ".jpg";
+            if (size == null) {
+                info.skip = Skip.UNAVAILABLE;
+                return info;
+            }
+            info.skip = typeOrSizeSkip(Options.PHOTO, info.size);
+            if (info.skip != Skip.NONE) return info;
+            name = uniqueName("photos", name);
+            String out;
+            if (size instanceof TLRPC.TL_photoCachedSize && size.bytes != null && size.bytes.length > 0) {
+                out = writeBytes("photos", name, "image/jpeg", size.bytes);
             } else {
-                String name = "photo_" + m.id + "@" + fileFormat.format(new Date(m.date * 1000L)) + ".jpg";
-                if (size instanceof TLRPC.TL_photoCachedSize && size.bytes != null && size.bytes.length > 0) {
-                    info.path = writeBytes(info.folder, name, "image/jpeg", size.bytes);
-                } else if (size instanceof TLRPC.TL_photoStrippedSize) {
-                    info.path = NOT_INCLUDED;
-                } else {
-                    TLRPC.TL_inputPhotoFileLocation loc = new TLRPC.TL_inputPhotoFileLocation();
-                    loc.id = photo.id;
-                    loc.access_hash = photo.access_hash;
-                    loc.file_reference = photo.file_reference != null ? photo.file_reference : new byte[0];
-                    loc.thumb_size = size.type != null ? size.type : "";
-                    final long photoId = photo.id;
-                    info.path = download(loc, photo.dc_id, info.size, info.folder, name, "image/jpeg", () -> {
-                        TLRPC.MessageMedia fresh = refetchMedia(m.id);
-                        if (fresh != null && fresh.photo != null && fresh.photo.id == photoId) return fresh.photo.file_reference;
-                        return null;
-                    });
+                TLRPC.TL_inputPhotoFileLocation loc = new TLRPC.TL_inputPhotoFileLocation();
+                loc.id = photo.id;
+                loc.access_hash = photo.access_hash;
+                loc.file_reference = photo.file_reference != null ? photo.file_reference : new byte[0];
+                loc.thumb_size = size.type != null ? size.type : "";
+                final long photoId = photo.id;
+                out = download(loc, photo.dc_id, info.size, "photos", name, "image/jpeg", () -> {
+                    TLRPC.MessageMedia fresh = refetchMedia(m.id);
+                    if (fresh != null && fresh.photo != null && fresh.photo.id == photoId) return fresh.photo.file_reference;
+                    return null;
+                });
+            }
+            if (out.startsWith("(")) {
+                info.skip = Skip.UNAVAILABLE;
+            } else {
+                info.path = out;
+                if (html != null) {
+                    writePreview(info, lastWritten, "photos", out, PHOTO_MAX, false, Bitmap.CompressFormat.JPEG, "image/jpeg");
                 }
-                info.downloaded = info.path != null && !info.path.startsWith("(");
             }
             return info;
         }
         if (mm instanceof TLRPC.TL_messageMediaDocument && mm.document != null) {
             TLRPC.Document doc = mm.document;
             MediaInfo info = new MediaInfo();
-            info.jsonKey = "file";
             info.size = doc.size;
             info.mime = doc.mime_type;
-            info.fileName = FileLoader.getDocumentFileName(doc);
-            boolean wanted;
-            if (MessageObject.isRoundVideoDocument(doc)) {
-                info.mediaType = "video_message";
-                info.folder = "round_video_messages";
-                wanted = options.voice;
-            } else if (MessageObject.isVoiceDocument(doc)) {
-                info.mediaType = "voice_message";
-                info.folder = "voice_messages";
-                wanted = options.voice;
-            } else if (MessageObject.isStickerDocument(doc) || MessageObject.isAnimatedStickerDocument(doc, true)) {
-                info.mediaType = "sticker";
-                info.folder = "stickers";
-                wanted = options.files;
-            } else if (MessageObject.isGifDocument(doc)) {
-                info.mediaType = "animation";
-                info.folder = "video_files";
-                wanted = options.videos;
-            } else if (MessageObject.isVideoDocument(doc)) {
-                info.mediaType = "video_file";
-                info.folder = "video_files";
-                wanted = options.videos;
-            } else if (MessageObject.isMusicDocument(doc)) {
-                info.mediaType = "audio_file";
-                info.folder = "files";
-                wanted = options.files;
-            } else {
-                info.folder = "files";
-                wanted = options.files;
-            }
             for (TLRPC.DocumentAttribute a : doc.attributes) {
-                if (a instanceof TLRPC.TL_documentAttributeVideo || a instanceof TLRPC.TL_documentAttributeImageSize) {
-                    if (a.w > 0) info.width = a.w;
-                    if (a.h > 0) info.height = a.h;
+                if (a instanceof TLRPC.TL_documentAttributeImageSize) {
+                    info.width = a.w;
+                    info.height = a.h;
+                } else if (a instanceof TLRPC.TL_documentAttributeAnimated) {
+                    info.isAnimated = true;
+                } else if (a instanceof TLRPC.TL_documentAttributeSticker || a instanceof TLRPC.TL_documentAttributeCustomEmoji) {
+                    info.isSticker = true;
+                    info.emoji = a.alt;
+                } else if (a instanceof TLRPC.TL_documentAttributeVideo) {
+                    if (a.round_message) {
+                        info.isVideoMessage = true;
+                    } else {
+                        info.isVideoFile = true;
+                    }
+                    info.width = a.w;
+                    info.height = a.h;
+                    info.duration = (int) a.duration;
                 } else if (a instanceof TLRPC.TL_documentAttributeAudio) {
+                    if (a.voice) {
+                        info.isVoiceMessage = true;
+                    } else {
+                        info.isAudioFile = true;
+                    }
                     info.performer = a.performer;
                     info.title = a.title;
-                } else if (a instanceof TLRPC.TL_documentAttributeSticker) {
-                    info.emoji = a.alt;
+                    info.duration = (int) a.duration;
+                } else if (a instanceof TLRPC.TL_documentAttributeFilename) {
+                    info.fileName = a.file_name;
                 }
             }
-            try {
-                info.duration = MessageObject.getDocumentDuration(doc);
-            } catch (Throwable ignore) {
+            String folder = documentFolder(info);
+            String name = safeName(documentName(info, m.date));
+            TLRPC.PhotoSize thumb = largest(doc.thumbs);
+            info.hasThumb = thumb != null;
+            if (thumb != null) {
+                info.thumbSize = thumb.size > 0 ? thumb.size : (thumb.bytes != null ? thumb.bytes.length : 0);
             }
-            if (!wanted) {
-                info.path = NOT_INCLUDED;
-            } else if (options.sizeLimit > 0 && doc.size > options.sizeLimit) {
-                info.path = TOO_BIG;
+            info.skip = typeOrSizeSkip(documentType(info), doc.size);
+            if (info.skip != Skip.NONE) {
+                info.thumbSkip = info.skip; // "Don't load thumbs for large files that we skip."
+                return info;
+            }
+            name = uniqueName(folder, name);
+            TLRPC.TL_inputDocumentFileLocation loc = new TLRPC.TL_inputDocumentFileLocation();
+            loc.id = doc.id;
+            loc.access_hash = doc.access_hash;
+            loc.file_reference = doc.file_reference != null ? doc.file_reference : new byte[0];
+            loc.thumb_size = "";
+            final long docId = doc.id;
+            FileReferenceSource refs = () -> {
+                TLRPC.MessageMedia fresh = refetchMedia(m.id);
+                if (fresh != null && fresh.document != null && fresh.document.id == docId) return fresh.document.file_reference;
+                return null;
+            };
+            String out = download(loc, doc.dc_id, doc.size, folder, name,
+                    TextUtils.isEmpty(doc.mime_type) ? "application/octet-stream" : doc.mime_type, refs);
+            Uri written = lastWritten;
+            if (out.startsWith("(")) {
+                info.skip = Skip.UNAVAILABLE;
             } else {
-                String name = safeName(info.fileName);
-                if (TextUtils.isEmpty(name)) {
-                    String ext = extensionFor(doc.mime_type, info.mediaType);
-                    String prefix = info.mediaType != null ? info.mediaType.replace("_message", "") : "file";
-                    name = prefix + "_" + m.id + "@" + fileFormat.format(new Date(m.date * 1000L)) + ext;
+                info.path = out;
+            }
+            if (thumb != null) {
+                // <document path>_thumb.jpg (ParseDocumentThumb)
+                String thumbName = uniqueName(folder, displayLeaf(info.path != null ? info.path : folder + "/" + name) + "_thumb.jpg");
+                String t;
+                if (thumb instanceof TLRPC.TL_photoCachedSize && thumb.bytes != null && thumb.bytes.length > 0) {
+                    t = writeBytes(folder, thumbName, "image/jpeg", thumb.bytes);
+                } else {
+                    TLRPC.TL_inputDocumentFileLocation tl = new TLRPC.TL_inputDocumentFileLocation();
+                    tl.id = doc.id;
+                    tl.access_hash = doc.access_hash;
+                    tl.file_reference = loc.file_reference;
+                    tl.thumb_size = thumb.type != null ? thumb.type : "";
+                    t = download(tl, doc.dc_id, info.thumbSize, folder, thumbName, "image/jpeg", refs);
                 }
-                TLRPC.TL_inputDocumentFileLocation loc = new TLRPC.TL_inputDocumentFileLocation();
-                loc.id = doc.id;
-                loc.access_hash = doc.access_hash;
-                loc.file_reference = doc.file_reference != null ? doc.file_reference : new byte[0];
-                loc.thumb_size = "";
-                final long docId = doc.id;
-                info.path = download(loc, doc.dc_id, doc.size, info.folder, name,
-                        TextUtils.isEmpty(doc.mime_type) ? "application/octet-stream" : doc.mime_type, () -> {
-                    TLRPC.MessageMedia fresh = refetchMedia(m.id);
-                    if (fresh != null && fresh.document != null && fresh.document.id == docId) return fresh.document.file_reference;
-                    return null;
-                });
-                info.downloaded = info.path != null && !info.path.startsWith("(");
+                if (t.startsWith("(")) {
+                    info.thumbSkip = Skip.UNAVAILABLE;
+                } else {
+                    info.thumbPath = t;
+                }
+            }
+            if (html != null && info.isSticker && info.path != null && "image/webp".equals(doc.mime_type)) {
+                writePreview(info, written, folder, info.path, STICKER_MAX, false, Bitmap.CompressFormat.PNG, "image/png");
             }
             return info;
         }
         return null;
     }
 
-    private static String extensionFor(String mime, String mediaType) {
-        if ("voice_message".equals(mediaType)) return ".ogg";
-        if ("video_message".equals(mediaType)) return ".mp4";
-        if ("sticker".equals(mediaType)) {
-            if ("application/x-tgsticker".equals(mime)) return ".tgs";
-            if ("video/webm".equals(mime)) return ".webm";
-            return ".webp";
-        }
-        if (mime != null) {
-            switch (mime) {
-                case "video/mp4":
-                    return ".mp4";
-                case "image/jpeg":
-                    return ".jpg";
-                case "image/png":
-                    return ".png";
-                case "image/gif":
-                    return ".gif";
-                case "audio/mpeg":
-                    return ".mp3";
-                case "audio/ogg":
-                    return ".ogg";
-                case "application/pdf":
-                    return ".pdf";
-            }
-        }
-        return "";
+    private static String displayLeaf(String path) {
+        int slash = path.lastIndexOf('/');
+        return slash >= 0 ? path.substring(slash + 1) : path;
     }
 
+    /**
+     * WriteImageThumb: a scaled copy next to the original ("photo_1@…_thumb.jpg"), sized by
+     * CalculateThumbSize (fit max x max keeping the aspect ratio, even sides, at least 80 px),
+     * shown at half size in the page.
+     */
+    private void writePreview(MediaInfo info, Uri source, String folder, String largePath, int max, boolean retina,
+                              Bitmap.CompressFormat format, String mime) {
+        if (source == null) return;
+        try {
+            BitmapFactory.Options bounds = new BitmapFactory.Options();
+            bounds.inJustDecodeBounds = true;
+            try (InputStream in = resolver.openInputStream(source)) {
+                BitmapFactory.decodeStream(in, null, bounds);
+            }
+            int w = bounds.outWidth, h = bounds.outHeight;
+            if (w <= 0 || h <= 0 || w >= 10000 || h >= 10000) return;
+            int[] size = thumbSize(w, h, max, retina);
+            if (size == null) return;
+            BitmapFactory.Options opts = new BitmapFactory.Options();
+            opts.inSampleSize = 1;
+            while (w / (opts.inSampleSize * 2) >= size[0] && h / (opts.inSampleSize * 2) >= size[1]) opts.inSampleSize *= 2;
+            Bitmap bmp;
+            try (InputStream in = resolver.openInputStream(source)) {
+                bmp = BitmapFactory.decodeStream(in, null, opts);
+            }
+            if (bmp == null) return;
+            Bitmap scaled = Bitmap.createScaledBitmap(bmp, size[0], size[1], true);
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            scaled.compress(format, 75, bos); // Qt's default JPEG quality; PNG ignores it
+            if (scaled != bmp) scaled.recycle();
+            bmp.recycle();
+            String leaf = displayLeaf(largePath);
+            int dot = leaf.indexOf('.');
+            String thumb = dot >= 0 ? leaf.substring(0, dot) + "_thumb" + leaf.substring(dot) : leaf + "_thumb";
+            String out = writeBytes(folder, uniqueName(folder, thumb), mime, bos.toByteArray(), false);
+            if (!out.startsWith("(")) {
+                info.previewPath = out;
+                info.previewW = size[0];
+                info.previewH = size[1];
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+    }
+
+    /** export_output_html.cpp CalculateThumbSize(max, max, 80, 80, expandForRetina). */
+    private static int[] thumbSize(int w, int h, int max, boolean retina) {
+        int mul = retina ? 2 : 1;
+        int sw = w, sh = h;
+        if (w * mul > max || h * mul > max) {
+            // QSize::scaled(max, max, Qt::KeepAspectRatio)
+            if (w >= h) {
+                sw = max;
+                sh = (int) ((long) h * max / w);
+            } else {
+                sh = max;
+                sw = (int) ((long) w * max / h);
+            }
+        }
+        sw &= ~1;
+        sh &= ~1;
+        if (sw < PHOTO_MIN || sh < PHOTO_MIN) return null;
+        return new int[]{sw, sh};
+    }
+
+    private Uri lastWritten;
+
     private String writeBytes(String folder, String name, String mime, byte[] data) throws IOException {
+        return writeBytes(folder, name, mime, data, true);
+    }
+
+    private String writeBytes(String folder, String name, String mime, byte[] data, boolean count) throws IOException {
+        lastWritten = null;
         Uri dir = subdir(folder);
         Uri out = DocumentsContract.createDocument(resolver, dir, mime, name);
         if (out == null) {
@@ -1014,7 +1304,8 @@ public final class HanakoChatExport {
             }
             os.write(data);
         }
-        mediaCount++;
+        if (count) mediaCount++;
+        lastWritten = out;
         return folder + "/" + displayName(out, name);
     }
 
@@ -1051,6 +1342,7 @@ public final class HanakoChatExport {
     /** Downloads a file into {@code folder}; returns its relative path, or a TD placeholder on failure. */
     private String download(TLRPC.InputFileLocation location, int dcId, long size, String folder, String name, String mime,
                             FileReferenceSource refSource) throws Exception {
+        lastWritten = null;
         if (cancelled.get()) return FAILED;
         Uri dir = subdir(folder);
         Uri out = DocumentsContract.createDocument(resolver, dir, mime, name);
@@ -1112,93 +1404,310 @@ public final class HanakoChatExport {
         }
         mediaCount++;
         if (mediaCount % 5 == 0) progress();
+        lastWritten = out;
         return folder + "/" + displayName(out, name);
     }
 
-    // =====================================================================================
-    // HTML
 
-    private void writeHtml(TLRPC.Message m, boolean service, String fromName, ArrayList<Part> parts, MediaInfo media) throws IOException {
-        Date date = new Date(m.date * 1000L);
-        String day = dayFormat.format(date);
-        if (!day.equals(lastHtmlDay)) {
-            lastHtmlDay = day;
-            html.write("<div class=\"day\"><span>" + esc(day) + "</span></div>\n");
+    // =====================================================================================
+    // HTML (export_output_html.cpp HtmlWriter::Wrap::pushMessage and friends)
+
+    private static String dateText(int date) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(date * 1000L);
+        String[] months = {"January", "February", "March", "April", "May", "June", "July", "August",
+                "September", "October", "November", "December"};
+        return c.get(Calendar.DAY_OF_MONTH) + " " + months[c.get(Calendar.MONTH)] + " " + c.get(Calendar.YEAR);
+    }
+
+    private static boolean sameDay(int a, int b) {
+        Calendar x = Calendar.getInstance();
+        x.setTimeInMillis(a * 1000L);
+        Calendar y = Calendar.getInstance();
+        y.setTimeInMillis(b * 1000L);
+        return x.get(Calendar.YEAR) == y.get(Calendar.YEAR) && x.get(Calendar.DAY_OF_YEAR) == y.get(Calendar.DAY_OF_YEAR);
+    }
+
+    /** FormatDateTime(date, true): "20.10.2026 19:06:00 UTC+04:00". */
+    private String fullDate(int date) {
+        Date d = new Date(date * 1000L);
+        return fullFormat.format(d) + " UTC" + zoneFormat.format(d);
+    }
+
+    /** Ui::FormatDurationText. */
+    private static String duration(double seconds) {
+        long s = Math.round(seconds);
+        long h = s / 3600, m = (s % 3600) / 60, sec = s % 60;
+        return h > 0 ? String.format(Locale.US, "%d:%02d:%02d", h, m, sec) : String.format(Locale.US, "%d:%02d", m, sec);
+    }
+
+    /** Ui::FormatSizeText. */
+    private static String sizeText(long size) {
+        if (size >= 1024L * 1024 * 1024) return String.format(Locale.US, "%.1f GB", size / (1024.0 * 1024 * 1024));
+        if (size >= 1024L * 1024) return String.format(Locale.US, "%.1f MB", size / (1024.0 * 1024));
+        if (size >= 1024L) return String.format(Locale.US, "%.1f KB", size / 1024.0);
+        return size + " B";
+    }
+
+    private static String noFileDescription(Skip s) {
+        switch (s) {
+            case UNAVAILABLE:
+                return "Unavailable, please try again later.";
+            case FILE_SIZE:
+                return "Exceeds maximum size, change data exporting settings to download.";
+            case FILE_TYPE:
+                return "Not included, change data exporting settings to download.";
+            default:
+                return "";
+        }
+    }
+
+    /** PeerColorIndex. */
+    private static int colorIndex(long bareId) {
+        int[] map = {0, 7, 4, 1, 6, 3, 5};
+        return map[(int) (Math.abs(bareId) % map.length)];
+    }
+
+    private static String initial(String s) {
+        if (s == null) return "";
+        s = s.trim();
+        if (s.isEmpty()) return "";
+        return ser(s.substring(0, Character.charCount(s.codePointAt(0))));
+    }
+
+    private static String userpic(long bareId, String[] names) {
+        String px = USERPIC_SIZE + "px";
+        return "<div class=\"userpic userpic" + (colorIndex(bareId) + 1) + "\" style=\"width: " + px + "; height: " + px + "\">"
+                + "<div class=\"initials\" style=\"line-height: " + px + "\">" + initial(names[0]) + initial(names[1]) + "</div></div>";
+    }
+
+    /** wrapMessageLink: a reply into an earlier page links to that page. */
+    private String messageLink(int messageId, String text) {
+        for (int i = 0; i < lastIdPerFile.size(); i++) {
+            if (messageId <= lastIdPerFile.get(i)) {
+                return "<a href=\"" + messagesFile(i) + "#go_to_message" + messageId + "\">" + text + "</a>";
+            }
+        }
+        return "<a href=\"#go_to_message" + messageId + "\" onclick=\"return GoToMessage(" + messageId + ")\">" + text + "</a>";
+    }
+
+    private void writeHtml(TLRPC.Message m, boolean service, String fromName, ArrayList<Part> parts, MediaInfo media, Contact contact) throws IOException {
+        if (htmlMessages > 0 && htmlMessages % MESSAGES_IN_FILE == 0) {
+            lastIdPerFile.add(lastHtmlId);
+            closeHtmlFile(true);
+            openHtmlFile(htmlFileIndex + 1);
+        }
+        StringBuilder b = new StringBuilder();
+        if (prev == null || !sameDay(prev.date, m.date)) {
+            b.append("     <div class=\"message service\" id=\"message").append(--dateMessageId).append("\">\n")
+                    .append("      <div class=\"body details\">\n       ").append(dateText(m.date)).append("\n      </div>\n     </div>\n");
         }
         if (service) {
-            html.write("<div class=\"service\" id=\"message" + m.id + "\">");
-            html.write(esc(fromName));
-            html.write(" · ");
-            html.write(esc(actionName(m.action).replace('_', ' ')));
-            if (m.action != null && !TextUtils.isEmpty(m.action.title)) {
-                html.write(" «" + esc(m.action.title) + "»");
-            }
-            html.write("</div>\n");
+            b.append("     <div class=\"message service\" id=\"message").append(m.id).append("\">\n      <div class=\"body details\">\n       ");
+            b.append(ser(fromName)).append(' ').append(ser(actionName(m.action).replace('_', ' ')));
+            if (m.action != null && !TextUtils.isEmpty(m.action.title)) b.append(" «").append(ser(m.action.title)).append('»');
+            b.append("\n      </div>\n     </div>\n");
+            HtmlPrev p = new HtmlPrev();
+            p.service = true;
+            p.date = m.date;
+            prev = p;
+            finishHtmlMessage(b, m.id);
             return;
         }
-        html.write("<div class=\"message" + (m.out ? " out" : "") + "\" id=\"message" + m.id + "\">");
-        html.write("<span class=\"date\" title=\"" + esc(fullFormat.format(date)) + "\">" + esc(timeFormat.format(date))
-                + (m.edit_date != 0 ? " ✎" : "") + "</span>");
-        html.write("<div class=\"from\">" + esc(fromName) + "</div>");
+        TLRPC.Peer from = m.from_id != null ? m.from_id : m.peer_id;
+        String fromKey = peerJsonId(from) + "|" + (m.via_bot_id);
+        String fwdKey = null;
+        String fwdName = null;
         if (m.fwd_from != null) {
-            String fwd = m.fwd_from.from_name;
-            if (fwd == null) fwd = peerName(m.fwd_from.from_id);
-            html.write("<div class=\"fwd\">Forwarded from " + esc(fwd != null ? fwd : "?") + "</div>");
+            fwdName = m.fwd_from.from_name;
+            if (fwdName == null) fwdName = peerName(m.fwd_from.from_id);
+            if (fwdName == null) fwdName = "Deleted Account";
+            fwdKey = peerJsonId(m.fwd_from.from_id) + "|" + fwdName;
+        }
+        boolean wrap = prev == null || prev.service || from == null || !fromKey.equals(prev.fromKey)
+                || !sameDay(prev.date, m.date)
+                || !TextUtils.equals(fwdKey, prev.fwdKey)
+                || Math.abs(m.date - prev.date) > (fwdKey != null ? 1 : JOIN_WITHIN_SECONDS);
+        b.append("     <div class=\"message default clearfix").append(wrap ? "" : " joined").append("\" id=\"message").append(m.id).append("\">\n");
+        if (wrap) {
+            b.append("      <div class=\"pull_left userpic_wrap\">").append(userpic(bareId(from), peerNames(from, fromName))).append("</div>\n");
+        }
+        b.append("      <div class=\"body\">\n");
+        b.append("       <div class=\"pull_right date details\" title=\"").append(fullDate(m.date)).append("\">")
+                .append(timeFormat.format(new Date(m.date * 1000L))).append("</div>\n");
+        if (wrap) {
+            b.append("       <div class=\"from_name\">").append(ser(fromName.isEmpty() ? "Deleted Account" : fromName)).append("</div>\n");
+        }
+        if (fwdKey != null) {
+            b.append("       <div class=\"pull_left forwarded userpic_wrap\">")
+                    .append(userpic(m.fwd_from.from_id != null ? bareId(m.fwd_from.from_id) : m.id, peerNames(m.fwd_from.from_id, fwdName))).append("</div>\n");
+            b.append("       <div class=\"forwarded body\">\n");
+            b.append("        <div class=\"from_name\">").append(ser(fwdName));
+            if (m.fwd_from.date != 0) {
+                b.append("<span class=\"date details\" title=\"").append(fullDate(m.fwd_from.date)).append("\"> ")
+                        .append(fullFormat.format(new Date(m.fwd_from.date * 1000L))).append("</span>");
+            }
+            b.append("</div>\n");
         }
         if (m.reply_to != null && m.reply_to.reply_to_msg_id != 0) {
-            html.write("<div class=\"reply\">In reply to <a href=\"#message" + m.reply_to.reply_to_msg_id + "\">this message</a></div>");
+            b.append("       <div class=\"reply_to details\">");
+            if (m.reply_to.reply_to_peer_id != null && peerJsonId(m.reply_to.reply_to_peer_id) != null
+                    && !TextUtils.equals(peerJsonId(m.reply_to.reply_to_peer_id), peerJsonId(m.peer_id))) {
+                b.append("In reply to a message in another chat");
+            } else {
+                b.append("In reply to ").append(messageLink(m.reply_to.reply_to_msg_id, "this message"));
+            }
+            b.append("</div>\n");
         }
         if (media != null) {
-            html.write("<div class=\"media\">");
-            if (!media.downloaded) {
-                String what = media.mediaType != null ? media.mediaType.replace('_', ' ') : ("photo".equals(media.jsonKey) ? "photo" : "file");
-                html.write("<span class=\"missing\">[" + esc(what) + (media.fileName != null ? ": " + esc(media.fileName) : "") + "] " + esc(media.path) + "</span>");
-            } else {
-                String href = escAttr(encodePath(media.path));
-                if ("photo".equals(media.jsonKey)) {
-                    html.write("<a href=\"" + href + "\"><img src=\"" + href + "\" loading=\"lazy\" alt=\"photo\"></a>");
-                } else if ("video_file".equals(media.mediaType) || "animation".equals(media.mediaType) || "video_message".equals(media.mediaType)) {
-                    html.write("<video controls preload=\"none\" src=\"" + href + "\"" + ("animation".equals(media.mediaType) ? " loop muted" : "") + "></video>");
-                } else if ("voice_message".equals(media.mediaType) || "audio_file".equals(media.mediaType)) {
-                    html.write("<audio controls preload=\"none\" src=\"" + href + "\"></audio>");
-                    if ("audio_file".equals(media.mediaType)) {
-                        html.write("<div><a href=\"" + href + "\">" + esc(media.fileName != null ? media.fileName : media.path) + "</a></div>");
-                    }
-                } else if ("sticker".equals(media.mediaType) && media.path.endsWith(".webp")) {
-                    html.write("<img src=\"" + href + "\" style=\"max-width:160px\" alt=\"sticker\">");
-                } else {
-                    html.write("<a href=\"" + href + "\">📎 " + esc(media.fileName != null ? media.fileName : media.path) + "</a>");
-                    if (media.size > 0) html.write(" <span class=\"missing\">" + esc(AndroidUtilities.formatFileSize(media.size)) + "</span>");
-                }
+            b.append(htmlMedia(media));
+        } else if (m.media instanceof TLRPC.TL_messageMediaContact) {
+            TLRPC.MessageMedia mm = m.media;
+            String status = mm.phone_number != null ? mm.phone_number : "";
+            String link = null;
+            if (contact != null && contact.vcardSize > 0) {
+                status += " - vCard";
+                link = contact.vcardPath;
             }
-            html.write("</div>");
-        }
-        TLRPC.MessageMedia mm = m.media;
-        if (mm instanceof TLRPC.TL_messageMediaContact) {
-            html.write("<div class=\"media\">👤 " + esc((mm.first_name != null ? mm.first_name : "") + " " + (mm.last_name != null ? mm.last_name : "")) + " " + esc(mm.phone_number != null ? mm.phone_number : "") + "</div>");
-        } else if (mm instanceof TLRPC.TL_messageMediaGeo && mm.geo != null) {
-            String q = mm.geo.lat + "," + mm.geo._long;
-            html.write("<div class=\"media\"><a href=\"https://maps.google.com/maps?q=" + escAttr(q) + "\">📍 " + esc(q) + "</a></div>");
+            b.append(generic("media_contact", link, null, (mm.first_name != null ? mm.first_name : "") + " " + (mm.last_name != null ? mm.last_name : ""), null, status));
+        } else if (m.media instanceof TLRPC.TL_messageMediaGeo && m.media.geo != null) {
+            String lat = Double.toString(m.media.geo.lat), lng = Double.toString(m.media.geo._long);
+            String coords = lat + "," + lng;
+            b.append(generic("media_location", "https://maps.google.com/maps?q=" + coords + "&ll=" + coords + "&z=16", null, "Location", null, lat + ", " + lng));
         }
         StringBuilder body = new StringBuilder();
         for (Part p : parts) body.append(htmlPart(p));
         if (body.length() > 0) {
-            html.write("<div class=\"text\">");
-            html.write(body.toString());
-            html.write("</div>");
+            b.append("       <div class=\"text\">\n").append(body).append("\n       </div>\n");
         }
-        html.write("</div>\n");
+        if (!TextUtils.isEmpty(m.post_author)) {
+            b.append("       <div class=\"signature details\">").append(ser(m.post_author)).append("</div>\n");
+        }
+        if (fwdKey != null) b.append("       </div>\n");
+        b.append("      </div>\n     </div>\n");
+        HtmlPrev p = new HtmlPrev();
+        p.fromKey = fromKey;
+        p.date = m.date;
+        p.fwdKey = fwdKey;
+        prev = p;
+        finishHtmlMessage(b, m.id);
     }
 
+    private void finishHtmlMessage(StringBuilder b, int id) throws IOException {
+        html.write(b.toString());
+        htmlMessages++;
+        lastHtmlId = id;
+    }
+
+    /** pushGenericMedia. */
+    private String generic(String classes, String link, String thumb, String title, String description, String status) {
+        StringBuilder r = new StringBuilder("       <div class=\"media_wrap clearfix\">\n");
+        if (TextUtils.isEmpty(link)) {
+            r.append("        <div class=\"media clearfix pull_left ").append(classes).append("\">\n");
+        } else {
+            boolean global = link.startsWith("http://") || link.startsWith("https://");
+            r.append("        <a class=\"media clearfix pull_left block_link ").append(classes).append("\" href=\"")
+                    .append(escAttr(global ? link : encodePath(link))).append("\">\n");
+        }
+        if (TextUtils.isEmpty(thumb)) {
+            r.append("         <div class=\"fill pull_left\"></div>\n");
+        } else {
+            r.append("         <img class=\"thumb pull_left\" src=\"").append(escAttr(encodePath(thumb))).append("\"/>\n");
+        }
+        r.append("         <div class=\"body\">\n");
+        if (!TextUtils.isEmpty(title)) r.append("          <div class=\"title bold\">").append(ser(title)).append("</div>\n");
+        if (!TextUtils.isEmpty(description)) r.append("          <div class=\"description\">").append(ser(description)).append("</div>\n");
+        if (!TextUtils.isEmpty(status)) r.append("          <div class=\"status details\">").append(ser(status)).append("</div>\n");
+        r.append("         </div>\n");
+        r.append(TextUtils.isEmpty(link) ? "        </div>\n" : "        </a>\n");
+        r.append("       </div>\n");
+        return r.toString();
+    }
+
+    private String sized(String cls, String src, int w, int h) {
+        return "<img class=\"" + cls + "\" src=\"" + escAttr(encodePath(src)) + "\" style=\"width: " + (w / 2) + "px; height: " + (h / 2) + "px\"/>";
+    }
+
+    private String htmlMedia(MediaInfo d) {
+        boolean has = d.path != null;
+        String desc = noFileDescription(d.skip);
+        if (d.photo) {
+            if (has && d.previewPath != null) {
+                return "       <div class=\"media_wrap clearfix\">\n        <a class=\"photo_wrap clearfix pull_left\" href=\""
+                        + escAttr(encodePath(d.path)) + "\">" + sized("photo", d.previewPath, d.previewW, d.previewH) + "</a>\n       </div>\n";
+            }
+            String status = d.width + "x" + d.height + (has ? "" : ", " + sizeText(d.size));
+            return generic("media_photo", d.path, null, "Photo", desc, status);
+        }
+        if (d.isSticker) {
+            if (has && d.previewPath != null) {
+                return "       <div class=\"media_wrap clearfix\">\n        <a class=\"sticker_wrap clearfix pull_left\" href=\""
+                        + escAttr(encodePath(d.path)) + "\">" + sized("sticker", d.previewPath, d.previewW, d.previewH) + "</a>\n       </div>\n";
+            }
+            String status = d.emoji != null ? d.emoji : "";
+            if (!has) status += (status.isEmpty() ? "" : ", ") + sizeText(d.size);
+            return generic("media_photo", d.path, null, "Sticker", desc, status);
+        }
+        if (d.isVideoMessage) {
+            return generic("media_video", d.path, d.thumbPath, "Video message", desc, duration(d.duration) + (has ? "" : ", " + sizeText(d.size)));
+        }
+        if (d.isVoiceMessage) {
+            return generic("media_voice_message", d.path, null, "Voice message", desc, duration(d.duration) + (has ? "" : ", " + sizeText(d.size)));
+        }
+        if (d.isAnimated || d.isVideoFile) {
+            int[] ts = d.width > 0 && d.height > 0 ? thumbSize(d.width, d.height, PHOTO_MAX, true) : null;
+            if (has && d.thumbPath != null && ts != null) {
+                StringBuilder r = new StringBuilder("       <div class=\"media_wrap clearfix\">\n        <a class=\"")
+                        .append(d.isAnimated ? "animated_wrap" : "video_file_wrap").append(" clearfix pull_left\" href=\"")
+                        .append(escAttr(encodePath(d.path))).append("\">");
+                if (d.isAnimated) {
+                    r.append("<div class=\"video_play_bg\"><div class=\"gif_play\">GIF</div></div>");
+                    r.append(sized("animated", d.thumbPath, ts[0], ts[1]));
+                } else {
+                    r.append("<div class=\"video_play_bg\"><div class=\"video_play\"></div></div><div class=\"video_duration\">")
+                            .append(duration(d.duration)).append("</div>");
+                    r.append(sized("video_file", d.thumbPath, ts[0], ts[1]));
+                }
+                return r.append("</a>\n       </div>\n").toString();
+            }
+            if (d.isAnimated) {
+                return generic("media_video", d.path, null, "Animation", desc, sizeText(d.size));
+            }
+            return generic("media_video", d.path, null, "Video file", desc, duration(d.duration) + (has ? "" : ", " + sizeText(d.size)));
+        }
+        if (d.isAudioFile) {
+            String title = !TextUtils.isEmpty(d.performer) && !TextUtils.isEmpty(d.title) ? d.performer + " \u2013 " + d.title
+                    : !TextUtils.isEmpty(d.fileName) ? d.fileName : "Audio file";
+            return generic("media_audio_file", d.path, null, title, desc, duration(d.duration) + (has ? "" : ", " + sizeText(d.size)));
+        }
+        return generic("media_file", d.path, null, TextUtils.isEmpty(d.fileName) ? "File" : d.fileName, desc, sizeText(d.size));
+    }
+
+    /** export_output_html.cpp FormatText. */
     private static String htmlPart(Part p) {
-        String t = esc(p.text);
+        String t = ser(p.text);
         switch (p.type) {
             case "plain":
+            case "unknown":
+            case "bank_card":
+            case "custom_emoji":
                 return t;
+            case "mention":
+                return "<a href=\"https://t.me/" + escAttr(p.text.length() > 1 ? p.text.substring(1) : "") + "\">" + t + "</a>";
+            case "hashtag":
+                return "<a href=\"\" onclick=\"return ShowHashtag(" + jsArg(p.text) + ")\">" + t + "</a>";
+            case "cashtag":
+                return "<a href=\"\" onclick=\"return ShowCashtag(" + jsArg(p.text) + ")\">" + t + "</a>";
+            case "bot_command":
+                return "<a href=\"\" onclick=\"return ShowBotCommand(" + jsArg(p.text) + ")\">" + t + "</a>";
+            case "mention_name":
+                return "<a href=\"\" onclick=\"return ShowMentionName()\">" + t + "</a>";
+            case "phone":
+                return "<a href=\"tel:" + escAttr(p.text) + "\">" + t + "</a>";
             case "bold":
-                return "<b>" + t + "</b>";
+                return "<strong>" + t + "</strong>";
             case "italic":
-                return "<i>" + t + "</i>";
+                return "<em>" + t + "</em>";
             case "underline":
                 return "<u>" + t + "</u>";
             case "strikethrough":
@@ -1208,7 +1717,7 @@ public final class HanakoChatExport {
             case "pre":
                 return "<pre>" + t + "</pre>";
             case "spoiler":
-                return "<span class=\"spoiler\">" + t + "</span>";
+                return "<span class=\"spoiler hidden\" onclick=\"ShowSpoiler(this)\"><span aria-hidden=\"true\">" + t + "</span></span>";
             case "blockquote":
                 return "<blockquote>" + t + "</blockquote>";
             case "text_link":
@@ -1220,6 +1729,16 @@ public final class HanakoChatExport {
             default:
                 return t;
         }
+    }
+
+    /** SerializeString('"' + text.mid(1) + '"'). */
+    private static String jsArg(String text) {
+        return escAttr("\"" + (text.length() > 1 ? text.substring(1) : "") + "\"");
+    }
+
+    /** SerializeString: escaped, newlines as &lt;br&gt;. */
+    private static String ser(String s) {
+        return esc(s).replace("\n", "<br>");
     }
 
     private static String link(String url, String inner) {

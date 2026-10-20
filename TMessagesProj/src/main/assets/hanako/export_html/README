@@ -1,0 +1,3 @@
+css/, js/ and images/ are Telegram Desktop's HTML export resources
+(telegramdesktop/tdesktop Telegram/Resources/export_html @ d5b208cd46960c626a53eeb0a26f49044a815372),
+GPLv3 with the OpenSSL exception. HanakoChatExport copies them next to messages.html.

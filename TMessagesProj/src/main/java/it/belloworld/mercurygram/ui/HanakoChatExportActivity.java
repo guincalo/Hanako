@@ -48,10 +48,8 @@ public class HanakoChatExportActivity extends UniversalFragment {
 
     private static final int ID_FROM = 1;
     private static final int ID_TO = 2;
-    private static final int ID_PHOTOS = 3;
-    private static final int ID_VIDEOS = 4;
-    private static final int ID_VOICE = 5;
-    private static final int ID_FILES = 6;
+    // media type rows: id = 100 + Options bit
+    private static final int ID_TYPE_BASE = 100;
     private static final int ID_SIZE = 7;
     private static final int ID_HTML = 8;
     private static final int ID_JSON = 9;
@@ -127,10 +125,14 @@ public class HanakoChatExportActivity extends UniversalFragment {
         items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoChatExportMediaHeader)));
-        items.add(UItem.asCheck(ID_PHOTOS, LocaleController.getString(R.string.HanakoChatExportPhotos)).setChecked(options.photos));
-        items.add(UItem.asCheck(ID_VIDEOS, LocaleController.getString(R.string.HanakoChatExportVideos)).setChecked(options.videos));
-        items.add(UItem.asCheck(ID_VOICE, LocaleController.getString(R.string.HanakoChatExportVoice)).setChecked(options.voice));
-        items.add(UItem.asCheck(ID_FILES, LocaleController.getString(R.string.HanakoChatExportFiles)).setChecked(options.files));
+        // Telegram Desktop's seven media types, in its order
+        typeRow(items, HanakoChatExport.Options.PHOTO, R.string.HanakoChatExportPhotos);
+        typeRow(items, HanakoChatExport.Options.VIDEO, R.string.HanakoChatExportTypeVideos);
+        typeRow(items, HanakoChatExport.Options.VOICE_MESSAGE, R.string.HanakoChatExportTypeVoice);
+        typeRow(items, HanakoChatExport.Options.VIDEO_MESSAGE, R.string.HanakoChatExportTypeRound);
+        typeRow(items, HanakoChatExport.Options.STICKER, R.string.HanakoChatExportTypeStickers);
+        typeRow(items, HanakoChatExport.Options.GIF, R.string.HanakoChatExportTypeGifs);
+        typeRow(items, HanakoChatExport.Options.FILE, R.string.HanakoChatExportTypeFiles);
         items.add(UItem.asButton(ID_SIZE, LocaleController.getString(R.string.HanakoChatExportSizeLimit), sizeLabel(options.sizeLimit)));
         items.add(UItem.asShadow(null));
 
@@ -152,18 +154,6 @@ public class HanakoChatExportActivity extends UniversalFragment {
             case ID_TO:
                 pickTo();
                 return;
-            case ID_PHOTOS:
-                options.photos = !options.photos;
-                break;
-            case ID_VIDEOS:
-                options.videos = !options.videos;
-                break;
-            case ID_VOICE:
-                options.voice = !options.voice;
-                break;
-            case ID_FILES:
-                options.files = !options.files;
-                break;
             case ID_SIZE:
                 pickSize();
                 return;
@@ -177,9 +167,17 @@ public class HanakoChatExportActivity extends UniversalFragment {
                 start();
                 return;
             default:
+                if (item.id > ID_TYPE_BASE && item.id <= ID_TYPE_BASE + 0x40) {
+                    options.types ^= item.id - ID_TYPE_BASE;
+                    break;
+                }
                 return;
         }
         refresh();
+    }
+
+    private void typeRow(java.util.ArrayList<UItem> items, int type, int label) {
+        items.add(UItem.asCheck(ID_TYPE_BASE + type, LocaleController.getString(label)).setChecked((options.types & type) != 0));
     }
 
     @Override
