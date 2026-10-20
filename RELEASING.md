@@ -1,33 +1,27 @@
 # Releasing Hanako
 
-Releases are built and published by CI ([`.github/workflows/hanako.yml`](.github/workflows/hanako.yml))
-when a version tag is pushed. Nothing is uploaded by hand.
+Hanako 2.x is built from the `hanako-classic` branch by
+[`.github/workflows/hanako-classic.yml`](.github/workflows/hanako-classic.yml). Tags follow
+[LRS version numbering](https://git.coom.tech/drummyfish/less_retarded_wiki/src/branch/master/version_numbering.md):
+`vMAJOR.MINOR`, with a `d` suffix for development builds, which are published as pre-releases.
 
-## Checklist
-
-1. Make sure `hanako` contains everything for the release and its last CI build is green.
-2. In [CHANGELOG.md](CHANGELOG.md), rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`, add a
-   new empty `## [Unreleased]` above it, and update the compare links at the bottom:
-   ```
-   [Unreleased]: https://github.com/guincalo/Hanako/compare/vX.Y.Z...hanako
-   [X.Y.Z]: https://github.com/guincalo/Hanako/compare/vPREVIOUS...vX.Y.Z
-   ```
-   Commit and push that to `hanako`.
-3. Tag the commit with an annotated tag and push **only the tag**:
+1. Make sure the last CI build of `hanako-classic` is green.
+2. In [CHANGELOG.md](CHANGELOG.md), move the `## [Unreleased]` notes into `## [X.Y] - YYYY-MM-DD`
+   (or `[X.Yd]`) and push.
+3. Tag that commit and push only the tag:
    ```bash
-   git tag -a vX.Y.Z -m "Hanako vX.Y.Z"
-   git push origin vX.Y.Z
+   git tag -a vX.Y -m "Hanako vX.Y"
+   git push origin vX.Y
    ```
-4. CI then:
-   - checks that the tag looks like `vMAJOR.MINOR.PATCH` (optionally `-pre`) and that CHANGELOG.md
-     has a `## [X.Y.Z]` section, and stops before building if not;
-   - builds the arm64-v8a APK once, signed with the private key from the `HANAKO_KEYSTORE_B64`,
-     `HANAKO_KEYSTORE_PASSWORD`, `HANAKO_KEY_ALIAS` and `HANAKO_KEY_PASSWORD` repository secrets
-     (a tag run fails if they are missing rather than falling back to the public debug key);
-   - publishes a GitHub Release named `🌸 Hanako vX.Y.Z` with the APK, its SHA-256 file and that
-     CHANGELOG section as notes. Tags with a `-suffix` are marked as pre-releases.
-5. Check the release page and download the APK once to make sure it installs.
+   CI builds the arm64-v8a APK for the tag, signed with the private Hanako key (secrets
+   `HANAKO_KEYSTORE_*`; a tag build fails without them) and uploads it as the `hanako-classic-arm64`
+   workflow artifact, named `Hanako-vX.Y-arm64-v8a.apk` with its `.sha256`.
+4. Create the GitHub release from that artifact:
+   ```bash
+   gh run download <run-id> -n hanako-classic-arm64 -D dist
+   gh release create vX.Y dist/* --title "Hanako vX.Y" --notes-file notes.md   # add --prerelease for d builds
+   ```
+5. Check the release page and install the APK once.
 
-The branch push of an already-tagged commit is skipped by CI, so a release is built only once.
-If a tag run fails validation, fix CHANGELOG.md, delete the tag (`git push origin :refs/tags/vX.Y.Z`
-and `git tag -d vX.Y.Z`) and tag again.
+Hanako 1.x (Mercurygram based) was released from the `hanako` branch by `hanako.yml`; that branch is
+no longer developed.

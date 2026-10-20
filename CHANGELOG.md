@@ -2,6 +2,7 @@
 
 All notable changes to Hanako are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Hanako is versioned by its Git tags.
+Hanako 2.x is based on Forkgram Classic (branch `hanako-classic`), 1.x on Mercurygram (branch `hanako`).
 Up to 1.3.1 tags were `vX.Y.Z`; from 1.31 on Hanako uses
 [LRS version numbering](https://git.coom.tech/drummyfish/less_retarded_wiki/src/branch/master/version_numbering.md):
 `MAJOR.MINOR`, the minor sized by how big the change is, and a `d` suffix for development builds
@@ -9,6 +10,34 @@ Up to 1.3.1 tags were `vX.Y.Z`; from 1.31 on Hanako uses
 Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
+
+## [2.0d] - 2026-10-21
+
+Development build of the new 2.x line: Hanako moved from Mercurygram to
+[Forkgram Classic](https://github.com/forkgram/forkgram-classic) (Telegram 13.0.2 with the classic,
+pre-Liquid-Glass interface). Not yet tested much on real devices.
+
+### Changed
+- Based on Forkgram Classic instead of Mercurygram. Where both had a feature (QR login, hidden accounts,
+  UnifiedPush, Monet themes, voice-to-text, folder and tab options), Forkgram's version is used.
+- One settings screen, **Settings > Hanako**, holds Hanako's and Forkgram's options; Settings search
+  opens Hanako rows directly.
+- Chat export now follows Telegram Desktop more closely: its seven media types (photos only and 8 MB by
+  default), file and folder names, thumbnails, contacts as vCard, paginated `messages.html` with
+  Desktop's own style sheet and icons, and the same JSON keys.
+- Hanako launcher and settings icons throughout.
+
+### Removed
+- OpenPGP, the Tor plugin, custom DNS-over-HTTPS, proxy auto-switch, disabling the proxy while a VPN is on.
+- Extra translation engines (Telegram's own translation stays).
+- On-device Whisper and Parakeet transcription (Forkgram's voice-to-text stays).
+- The plugin engine, and sending as scheduled in ghost mode.
+
+### Known issues
+- Chat export still differs from Telegram Desktop for service messages, polls, reactions, userpics and
+  some rich media, and has not been compared side by side on a device.
+- The in-app update check still looks at the upstream Mercurygram repository. Get updates from GitHub
+  Releases or Obtainium.
 
 ## [1.31d] - 2026-10-17
 
@@ -204,7 +233,9 @@ First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
 ### Other
 - Telegram Premium upsells and promo rows hidden; upstream Mercurygram update checks disabled.
 
-[Unreleased]: https://github.com/guincalo/Hanako/compare/v1.3.1...hanako
+[Unreleased]: https://github.com/guincalo/Hanako/compare/v2.0d...hanako-classic
+[2.0d]: https://github.com/guincalo/Hanako/releases/tag/v2.0d
+[1.31d]: https://github.com/guincalo/Hanako/compare/v1.3.1...v1.31d
 [1.3.1]: https://github.com/guincalo/Hanako/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/guincalo/Hanako/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/guincalo/Hanako/compare/v1.2.0...v1.2.1

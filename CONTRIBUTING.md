@@ -1,20 +1,20 @@
 # Contributing to Hanako
 
-Hanako is a small, **fully vibecoded** fork of [Mercurygram](https://github.com/Mercurygram/Mercurygram):
-its own changes are written by AI coding agents and mostly not tested by a human before release.
+Hanako is a small fork of [Forkgram Classic](https://github.com/forkgram/forkgram-classic) whose own
+changes are mostly written by AI coding agents and have had limited testing.
 Contributions are welcome, but please keep that in mind when you read the code.
 
 ## Before you start
 
 - **Open an issue first** for anything bigger than a typo, so we can agree on the change before you
   spend time on it. Use the [issue forms](https://github.com/guincalo/Hanako/issues/new/choose).
-- Only Hanako's own features belong here. Bugs that also happen in upstream Mercurygram or in
-  official Telegram should go to [Mercurygram](https://github.com/Mercurygram/Mercurygram/issues)
+- Only Hanako's own features belong here. Bugs that also happen in Forkgram Classic or in
+  official Telegram should go to [Forkgram Classic](https://github.com/forkgram/forkgram-classic/issues)
   or [Telegram](https://github.com/DrKLO/Telegram/issues).
 
 ## Pull requests
 
-- Branch off `hanako` and open the PR against `hanako`.
+- Branch off `hanako-classic` and open the PR against `hanako-classic`.
 - Keep a PR to one change, and say how you checked it (built it, ran it on a device, or not at all).
 - Hanako's features live mostly in `TMessagesProj/src/main/java/it/belloworld/mercurygram/`
   (`Plus*.java`) with their strings in `TMessagesProj/src/main/res/values/plus_*_strings.xml`.
@@ -23,7 +23,7 @@ Contributions are welcome, but please keep that in mind when you read the code.
 
 ## Building
 
-See [Building](README.md#building) in the README. CI builds every push to `hanako`; releases are
+See [Building](README.md#building) in the README. CI builds every push to `hanako-classic`; releases are
 described in [RELEASING.md](RELEASING.md).
 
 ## License

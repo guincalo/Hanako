@@ -1,1 +1,1 @@
-A Telegram fork preserving the classic UI from before the Liquid Glass era.
+Unofficial Telegram client with the classic interface, ghost mode and anti-delete.

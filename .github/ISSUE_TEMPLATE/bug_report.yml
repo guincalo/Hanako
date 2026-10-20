@@ -5,13 +5,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        Hanako is an unofficial, fully vibecoded fork. Please report Hanako bugs **here**, not to Telegram or upstream Mercurygram.
-        If the bug also happens in upstream [Mercurygram](https://github.com/Mercurygram/Mercurygram) or official Telegram, it belongs there instead.
+        Please report Hanako bugs **here**, not to Telegram or Forkgram.
+        If the bug also happens in [Forkgram Classic](https://github.com/forkgram/forkgram-classic) or official Telegram, it belongs there instead.
   - type: input
     id: version
     attributes:
       label: Hanako version
-      description: Release tag (e.g. v1.0.0), or Settings → bottom of the screen ("Hanako for Android …")
+      description: Release tag (e.g. v2.0d), or Settings → bottom of the screen ("Hanako for Android …")
     validations:
       required: true
   - type: input

@@ -1,3 +1,5 @@
-Forkgram Classic is a fork of Telegram for Android with a single purpose: to preserve the classic interface — the era before "Liquid Glass".
+Hanako is an unofficial Telegram client for Android based on Forkgram Classic, which keeps Telegram's classic interface from before the "Liquid Glass" redesign.
 
-It is based on Forkgram and inherits its quality-of-life tweaks, with no telemetry, no analytics and no third-party endpoints — all traffic goes only to Telegram's official servers.
+It adds ghost mode, chat lock, kept deleted and edited messages, a local activity log, streamer mode, message filters and chat export in Telegram Desktop's format, all in one settings screen.
+
+Usage statistics are opt-in and off by default. Hanako is not affiliated with Telegram.
