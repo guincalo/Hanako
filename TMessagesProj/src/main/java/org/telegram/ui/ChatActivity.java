@@ -4550,9 +4550,6 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             if (searchItem != null) {
                 headerItem.lazilyAddSubItem(search, R.drawable.msg_search, LocaleController.getString(R.string.Search));
             }
-            if (!DialogObject.isEncryptedDialog(dialog_id)) {
-                headerItem.lazilyAddSubItem(mg_go_to_first_message, R.drawable.msg_go_up, LocaleController.getString(R.string.MercurygramGoToFirstMessage));
-            }
             if (chatMode == 0 && dialog_id != getUserConfig().getClientUserId() && it.belloworld.mercurygram.PlusGhost.isEnabled(currentAccount)) { // plus f01
                 headerItem.lazilyAddSubItem(plus_ghost_exceptions, R.drawable.plus_ghost, LocaleController.getString(R.string.PlusGhostExcMenu));
             }
