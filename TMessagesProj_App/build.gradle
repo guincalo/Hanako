@@ -269,7 +269,9 @@ android {
 //
     }
 
-    defaultConfig.versionCode = Integer.parseInt(Utils['getVersionCode']())
+    // Hanako: keep MG's scheme (APP_VERSION_CODE * 100 + M) so classic builds upgrade over
+    // old Hanako (7112xx); plain 7176 would read as a downgrade. M = 1 for dev builds.
+    defaultConfig.versionCode = Integer.parseInt(Utils['getVersionCode']()) * 100 + 1
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
