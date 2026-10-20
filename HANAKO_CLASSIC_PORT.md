@@ -109,39 +109,89 @@ ported (MG's EditTextCaption side is merged but unreachable).
 - TMessagesProj/build.gradle: classic's build kept; Hanako sherpa-onnx AAR download + jniLibs
   and HANAKO_TELEMETRY_* BuildConfig fields added (read from env or local.properties).
 
+## Post-merge compile fixes (2026-10-20)
+
+Branch `hanako-classic-wip` was rebased onto `hanako-classic` @ 558451ec (keystore fix) and
+fixed until javac and the full arm64 build passed:
+- PasscodeView: duplicate `skipFingerprintOnce` field (MG and Forkgram both added it).
+- SettingsActivity: two `onResume()`; kept the one that also calls `setInfo()`.
+- EditTextCaption: dropped `TranslateAlert3.setSecret(...)` (MG secret-chat translate, dropped).
+- ChatActivity: `isDialogTranslatableMg` -> classic's `isDialogTranslatable`; removed the MG
+  secret-chat translate menu entry (`passesSecretTranslateGate`); removed the MG
+  "go to first message" menu entry (Forkgram's `goToFirstMessage` is already in the menu; the
+  MG id/handler stay, unreachable).
+- ChatActivityEnterView: MgCharCounter call used MG's `isLiveComment` (not in classic): limit
+  test is classic's `<= 100`. MgCharCounter: `ChatActivityEnterView.DEFAULT_HEIGHT` -> 44
+  (MG's value; classic has no constant).
+- PasscodeActivity: removed `HiddenAccountHelper.onAppPasscodeChanged()` calls (MG helper;
+  Forkgram's Kotlin HiddenAccountHelper is kept and has no such hook).
+- tgnet: `rotateTempAuthKeys` / `setReducedTempKeyMode` natives are registered in
+  TgNetWrapper.cpp and implemented in ConnectionsManager.cpp; they built in the full CI build.
+Not runtime-tested on a device yet.
+
 ## CI
 
 - `.github/workflows/hanako-classic.yml`: full arm64 build (native deps from source, cached),
-  Hanako signing, artifact `hanako-classic-arm64`.
+  artifact `hanako-classic-arm64`. Gradle signs with a throwaway CI key (Forkgram's in-repo
+  release.keystore does not open with gradle.properties' passwords); on `hanako-classic` and
+  tags the APK is then re-signed with the private Hanako key (secrets HANAKO_KEYSTORE_*),
+  elsewhere it ships as `-UNOFFICIAL-debugkey`.
 - `.github/workflows/hanako-classic-check.yml`: fast javac-only check on branch
-  `hanako-classic-wip` (no native build).
+  `hanako-classic-wip` (no native build), uploads `compile-log`.
 - CI-only tweaks (not in tree): Play Services deps stripped like prebuild_fdroid.sh, native deps
   arm64 only, Goregram api_id 105810.
 
 ## Open gaps / TODO
 
-- Chat export vs Telegram Desktop: see "Chat export gap" below (phase 2).
+- Device testing of the port (nothing has been run on a phone yet).
 - Hanako strings for dropped features are still in plus_*_strings.xml / smug.xml (harmless).
 - SharedConfig still carries dead MG translate/Tor fields and setters (no callers into dropped
   classes).
+- Chat export: see below for what still differs from Telegram Desktop.
 
-## Chat export gap vs Telegram Desktop (phase 2)
+## Chat export vs Telegram Desktop (phase 2)
 
-Reference: tdesktop `Telegram/SourceFiles/export/data/export_data_types.cpp` (dev).
-HanakoChatExport already has: HTML and/or JSON (result.json in the import-export schema),
-date range, size limit, media toggles photos/videos/voice/files, output folder
-`ChatExport_<date>` with photos/, video_files/, voice_messages/, round_video_messages/,
-stickers/, files/.
-Differences:
-1. GIFs go to `video_files/`; tdesktop uses `animations/` and has a separate GIFs toggle.
-2. Toggles: tdesktop has Photos, Videos, Voice messages, Video messages, Stickers, GIFs, Files;
-   Hanako has 4 (round videos ride on voice/videos, stickers/GIFs not separately switchable).
-3. File names: tdesktop numbers per kind (`photo_1@DD-MM-YYYY_HH-MM-SS.jpg`, `audio_N@...ogg`,
-   `video_N@...`, `file_N@...` when the document has no name); Hanako uses the message id
-   (`photo_<msgId>@...`). Check Hanako's date pattern against `DD-MM-YYYY_HH-MM-SS`.
-4. No `_thumb.jpg` thumbnails for documents/videos; no `contacts/contact_N.vcard`.
-5. HTML: Hanako writes one self-contained messages.html with inline CSS; tdesktop writes
-   messages.html, messages2.html, ... (paginated) plus css/, js/, images/ (from memory of
-   export_output_html.cpp, not re-checked in this pass).
-6. Folder name: Hanako `ChatExport_yyyy-MM-dd_HH-mm-ss`; tdesktop `ChatExport_YYYY-MM-DD`
-   (+ suffix on clash), inside a user-chosen folder (Hanako: SAF tree picker).
+Reference, read from source (not memory): tdesktop dev @ d5b208cd46960c626a53eeb0a26f49044a815372,
+`Telegram/SourceFiles/export/` (data/export_data_types.cpp, export_api_wrap.cpp,
+output/export_output_html.cpp, output/export_output_json.cpp, output/export_output_abstract.cpp,
+output/export_output_file.cpp, export_settings.h, view/export_view_settings.cpp).
+
+Now matching (HanakoChatExport / HanakoChatExportActivity):
+- Media types: tdesktop's seven toggles Photos, Videos, Voice messages, Video messages,
+  Stickers, GIFs, Files (`Options.types`, MediaSettings::Type bits). Default photos only and
+  8 MB, as tdesktop (Hanako used to default to everything).
+- Classification follows DocumentMediaType (sticker > video message > voice > animated = GIF >
+  video = Video > File) and folders follow DocumentFolder (video attribute first, so most GIFs,
+  which carry both animated and video attributes, land in `video_files/` in tdesktop too;
+  `animations/` gets animated documents without a video attribute).
+- File names: ComputeDocumentName. Own document name kept; else `audio_N@DD-MM-YYYY_HH-MM-SS.ogg`
+  (`.mp3` for audio/mp3), `video_N@….<ext>` (`.mov` fallback), `file_N@….<ext>` (`.unknown`
+  fallback); photos `photo_N@….jpg`; separate counters per kind, counted at parse time (skipped
+  files still take a number). Clashes become `name (1).ext` split at the first dot.
+- Document thumbnails `<file>_thumb.jpg` (largest thumb), skipped together with the file when the
+  type or size excludes it; JSON `thumbnail` + `thumbnail_file_size`.
+- Contacts: vCard to `contacts/contact_N.vcard`; JSON `contact_vcard` + `contact_vcard_file_size`.
+- JSON media keys/order as the JSON writer (media_type sticker/video_message/voice_message/
+  animation/video_file/audio_file, skip-reason strings verbatim).
+- HTML: `messages.html`, `messages2.html`, … with 1000 messages per file and
+  Previous/Next pagination links; tdesktop's `css/style.css`, `js/script.js`, `images/*.png`
+  (+@2x) are bundled in `assets/hanako/export_html/` (GPLv3 + OpenSSL exception, see README there)
+  and copied into the export; markup uses tdesktop's classes (page_wrap/page_header/history,
+  message default clearfix [joined], userpic initials with PeerColorIndex, date details title
+  with UTC offset, forwarded body, reply_to with cross-page links, media_wrap generic blocks,
+  photo/sticker previews written as `…_thumb` like WriteImageThumb, video/GIF thumbs,
+  text entities as FormatText incl. spoilers).
+- Folder: `ChatExport_YYYY-MM-DD`, ` (N)` appended while taken (NormalizePath).
+- Date range: from inclusive (tdesktop `singlePeerFrom <= date`); "to" includes the whole
+  picked day (tdesktop's `date < singlePeerTill` is exclusive; its UI's choice of till was not
+  checked).
+
+Still different:
+- Service messages are a plain "actor action «title»" line, not tdesktop's per-action sentences.
+- Size limit is a fixed list (1/8/32/100/500/2000 MB, none) instead of tdesktop's 100-step slider
+  (1 MB … 4000 MB); "no limit" has no tdesktop equivalent.
+- No userpic images, reactions, inline bot buttons, polls/todo/giveaways, venues/games/invoices,
+  rich messages, custom emoji images, call entries in HTML; forwarded messages are never joined.
+- Hanako always creates the ChatExport subfolder (tdesktop writes into an empty chosen folder
+  directly); output goes through SAF, so file names may still be changed by the provider.
+- Not tested on a device: needs a real export compared side by side with a tdesktop export.
