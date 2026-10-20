@@ -597,9 +597,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
 
         public boolean isUnalivePhoto() {
             if (discardLivePhoto == null) {
-                // [MG] honor per-account "disable Live Photos by default" before upstream's global default
-                return UserConfig.getInstance(UserConfig.selectedAccount).mg.disableLivePhotosByDefault
-                        || !SharedConfig.photoLiveDefault;
+                // hanako: MG's "disable Live Photos" row removed, Forkgram's Disable Motion Photos covers it
+                return !SharedConfig.photoLiveDefault;
             }
             return discardLivePhoto;
         }

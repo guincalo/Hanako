@@ -171,6 +171,8 @@ public class ForkSettingsActivity extends BaseFragment {
     private static final int REQUEST_IMPORT_SETTINGS = 7312;
 
     private UniversalRecyclerView listView;
+    // hanako: Hanako's settings rows live in this screen too (ids offset by HanakoSettingsSection.ID_OFFSET)
+    private it.belloworld.mercurygram.ui.HanakoSettingsSection hanako;
     private ActionBarMenuItem searchItem;
     private String searchQuery = "";
     private int highlightItemId;
@@ -352,7 +354,7 @@ public class ForkSettingsActivity extends BaseFragment {
     @Override
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
-        actionBar.setTitle(LocaleController.getString(R.string.ForkSettingsTitle));
+        actionBar.setTitle(LocaleController.getString(R.string.MercurygramSettings)); // hanako: one merged "Hanako" screen
         actionBar.setAllowOverlayTitle(true);
 
         if (AndroidUtilities.isTablet()) {
@@ -527,7 +529,27 @@ public class ForkSettingsActivity extends BaseFragment {
         return true;
     }
 
+    // hanako: Hanako's rows first, then Forkgram's. Ids are offset so they never collide.
+    private void fillHanako(ArrayList<UItem> items) {
+        if (hanako == null) {
+            hanako = new it.belloworld.mercurygram.ui.HanakoSettingsSection(this, () -> {
+                if (listView != null && listView.adapter != null) {
+                    listView.adapter.update(true);
+                }
+            });
+        }
+        final int start = items.size();
+        hanako.fill(items);
+        for (int i = start; i < items.size(); ++i) {
+            final UItem item = items.get(i);
+            if (item.id > 0) {
+                item.id += it.belloworld.mercurygram.ui.HanakoSettingsSection.ID_OFFSET;
+            }
+        }
+    }
+
     private void fillSettings(ArrayList<UItem> items) {
+        fillHanako(items);
         items.add(UItem.asHeader(LocaleController.getString(R.string.PrivacySettings)));
         if (!SharedConfig.isUserOwner()) {
             items.add(UItem.asButtonCheck(ID_HIDE_SENSITIVE_DATA, LocaleController.getString(R.string.HideSensitiveData), LocaleController.getString(R.string.ForkRestartRequired))
@@ -781,6 +803,15 @@ public class ForkSettingsActivity extends BaseFragment {
     }
 
     private void onClick(UItem item, View view, int position, float x, float y) {
+        if (item.id >= it.belloworld.mercurygram.ui.HanakoSettingsSection.ID_OFFSET && hanako != null) { // hanako
+            item.id -= it.belloworld.mercurygram.ui.HanakoSettingsSection.ID_OFFSET;
+            try {
+                hanako.onClick(item, view);
+            } finally {
+                item.id += it.belloworld.mercurygram.ui.HanakoSettingsSection.ID_OFFSET;
+            }
+            return;
+        }
         final int id = item.id;
 
         if (id == ID_HIDE_SENSITIVE_DATA) {
@@ -1056,7 +1087,7 @@ public class ForkSettingsActivity extends BaseFragment {
 
         CodeFieldContainer container = createCodeContainer(context, onCompleted);
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle(LocaleController.getString(R.string.ForkSettingsTitle));
+        builder.setTitle(LocaleController.getString(R.string.MercurygramSettings));
         builder.setMessage(LocaleController.getString(R.string.ForkSettingsLockUnlockInfo));
         builder.setView(wrapCodeContainer(context, container));
         builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
@@ -1646,6 +1677,9 @@ public class ForkSettingsActivity extends BaseFragment {
     @Override
     public void onResume() {
         super.onResume();
+        if (hanako != null) {
+            hanako.onResume(); // hanako: deleted-message counts / media size may have changed
+        }
         if (listView != null) {
             listView.adapter.update(false);
         }
@@ -1679,7 +1713,7 @@ public class ForkSettingsActivity extends BaseFragment {
             return;
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle(LocaleController.getString(R.string.ForkSettingsTitle));
+        builder.setTitle(LocaleController.getString(R.string.MercurygramSettings));
         builder.setMessage(message);
         builder.setPositiveButton(LocaleController.getString(R.string.OK), null);
         showDialog(builder.create());

@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-import it.belloworld.mercurygram.ui.MercurygramSettingsActivity;
 
 /**
  * plus f02: quick ghost-mode controls.

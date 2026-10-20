@@ -9,9 +9,6 @@
 -keepclasseswithmembers class * { @androidx.annotation.Keep *; }
 
 -keep class it.belloworld.mercurygram.** { *; }
-# hanako: sherpa-onnx JNI reads config fields by name and builds result objects natively
--keep class com.k2fsa.sherpa.onnx.** { *; }
--dontwarn com.k2fsa.sherpa.onnx.**
 -keep class org.webrtc.* { *; }
 -keep class org.webrtc.audio.* { *; }
 -keep class org.webrtc.voiceengine.* { *; }

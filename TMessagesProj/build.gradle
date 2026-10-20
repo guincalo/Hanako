@@ -42,65 +42,6 @@ configurations.all {
     exclude group: 'androidx.recyclerview', module: 'recyclerview'
 }
 
-// [Hanako] sherpa-onnx for the on-device Parakeet TDT 0.6B v3 transcription engine
-// (it.belloworld.mercurygram.transcribe.MgParakeetEngine). Uses the OFFICIAL prebuilt
-// "static-link-onnxruntime" AAR from github.com/k2-fsa/sherpa-onnx/releases, pinned by
-// version + SHA-256. The AAR is unpacked here (a library module can't depend on a local
-// .aar): its classes.jar (Kotlin API, needs kotlin-stdlib, already on the classpath) goes
-// on the classpath, and ONLY jni/arm64-v8a/libsherpa-onnx-jni.so (onnxruntime linked in,
-// ~24 MB, ~9 MB compressed in the APK) is packaged; other ABIs keep whisper.cpp only.
-// The model itself (~670 MB) is never bundled; it is downloaded at runtime.
-def sherpaOnnxVersion = '1.13.8'
-def sherpaOnnxSha256 = 'b22c3fc1b6a45666d28892bb2f7694beeb77a8362d7ebd77c1a5431ec9435471'
-def sherpaOnnxDir = new File(buildDir, "sherpa-onnx/${sherpaOnnxVersion}")
-def sherpaOnnxSo = 'jni/arm64-v8a/libsherpa-onnx-jni.so'
-def prepareSherpaOnnx = {
-    def jar = new File(sherpaOnnxDir, 'classes.jar')
-    def so = new File(sherpaOnnxDir, sherpaOnnxSo)
-    def ok = new File(sherpaOnnxDir, '.ok')
-    if (ok.exists() && ok.text.trim() == sherpaOnnxSha256 && jar.exists() && so.exists()) {
-        return
-    }
-    sherpaOnnxDir.mkdirs()
-    def sha256Of = { File f ->
-        def md = java.security.MessageDigest.getInstance('SHA-256')
-        f.withInputStream { is ->
-            byte[] buf = new byte[1 << 16]
-            int n
-            while ((n = is.read(buf)) != -1) md.update(buf, 0, n)
-        }
-        md.digest().collect { String.format('%02x', it) }.join()
-    }
-    def aar = new File(sherpaOnnxDir, "sherpa-onnx-static-link-onnxruntime-${sherpaOnnxVersion}.aar")
-    if (!aar.exists() || sha256Of(aar) != sherpaOnnxSha256) {
-        def url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/v${sherpaOnnxVersion}/sherpa-onnx-static-link-onnxruntime-${sherpaOnnxVersion}.aar"
-        logger.lifecycle("Downloading ${url}")
-        def part = new File(aar.path + '.part')
-        new URL(url).withInputStream { is -> part.withOutputStream { os -> os << is } }
-        aar.delete()
-        part.renameTo(aar)
-    }
-    def actual = sha256Of(aar)
-    if (actual != sherpaOnnxSha256) {
-        aar.delete()
-        throw new GradleException("sherpa-onnx AAR checksum mismatch: ${actual} != ${sherpaOnnxSha256}")
-    }
-    def zip = new java.util.zip.ZipFile(aar)
-    try {
-        ['classes.jar', sherpaOnnxSo].each { name ->
-            def entry = zip.getEntry(name)
-            if (entry == null) throw new GradleException("sherpa-onnx AAR lacks ${name}")
-            def out = new File(sherpaOnnxDir, name)
-            out.parentFile.mkdirs()
-            zip.getInputStream(entry).withStream { is -> out.withOutputStream { os -> os << is } }
-        }
-    } finally {
-        zip.close()
-    }
-    aar.delete()
-    ok.text = sherpaOnnxSha256
-}
-prepareSherpaOnnx()
 
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
@@ -156,8 +97,6 @@ dependencies {
     api project(":TMessagesProj_Modules:media3:media-lib-session")
     api project(':jlatexmath')
 
-    // [Hanako] sherpa-onnx Kotlin API (see prepareSherpaOnnx above)
-    implementation files(new File(sherpaOnnxDir, 'classes.jar'))
 
 //    implementation 'com.google.mlkit:translate:17.0.3'
 
@@ -197,8 +136,6 @@ android {
     // contributes zero .so while making AGP copy the whole native source tree plus the
     // in-tree build output (~6 GB of .o/.d) into merged_jni_libs, enough to exhaust the
     // CI runner's disk. The packaged .so come from externalNativeBuild (cmake/*/obj/<abi>).
-    // [Hanako] ...except the prebuilt sherpa-onnx JNI lib (arm64-v8a only), unpacked above.
-    sourceSets.main.jniLibs.srcDirs = [new File(sherpaOnnxDir, 'jni')]
 
     externalNativeBuild {
         cmake {

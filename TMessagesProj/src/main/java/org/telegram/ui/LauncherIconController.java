@@ -41,12 +41,12 @@ public class LauncherIconController {
                 return icon.notification;
             }
         }
-        return R.drawable.notification;
+        return R.drawable.notification_plane; // hanako: no fork
     }
 
     public enum LauncherIcon {
-        DEFAULT("DefaultIcon", R.drawable.icon_01_background_sa, R.mipmap.icon_01_foreground_sa, R.string.AppIconDefault, R.drawable.notification),
-        ADAPTIVE("AdaptiveIcon", R.drawable.icon_01_background_sa, R.mipmap.icon_01_foreground_sa, R.string.AppIconAdaptive, R.drawable.notification),
+        DEFAULT("DefaultIcon", R.drawable.ic_launcher_background, R.mipmap.ic_launcher_foreground, R.string.AppIconDefault, R.drawable.notification_plane), // hanako
+        ADAPTIVE("AdaptiveIcon", R.drawable.ic_launcher_background, R.mipmap.ic_launcher_foreground, R.string.AppIconAdaptive, R.drawable.notification_plane), // hanako
         ORIGINAL("OriginalIcon", R.drawable.icon_background_sa, R.mipmap.icon_foreground_sa, R.string.CropOriginal, R.drawable.notification_plane),
         // [classic] #72: adaptive original Telegram icon — blue fills the whole icon (like the fork icon) + Material You themed.
         ORIGINAL_ADAPTIVE("OriginalAdaptiveIcon", R.drawable.icon_background_sa, R.mipmap.icon_foreground_sa, R.string.AppIconOriginalAdaptive, R.drawable.notification_plane),

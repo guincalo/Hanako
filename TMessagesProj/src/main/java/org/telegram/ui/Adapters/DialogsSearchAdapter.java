@@ -356,7 +356,7 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
             }
         });
         // Mercurygram: disable-global-search keeps search local — no public username/channel lookup.
-        searchAdapterHelper.setAllowGlobalResults(allowGlobalSearch && !UserConfig.getInstance(currentAccount).mg.disableGlobalSearch);
+        searchAdapterHelper.setAllowGlobalResults(allowGlobalSearch && !org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("disableGlobalSearch", false));
         mContext = context;
         needMessagesSearch = messagesSearch;
         dialogsType = type;
@@ -557,7 +557,7 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
         // a real global query would have been sent. Mirror the empty-result branch of
         // the RPC callback (drain waitingResponseCount, clear the spinner) so the search
         // state machine settles instead of hanging on "searching".
-        if (UserConfig.getInstance(currentAccount).mg.disableGlobalSearch) {
+        if (org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("disableGlobalSearch", false)) {
             lastMessagesSearchString = query;
             lastMessagesSearchFilterFlags = currentMessagesFilter.flags;
             if (searchId > 0) {

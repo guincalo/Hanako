@@ -12686,8 +12686,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 ||
                 org.telegram.messenger.forkgram.ForkOfflineTranscribe.isActive()
                 ||
-                it.belloworld.mercurygram.transcribe.MgWhisperTranscriber.isUsable()
-                ||
                 TranscribeButton.isFreeTranscribeInChat(currentMessageObject)
                 ||
                 MessagesController.getInstance(currentAccount).transcribeAudioTrialWeeklyNumber > 0 &&

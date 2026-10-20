@@ -19,7 +19,7 @@ public final class MgDefaultFolder {
     // the match rule shared by the back-press helper and the first-build
     // auto-select so they can never disagree on which folder opens.
     public static int folderIndex(UserConfig userConfig, MessagesController messagesController) {
-        final int defaultFolderId = userConfig.mg.defaultFolderId;
+        final int defaultFolderId = 0; // hanako: Forkgram's default folder owns this (MG row removed)
         if (defaultFolderId == 0) {
             return -1;
         }
@@ -52,7 +52,7 @@ public final class MgDefaultFolder {
         if (filterTabsView == null) {
             return true;
         }
-        if (!userConfig.mg.hideAllTab) {
+        if (true) { // hanako: Forkgram's hideAllChatsTab owns this
             final int defaultStableId = stableId(userConfig, messagesController);
             if (defaultStableId >= 0) {
                 return filterTabsView.getCurrentTabStableId() == defaultStableId;

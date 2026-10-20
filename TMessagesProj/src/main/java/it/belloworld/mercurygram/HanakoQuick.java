@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-import it.belloworld.mercurygram.ui.MercurygramSettingsActivity;
+import it.belloworld.mercurygram.ui.HanakoSettingsSection;
 
 /**
  * hanako: small chat-list helpers.
@@ -120,7 +120,7 @@ public final class HanakoQuick {
     }
 
     private static void openStreamerSettings(BaseFragment f) {
-        f.presentFragment(new MercurygramSettingsActivity(MercurygramSettingsActivity.PAGE_STREAMER));
+        HanakoSettingsSection.open(f, HanakoSettingsSection.PAGE_STREAMER);
     }
 
     private static void showStreamerMenu(BaseFragment f, View anchor) {
@@ -175,7 +175,7 @@ public final class HanakoQuick {
         if (uc.mg.savedMessagesHistory) {
             msg.append("\n\n").append(LocaleController.getString(R.string.HanakoIntroDeleted));
         }
-        if (uc.mg.hidePremiumPromo) {
+        if (org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("lockPremium", false)) { // hanako: Forkgram's Lock premium replaces MG's promo toggle
             msg.append("\n\n").append(LocaleController.getString(R.string.HanakoIntroPromo));
         }
         try {
@@ -196,7 +196,7 @@ public final class HanakoQuick {
                 b.setPositiveButton(LocaleController.getString(R.string.OK), null);
             }
             b.setNeutralButton(LocaleController.getString(R.string.PlusGhostSettings), (d, w) ->
-                    f.presentFragment(new MercurygramSettingsActivity(MercurygramSettingsActivity.PAGE_GHOST)));
+                    HanakoSettingsSection.open(f, HanakoSettingsSection.PAGE_GHOST));
             f.showDialog(b.create());
         } catch (Exception e) {
             FileLog.e(e);

@@ -381,7 +381,7 @@ public final class InstantCameraView2 extends InstantCameraViewBase {
         activeOutputResolution = SharedSettings.roundVideoOutputResolution.get();
         session = new RoundVideoSession.Builder(getContext(), textureView)
                 .setOutputDirectory(new File(ApplicationLoader.getFilesDirFixed(), "cache"))
-                .setInitialFacing(UserConfig.getInstance(currentAccount).mg.rearRoundCamera ? RoundVideoSession.CameraFacing.BACK : SharedSettings.roundVideoLastCamera.get())
+                .setInitialFacing(org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("rearVideoMessages", false) ? RoundVideoSession.CameraFacing.BACK : SharedSettings.roundVideoLastCamera.get())
                 .setOutputResolution(activeOutputResolution)
                 .setVideoBitrate(SharedSettings.roundVideoVideoBitrate.get())
                 .setCameraResolution(SharedSettings.roundVideoCameraResolution.get())

@@ -637,7 +637,7 @@ public class RichEditor extends BaseFragment implements NotificationCenter.Notif
         bottomPanel.addView(aiButton, LayoutHelper.createLinear(44, 44, 0, Gravity.LEFT | Gravity.CENTER_VERTICAL, 0, 0, 8, 0));
         ScaleStateListAnimator.apply(aiButton);
         aiButton.setContentDescription(getString(R.string.AIEditor));
-        if (UserConfig.getInstance(currentAccount).mg.disableAiEditor) {
+        if (org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("hideAiEditor", false)) {
             aiButton.setVisibility(View.GONE);
         }
         aiButton.setOnClickListener(v -> {
@@ -989,7 +989,7 @@ public class RichEditor extends BaseFragment implements NotificationCenter.Notif
         aiStyleButton = new Button(context, 0, getResourceProvider());
         aiStyleButton.setImageDrawable(new AiButtonDrawable(context));
         aiStyleButton.setContentDescription(getString(R.string.AIEditor));
-        if (UserConfig.getInstance(currentAccount).mg.disableAiEditor) {
+        if (org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("hideAiEditor", false)) {
             aiStyleButton.setVisibility(View.GONE);
         }
         aiStyleButton.setOnClickListener(v -> onAiStyleSelection());

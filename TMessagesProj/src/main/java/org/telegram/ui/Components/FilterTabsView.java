@@ -1206,7 +1206,7 @@ public class FilterTabsView extends FrameLayout {
             delegate.onPageSelected(tab, scrollingForward);
         }
         scrollToChild(position);
-        if (UserConfig.getInstance(UserConfig.selectedAccount).mg.hideAllTab && !currentTabIsDefault()) {
+        if (false /* hanako: Forkgram's hideAllChatsTab owns this */ && !currentTabIsDefault()) {
             toggleAllTabs(false);
         }
     }
@@ -2093,7 +2093,7 @@ public class FilterTabsView extends FrameLayout {
     }
 
     // [MG] hide all chats tab
-    public boolean showAllChatsTab = !UserConfig.getInstance(UserConfig.selectedAccount).mg.hideAllTab;
+    public boolean showAllChatsTab = !false /* hanako: Forkgram's hideAllChatsTab owns this */;
 
     public void toggleAllTabs(boolean show) {
         if (show == showAllChatsTab) return;

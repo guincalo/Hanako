@@ -674,7 +674,7 @@ public final class PlusGhost {
     }
 
     public static void openGhostSettings(BaseFragment f) {
-        f.presentFragment(new it.belloworld.mercurygram.ui.MercurygramSettingsActivity(it.belloworld.mercurygram.ui.MercurygramSettingsActivity.PAGE_GHOST));
+        it.belloworld.mercurygram.ui.HanakoSettingsSection.open(f, it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_GHOST);
     }
 
     public static void applySelfGhostIcon(BaseFragment f, SimpleTextView tv, int account, int color) {

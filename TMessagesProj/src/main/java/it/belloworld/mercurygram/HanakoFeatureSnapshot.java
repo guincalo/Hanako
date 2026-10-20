@@ -138,11 +138,6 @@ final class HanakoFeatureSnapshot {
         put(s, "boost_upload", PlusTransferBoost::getUploadMode);
 
         // voice and translation
-        put(s, "transcribe_offline", () -> SharedConfig.mg_transcribeOffline);
-        put(s, "transcribe_model", () -> SharedConfig.mg_transcribeModel);
-        put(s, "transcribe_model_installed", it.belloworld.mercurygram.transcribe.MgWhisperModel::isSelectedInstalled);
-        put(s, "parakeet_installed", it.belloworld.mercurygram.transcribe.MgParakeetModel::isInstalled);
-        put(s, "transcribe_vad", () -> SharedConfig.mg_transcribeVad);
 
         // look
         put(s, "smug_language", () -> HanakoSmugLanguage.isSmug(LocaleController.getInstance().getCurrentLocaleInfo()));
