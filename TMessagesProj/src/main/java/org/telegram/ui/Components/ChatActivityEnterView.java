@@ -10645,7 +10645,11 @@ public class ChatActivityEnterView extends BlurredFrameLayout implements Notific
         if (defPeer == null && delegate.getSendAsPeers() != null && !delegate.getSendAsPeers().peers.isEmpty()) {
             defPeer = delegate.getSendAsPeers().peers.get(0).peer;
         }
-        boolean isVisible = defPeer != null && (delegate.getSendAsPeers() == null || delegate.getSendAsPeers().peers.size() > 1) &&
+        // hanako: "Hide 'Send as' button" (Settings). It used to only null the delegate's peer list,
+        // but a null list counts as "not loaded yet, show it" here and default_send_as still gave a
+        // peer, so the button stayed. Gate visibility on the pref itself on every update.
+        final boolean hideSendAs = MessagesController.getGlobalMainSettings().getBoolean("hideSendAs", false);
+        boolean isVisible = !hideSendAs && defPeer != null && (delegate.getSendAsPeers() == null || delegate.getSendAsPeers().peers.size() > 1) &&
             !isEditingMessage() && !isRecordingAudioVideo() && (recordedAudioPanel == null || recordedAudioPanel.getVisibility() != View.VISIBLE) &&
             (!ChatObject.isChannelAndNotMegaGroup(chat) || ChatObject.canSendAsPeers(chat)) && !ChatObject.isMonoForum(chat);
         if (isVisible) {

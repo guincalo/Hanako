@@ -2110,10 +2110,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
         @Override
         public TLRPC.TL_channels_sendAsPeers getSendAsPeers() {
-            if (MessagesController.getGlobalMainSettings().getBoolean("hideSendAs", false)) {
-                return null;
-            }
-            return sendAsPeersObj;
+            return sendAsPeersObj; // hanako: hideSendAs is applied in ChatActivityEnterView.updateSendAsButton
         }
 
         @Override
@@ -30973,6 +30970,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
         }
 
         checkAdjustResize();
+        if (chatActivityEnterView != null) {
+            chatActivityEnterView.updateSendAsButton(false); // hanako: apply "Hide 'Send as' button" on return from settings
+        }
         MediaController.getInstance().startRaiseToEarSensors(this);
         checkRaiseSensors();
         if (chatAttachAlert != null) {
