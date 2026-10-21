@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--FORK CLIENT-->
-    <string name="AppNameFdroid">Forkgram</string>
+    <string name="AppNameFdroid">Hanako</string>
     <string name="ForkSectionAppearance">ظاهر</string>
     <string name="ForkSectionMedia">عکس و ویدیو</string>
     <string name="ForkSectionVoice">صدا و ترجمه</string>
@@ -70,7 +70,7 @@
     <string name="formatterDay12HSec">h:mm:ss a</string>
     <string name="CopyWithoutProtocol">کپی بدون پروتکل</string>
     <!--fork settings view-->
-    <string name="ForkSettingsTitle">تنظیمات Fork Client</string>
+    <string name="ForkSettingsTitle">Hanako</string>
     <string name="ForkCheckUpdate">بررسی به‌روزرسانی‌ها</string>
     <string name="InAppCamera">فعال کردن دوربین داخلی</string>
     <string name="InAppCameraInfo">در پیوست‌ها</string>

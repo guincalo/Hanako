@@ -156,7 +156,7 @@
     <string name="formatterDay12HSec">h:mm:ss a</string>
     <string name="CopyWithoutProtocol">Kopiëren zonder protocol</string>
     <!--fork settings view-->
-    <string name="ForkSettingsTitle">Instellingen van Forkgram Classic</string>
+    <string name="ForkSettingsTitle">Hanako</string>
     <string name="ForkCheckUpdate">Controleer op updates</string>
     <string name="SquareAvatars">Vierkante avatars</string>
     <string name="AvatarShape">Avatarvorm</string>

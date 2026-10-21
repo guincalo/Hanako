@@ -112,7 +112,7 @@ public class NotificationsService extends Service {
                     .setContentText("Push service: tap to learn more");
             try {
                 Intent explainIntent = new Intent("android.intent.action.VIEW");
-                explainIntent.setData(Uri.parse("https://github.com/forkgram/TelegramAndroid"));
+                explainIntent.setData(Uri.parse("https://github.com/guincalo/Hanako"));
                 builder.setContentIntent(PendingIntent.getActivity(this, 0, explainIntent, pendingIntentFlags));
             } catch (Throwable ignore) {
                 Log.d("Forkgram Classic", "Failed to set intent");
