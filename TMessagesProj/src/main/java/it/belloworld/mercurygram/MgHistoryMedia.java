@@ -207,18 +207,25 @@ public final class MgHistoryMedia {
         }
         final ArrayList<Plan> copy = new ArrayList<>(plans);
         getQueue().postRunnable(() -> {
+            ArrayList<String> missing = new ArrayList<>();
             for (int i = 0; i < copy.size(); i++) {
-                runCopy(copy.get(i));
+                Plan p = copy.get(i);
+                if (!runCopy(p) && p != null && p.mediaPath != null) {
+                    missing.add(p.mediaPath);
+                }
             }
+            // hanako 2.01: say "not downloaded" instead of pointing at a file that is not there
+            MgMessageHistory.getInstance().markNotDownloaded(missing);
             MgMessageHistory.getInstance().enforceMediaCap(false); // hanako 2.01: storage limit
         });
     }
 
-    /** Copies the planned file(s) on the calling thread. */
-    public static void runCopy(Plan p) {
+    /** Copies the planned file(s) on the calling thread; false when the media file was not on the device. */
+    public static boolean runCopy(Plan p) {
         if (p == null) {
-            return;
+            return false;
         }
+        boolean ok = false;
         try {
             TLRPC.MessageMedia media = mediaOf(p.message);
             TLRPC.Photo photo = photoOf(media);
@@ -240,7 +247,7 @@ public final class MgHistoryMedia {
                 candidates.add(fl.getPathToAttach(document, null, true, true));
             }
             if (p.mediaPath != null) {
-                copyFirst(candidates, new File(p.mediaPath));
+                ok = copyFirst(candidates, new File(p.mediaPath));
             }
             TLRPC.PhotoSize thumb = pickThumb(document);
             if (p.thumbPath != null && thumb != null) {
@@ -252,6 +259,7 @@ public final class MgHistoryMedia {
         } catch (Throwable e) {
             FileLog.e(e);
         }
+        return ok;
     }
 
     private static boolean copyFirst(ArrayList<File> candidates, File dest) {

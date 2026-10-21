@@ -60,6 +60,8 @@ public final class PlusDeletedMedia {
     public static final int CAT_PHOTO = 1;
     public static final int CAT_VIDEO = 2;
     public static final int CAT_FILE = 3;
+    /** Stickers and custom emoji (static webp, animated tgs, video webm), shown whole on a grid tile. */
+    public static final int CAT_STICKER = 4;
 
     /** How the saved copy came to be (from the MgHistoryMedia file tag). */
     public static final int ORIGIN_DELETED = 0;
@@ -68,7 +70,6 @@ public final class PlusDeletedMedia {
 
     private static final String PREFS = "plus_f20";
     private static final String KEY_CHAT_MENU = "chat_menu";
-    private static final String KEY_INCLUDE_EDITS = "include_edits";
     private static final int LOAD_LIMIT = 3000;
     private static final long SHARE_TTL_MS = 60 * 60 * 1000L;
 
@@ -101,6 +102,8 @@ public final class PlusDeletedMedia {
         public final long size;
         /** Built off the UI thread; null when the viewer cannot show this item. */
         public MessageObject viewerObject;
+        /** How many deleted / edited messages of this chat had this same file (shared copy). */
+        public int copies = 1;
 
         Item(int account, MgMessageHistory.Entry entry, int category, int origin, File file, File thumb,
              String displayName, String mime) {
@@ -122,18 +125,19 @@ public final class PlusDeletedMedia {
 
         /** Image file usable as a grid preview, or null. */
         public String previewPath() {
-            if (category == CAT_PHOTO) {
+            if (category == CAT_PHOTO || category == CAT_STICKER) {
                 return file.getAbsolutePath();
             }
             if (thumb != null) {
                 return thumb.getAbsolutePath();
             }
-            TLRPC.Document d = document();
-            if (d != null && MessageObject.isStickerDocument(d) && !MessageObject.isAnimatedStickerDocument(d, true)
-                    && !MessageObject.isVideoStickerDocument(d)) {
-                return file.getAbsolutePath();
-            }
             return null;
+        }
+
+        /** ImageReceiver ext for a sticker file: "tgs" for animated (Lottie) stickers, else null. */
+        public String stickerExt() {
+            TLRPC.Document d = document();
+            return d != null && MessageObject.isAnimatedStickerDocument(d, true) ? "tgs" : null;
         }
 
         public boolean opensInViewer() {
@@ -155,14 +159,6 @@ public final class PlusDeletedMedia {
         prefs().edit().putBoolean(KEY_CHAT_MENU, value).apply();
     }
 
-    public static boolean isIncludeEdits() {
-        return prefs().getBoolean(KEY_INCLUDE_EDITS, false);
-    }
-
-    public static void setIncludeEdits(boolean value) {
-        prefs().edit().putBoolean(KEY_INCLUDE_EDITS, value).apply();
-    }
-
     /** ChatActivity hook: whether to offer "Deleted media" in this chat's header menu. */
     public static boolean showChatMenu(int account, long dialogId) {
         return dialogId != 0 && !DialogObject.isEncryptedDialog(dialogId) && isChatMenuEnabled();
@@ -180,19 +176,25 @@ public final class PlusDeletedMedia {
     /** Loads the saved media of one chat (or all chats when dialogId == 0). Call off the UI thread. */
     public static ArrayList<Item> load(int account, long dialogId) {
         ArrayList<Item> out = new ArrayList<>();
-        java.util.HashSet<String> seenFiles = new java.util.HashSet<>(); // hanako 2.01: shared copies show once
+        // hanako 2.01: a file shared by several messages of one chat (welcome spam, the same
+        // sticker again and again) is one tile with a "×N" count, under its newest message
+        java.util.HashMap<String, Item> seenFiles = new java.util.HashMap<>();
         // The edited table also holds expired view-once media, which always belongs here.
         List<MgMessageHistory.Entry> entries =
                 MgMessageHistory.getInstance().getMediaEntries(account, dialogId, true, LOAD_LIMIT);
         for (int i = 0; i < entries.size(); i++) {
             MgMessageHistory.Entry e = entries.get(i);
             int origin = originOf(e);
-            if (e.mediaPath != null && !seenFiles.add(e.mediaPath)) {
+            String key = e.dialogId + "/" + e.mediaPath;
+            Item same = e.mediaPath != null ? seenFiles.get(key) : null;
+            if (same != null) {
+                same.copies++;
                 continue;
             }
             Item item = makeItem(account, e, origin);
             if (item != null) {
                 out.add(item);
+                seenFiles.put(key, item);
             }
         }
         return out;
@@ -228,6 +230,11 @@ public final class PlusDeletedMedia {
             category = CAT_PHOTO;
             mime = "image/jpeg";
             name = "deleted_photo_" + e.mid + ".jpg";
+        } else if (media instanceof TLRPC.TL_messageMediaDocument && media.document != null
+                && isStickerLike(media.document)) {
+            category = CAT_STICKER;
+            mime = !TextUtils.isEmpty(media.document.mime_type) ? media.document.mime_type : mimeOf(ext);
+            name = "sticker_" + e.mid + ext;
         } else if (media instanceof TLRPC.TL_messageMediaDocument && media.document != null) {
             TLRPC.Document d = media.document;
             boolean video = MessageObject.isVideoDocument(d) || MessageObject.isRoundVideoDocument(d)
@@ -243,10 +250,15 @@ public final class PlusDeletedMedia {
         }
         name = sanitize(name);
         Item item = new Item(account, e, category, origin, file, thumb, name, mime);
-        if (category != CAT_FILE) {
+        if (category != CAT_FILE && category != CAT_STICKER) {
             item.viewerObject = buildViewerObject(account, e.message);
         }
         return item;
+    }
+
+    static boolean isStickerLike(TLRPC.Document d) {
+        return MessageObject.isStickerDocument(d) || MessageObject.isAnimatedStickerDocument(d, true)
+                || MessageObject.isVideoStickerDocument(d) || MessageObject.isAnimatedEmoji(d);
     }
 
     private static MessageObject buildViewerObject(int account, TLRPC.Message m) {
@@ -417,7 +429,7 @@ public final class PlusDeletedMedia {
         try (InputStream in = new FileInputStream(item.file); OutputStream out = new FileOutputStream(dest)) {
             copy(in, out);
         }
-        if (item.category != CAT_FILE) {
+        if (item.category == CAT_PHOTO || item.category == CAT_VIDEO) {
             AndroidUtilities.addMediaToGallery(dest);
         }
         return true;

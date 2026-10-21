@@ -247,6 +247,7 @@ public class HanakoSettingsSection {
     public static final int ID_NAV = 8900;
     public static final int ID_MEDIA_MAX = 2110;
     public static final int ID_MEDIA_CAP = 2111;
+    public static final int ID_MEDIA_CHATS_OFF = 2112;
 
     public void fill(int part, ArrayList<UItem> items) {
         final int acc = getCurrentAccount();
@@ -514,9 +515,12 @@ public class HanakoSettingsSection {
                     it.belloworld.mercurygram.MgDeletedRetention.mediaMaxLabel(it.belloworld.mercurygram.MgDeletedRetention.getMediaMax())));
             items.add(UItem.asButton(ID_MEDIA_CAP, LocaleController.getString(R.string.HanakoDeletedMediaCap),
                     it.belloworld.mercurygram.MgDeletedRetention.mediaCapLabel(it.belloworld.mercurygram.MgDeletedRetention.getMediaCap())));
+            int chatsOff = it.belloworld.mercurygram.MgDeletedRetention.countChatsMediaOff();
+            if (chatsOff > 0) {
+                items.add(UItem.asButton(ID_MEDIA_CHATS_OFF, LocaleController.getString(R.string.HanakoDeletedMediaChatsOff), Integer.toString(chatsOff)));
+            }
             items.add(UItem.asButton(ID_F20_OPEN, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title), deletedMediaSize));
-            items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.formatString(R.string.HanakoDeletedMediaInfo,
-                    it.belloworld.mercurygram.MgDeletedRetention.BIG_GROUP))));
+            items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.HanakoDeletedMediaInfo))));
 
             items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoDeletedInChatsHeader)));
             items.add(MgSettingsScope.globalCheck(ID_F07_KEEP_REACTIONS, LocaleController.getString(R.string.PlusF07KeepReactions))
@@ -676,6 +680,20 @@ public class HanakoSettingsSection {
             presentFragment(new org.telegram.ui.ForkSettingsActivity(item.id - ID_NAV).unlockedFrom(host));
             return;
         }
+        if (item.id == ID_MEDIA_CHATS_OFF) {
+            if (getParentActivity() == null) return;
+            showDialog(new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity())
+                    .setTitle(LocaleController.getString(R.string.HanakoDeletedMediaChatsOff))
+                    .setMessage(LocaleController.formatString(R.string.HanakoDeletedMediaChatsOffConfirm,
+                            it.belloworld.mercurygram.MgDeletedRetention.countChatsMediaOff()))
+                    .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
+                    .setPositiveButton(LocaleController.getString(R.string.HanakoMediaResumeAll), (d, w) -> {
+                        it.belloworld.mercurygram.MgDeletedRetention.clearChatsMediaOff();
+                        refreshList();
+                    })
+                    .create());
+            return;
+        }
         if (item.id == ID_MEDIA_MAX || item.id == ID_MEDIA_CAP) {
             showMediaPicker(item.id == ID_MEDIA_CAP);
             return;
@@ -827,11 +845,6 @@ public class HanakoSettingsSection {
         }
         if (item.id == ID_F20_CHAT_MENU) {
             it.belloworld.mercurygram.PlusDeletedMedia.setChatMenuEnabled(!it.belloworld.mercurygram.PlusDeletedMedia.isChatMenuEnabled());
-            refreshList();
-            return;
-        }
-        if (item.id == ID_F20_INCLUDE_EDITS) {
-            it.belloworld.mercurygram.PlusDeletedMedia.setIncludeEdits(!it.belloworld.mercurygram.PlusDeletedMedia.isIncludeEdits());
             refreshList();
             return;
         }

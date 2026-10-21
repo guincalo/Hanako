@@ -49,7 +49,7 @@ public class MgMessageHistory {
     public static final int KIND_EDITED = 1;
 
     private static final String DB_NAME = "mg_message_history.db";
-    private static final int DB_VERSION = 3;
+    private static final int DB_VERSION = 4;
     private static final String TBL_DELETED = "deleted_messages";
     private static final String TBL_EDITED = "edited_messages";
     // Cap rows kept per (account, dialog) so an active deleter cannot grow the DB unbounded.
@@ -109,11 +109,11 @@ public class MgMessageHistory {
             // (every retraction must survive), so the edited table has no PK.
             db.execSQL("CREATE TABLE " + TBL_DELETED + " (" +
                     "account INTEGER, dialog_id INTEGER, mid INTEGER, data BLOB, when_ms INTEGER, " +
-                    "media_path TEXT, thumb_path TEXT, " +
+                    "media_path TEXT, thumb_path TEXT, media_note INTEGER DEFAULT 0, " +
                     "PRIMARY KEY(account, dialog_id, mid))");
             db.execSQL("CREATE TABLE " + TBL_EDITED + " (" +
                     "account INTEGER, dialog_id INTEGER, mid INTEGER, data BLOB, when_ms INTEGER, " +
-                    "media_path TEXT, thumb_path TEXT)");
+                    "media_path TEXT, thumb_path TEXT, media_note INTEGER DEFAULT 0)");
             db.execSQL("CREATE INDEX idx_deleted_dialog ON " + TBL_DELETED + "(account, dialog_id, when_ms)");
             db.execSQL("CREATE INDEX idx_edited_dialog ON " + TBL_EDITED + "(account, dialog_id, when_ms)");
             createMediaIndexes(db);
@@ -137,6 +137,11 @@ public class MgMessageHistory {
             }
             if (oldVersion < 3) {
                 createMediaIndexes(db);
+            }
+            if (oldVersion < 4) {
+                // v4 (hanako 2.01): why a message's media was not kept (MgDeletedRetention.NOTE_*).
+                db.execSQL("ALTER TABLE " + TBL_DELETED + " ADD COLUMN media_note INTEGER DEFAULT 0");
+                db.execSQL("ALTER TABLE " + TBL_EDITED + " ADD COLUMN media_note INTEGER DEFAULT 0");
             }
         }
     }
@@ -272,13 +277,16 @@ public class MgMessageHistory {
     }
 
     private static Pending makePending(int account, long uid, TLRPC.Message message, byte[] bytes,
-                                       long now, MgHistoryMedia.Plan plan, boolean runPlan) {
+                                       long now, MgHistoryMedia.Plan plan, boolean runPlan, int note) {
         ContentValues cv = new ContentValues();
         cv.put("account", account);
         cv.put("dialog_id", uid);
         cv.put("mid", message.id);
         cv.put("data", bytes);
         cv.put("when_ms", now);
+        if (note != MgDeletedRetention.NOTE_KEPT) {
+            cv.put("media_note", note);
+        }
         if (plan != null) {
             cv.put("media_path", plan.mediaPath);
             if (plan.thumbPath != null) {
@@ -321,8 +329,10 @@ public class MgMessageHistory {
                         continue;
                     }
                     MgHistoryMedia.Plan plan = null;
-                    boolean copyMedia = MgDeletedRetention.shouldCopyMedia(account, uid, message); // hanako 2.01: media rules
-                    if (!copyMedia) {
+                    // hanako 2.01: media rules; a message whose media is not kept says why
+                    int note = MgHistoryMedia.hasSavableMedia(message)
+                            ? MgDeletedRetention.mediaNote(account, uid, message) : MgDeletedRetention.NOTE_KEPT;
+                    if (note != MgDeletedRetention.NOTE_KEPT) {
                         // keep the text only
                     } else if (deleted) {
                         plan = MgHistoryMedia.plan(account, uid, message, "d" + now);
@@ -332,7 +342,7 @@ public class MgMessageHistory {
                             plan = MgHistoryMedia.plan(account, uid, message, "e" + now);
                         }
                     }
-                    rows.add(makePending(account, uid, message, bytes, now, plan, true));
+                    rows.add(makePending(account, uid, message, bytes, now, plan, true, note));
                 }
             } catch (Exception e) {
                 FileLog.e(e);
@@ -367,7 +377,7 @@ public class MgMessageHistory {
             MgHistoryMedia.Plan plan = MgHistoryMedia.plan(account, dialogId, message, "x" + now);
             MgHistoryMedia.runCopy(plan);
             ArrayList<Pending> rows = new ArrayList<>(1);
-            rows.add(makePending(account, dialogId, message, bytes, now, plan, false));
+            rows.add(makePending(account, dialogId, message, bytes, now, plan, false, MgDeletedRetention.NOTE_KEPT));
             storeBatch(account, TBL_EDITED, rows);
         } catch (Exception e) {
             FileLog.e(e);
@@ -712,10 +722,10 @@ public class MgMessageHistory {
         return found[0];
     }
 
-    private void forgetFile(android.database.sqlite.SQLiteDatabase db, String path) {
+    private void forgetFile(android.database.sqlite.SQLiteDatabase db, String path, int note) {
         String[] a = {path};
         for (String t : new String[]{TBL_DELETED, TBL_EDITED}) {
-            db.execSQL("UPDATE " + t + " SET media_path=NULL WHERE media_path=?", a);
+            db.execSQL("UPDATE " + t + " SET media_path=NULL, media_note=" + note + " WHERE media_path=?", a);
             db.execSQL("UPDATE " + t + " SET thumb_path=NULL WHERE thumb_path=?", a);
         }
     }
@@ -773,7 +783,7 @@ public class MgMessageHistory {
                 db.beginTransaction();
                 try {
                     for (int i = 0; i < drop.size(); i++) {
-                        forgetFile(db, drop.get(i));
+                        forgetFile(db, drop.get(i), MgDeletedRetention.NOTE_PRUNED);
                     }
                     db.setTransactionSuccessful();
                 } finally {
@@ -788,48 +798,55 @@ public class MgMessageHistory {
     }
 
     /**
-     * Once per install: drops copies of stickers, GIFs and emoji made by older versions
-     * (Telegram can always show those again; they only filled the deleted-media browser).
+     * Copies that could not be made (the file was never downloaded): the rows forget the path
+     * and say why. Off the UI thread.
      */
-    public void dropThrowawayCopiesOnce() {
-        android.content.SharedPreferences prefs = ApplicationLoader.applicationContext
-                .getSharedPreferences("hanako_deleted_retention", android.content.Context.MODE_PRIVATE);
-        if (prefs.getBoolean("throwaway_dropped", false)) {
+    public void markNotDownloaded(ArrayList<String> paths) {
+        if (paths == null || paths.isEmpty()) {
             return;
         }
-        ArrayList<String> drop = new ArrayList<>();
-        for (String t : new String[]{TBL_DELETED, TBL_EDITED}) {
-            readCursor("SELECT data, media_path, thumb_path FROM " + t + " WHERE media_path IS NOT NULL", new String[0], c -> {
-                while (c.moveToNext()) {
-                    TLRPC.Message m = deserialize(c.getBlob(0));
-                    if (MgDeletedRetention.isThrowaway(m)) {
-                        drop.add(c.getString(1));
-                        if (!c.isNull(2)) drop.add(c.getString(2));
-                    }
-                }
-            });
-        }
-        if (!drop.isEmpty()) {
-            synchronized (writeLock) {
+        synchronized (writeLock) {
+            try {
+                android.database.sqlite.SQLiteDatabase db = dbHelper.getWritableDatabase();
+                db.beginTransaction();
                 try {
-                    android.database.sqlite.SQLiteDatabase db = dbHelper.getWritableDatabase();
-                    db.beginTransaction();
-                    try {
-                        for (int i = 0; i < drop.size(); i++) {
-                            forgetFile(db, drop.get(i));
+                    for (int i = 0; i < paths.size(); i++) {
+                        if (!new java.io.File(paths.get(i)).isFile()) {
+                            forgetFile(db, paths.get(i), MgDeletedRetention.NOTE_NOT_DOWNLOADED);
                         }
-                        db.setTransactionSuccessful();
-                    } finally {
-                        db.endTransaction();
                     }
-                } catch (Exception e) {
-                    FileLog.e(e);
-                    return;
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        }
+    }
+
+    /**
+     * Messages of one chat (0 = all chats) whose media was not kept, counted by reason
+     * (index = MgDeletedRetention.NOTE_*). Off the UI thread.
+     */
+    public int[] countNotKept(int account, long dialogId) {
+        final int[] out = new int[MgDeletedRetention.NOTE_COUNT];
+        String where = " WHERE account=? AND media_path IS NULL AND media_note>0" + (dialogId != 0 ? " AND dialog_id=?" : "")
+                + " GROUP BY media_note";
+        String[] args = dialogId != 0
+                ? new String[]{Integer.toString(account), Long.toString(dialogId)}
+                : new String[]{Integer.toString(account)};
+        CursorBody body = c -> {
+            while (c.moveToNext()) {
+                int n = c.getInt(0);
+                if (n > 0 && n < out.length) {
+                    out[n] += c.getInt(1);
                 }
             }
-            MgHistoryMedia.deleteAsync(drop);
-        }
-        prefs.edit().putBoolean("throwaway_dropped", true).apply();
+        };
+        readCursor("SELECT media_note, COUNT(*) FROM " + TBL_DELETED + where, args, body);
+        readCursor("SELECT media_note, COUNT(*) FROM " + TBL_EDITED + where, args, body);
+        return out;
     }
     // hanako 2.01 end
 

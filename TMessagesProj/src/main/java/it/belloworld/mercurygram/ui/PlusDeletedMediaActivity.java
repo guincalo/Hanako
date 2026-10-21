@@ -76,11 +76,16 @@ public class PlusDeletedMediaActivity extends BaseFragment {
     private static final int MENU_TYPE_FILE = 2014;
     private static final int MENU_CHATS = 2015;
     private static final int MENU_DELETE_SHOWN = 2016;
+    private static final int MENU_TYPE_STICKER = 2017;
+    private static final int MENU_MEDIA_OFF = 2018;
+    private static final int MENU_MEDIA_ON = 2019;
 
     private static final int ROW_CHAT = 0;
     private static final int ROW_SECTION = 1;
     private static final int ROW_TILE = 2;
     private static final int ROW_FILE = 3;
+    /** hanako 2.01: what was not kept here and why, and "media off in this chat". */
+    private static final int ROW_NOTE = 4;
 
     /** Fixed chat when opened from a chat's menu; 0 = global browser. */
     private final long fixedDialogId;
@@ -103,6 +108,10 @@ public class PlusDeletedMediaActivity extends BaseFragment {
     private ImageView emptyIcon;
     private RadialProgressView progressView;
     private GraySectionCell pinnedHeader;
+    private ActionBarMenuItem otherItem;
+    /** Not-kept counts (MgDeletedRetention.NOTE_*) for {@link #notesDialog}; null until loaded. */
+    private int[] notKept;
+    private long notesDialog = Long.MIN_VALUE;
 
     private static final class Row {
         final int type;
@@ -150,6 +159,12 @@ public class PlusDeletedMediaActivity extends BaseFragment {
                     setTypeFilter(PlusDeletedMedia.CAT_VIDEO);
                 } else if (id == MENU_TYPE_FILE) {
                     setTypeFilter(PlusDeletedMedia.CAT_FILE);
+                } else if (id == MENU_TYPE_STICKER) {
+                    setTypeFilter(PlusDeletedMedia.CAT_STICKER);
+                } else if (id == MENU_MEDIA_OFF) {
+                    confirmMediaOff(chatFilter);
+                } else if (id == MENU_MEDIA_ON) {
+                    setMediaOff(chatFilter, false);
                 } else if (id == MENU_CHATS) {
                     showChatPicker();
                 } else if (id == MENU_DELETE_SHOWN) {
@@ -158,14 +173,17 @@ public class PlusDeletedMediaActivity extends BaseFragment {
             }
         });
         ActionBarMenu menu = actionBar.createMenu();
-        ActionBarMenuItem other = menu.addItem(MENU_OTHER, R.drawable.ic_ab_other);
+        ActionBarMenuItem other = otherItem = menu.addItem(MENU_OTHER, R.drawable.ic_ab_other);
         other.addSubItem(MENU_TYPE_ALL, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20FilterAll));
         other.addSubItem(MENU_TYPE_PHOTO, R.drawable.msg_photos, LocaleController.getString(R.string.PlusF20FilterPhotos));
         other.addSubItem(MENU_TYPE_VIDEO, R.drawable.msg_video, LocaleController.getString(R.string.PlusF20FilterVideos));
         other.addSubItem(MENU_TYPE_FILE, R.drawable.msg_list, LocaleController.getString(R.string.PlusF20FilterFiles));
+        other.addSubItem(MENU_TYPE_STICKER, R.drawable.msg_sticker, LocaleController.getString(R.string.PlusF20FilterStickers));
         if (fixedDialogId == 0) {
             other.addSubItem(MENU_CHATS, R.drawable.msg_discussion, LocaleController.getString(R.string.PlusF20FilterChat));
         }
+        other.addSubItem(MENU_MEDIA_OFF, R.drawable.msg_block, LocaleController.getString(R.string.HanakoMediaStopHere));
+        other.addSubItem(MENU_MEDIA_ON, R.drawable.msg_media, LocaleController.getString(R.string.HanakoMediaResumeHere));
         other.addSubItem(MENU_DELETE_SHOWN, R.drawable.msg_delete, LocaleController.getString(R.string.PlusF20DeleteShown));
 
         FrameLayout frame = new FrameLayout(context);
@@ -227,6 +245,12 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         listView.setOnItemClickListener((view, position) -> {
             Row row = rowAt(position);
             if (row == null) {
+                return;
+            }
+            if (row.type == ROW_NOTE) {
+                if (chatFilter != 0 && it.belloworld.mercurygram.MgDeletedRetention.isChatMediaOff(currentAccount, chatFilter)) {
+                    setMediaOff(chatFilter, false);
+                }
                 return;
             }
             if (row.type == ROW_CHAT) {
@@ -377,6 +401,15 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         });
 
         rows.clear();
+        if (chatFilter != notesDialog) {
+            loadNotes();
+        }
+        CharSequence note = notesText();
+        if (note != null) {
+            Row n = new Row(ROW_NOTE);
+            n.title = note;
+            rows.add(n);
+        }
         Calendar calendar = Calendar.getInstance();
         long lastDialog = Long.MIN_VALUE;
         int lastDay = -1;
@@ -487,16 +520,26 @@ public class PlusDeletedMediaActivity extends BaseFragment {
             case PlusDeletedMedia.CAT_FILE:
                 type = LocaleController.getString(R.string.PlusF20FilterFiles);
                 break;
+            case PlusDeletedMedia.CAT_STICKER:
+                type = LocaleController.getString(R.string.PlusF20FilterStickers);
+                break;
             default:
                 type = null;
         }
         String subtitle = loading ? LocaleController.getString(R.string.Loading)
                 : scope + (type != null ? " · " + type : "") + " · " + countAndSize(shown.size(), shownSize);
         actionBar.setSubtitle(subtitle);
+        if (otherItem != null) {
+            boolean off = chatFilter != 0 && it.belloworld.mercurygram.MgDeletedRetention.isChatMediaOff(currentAccount, chatFilter);
+            otherItem.setSubItemShown(MENU_MEDIA_OFF, chatFilter != 0 && !off);
+            otherItem.setSubItemShown(MENU_MEDIA_ON, off);
+        }
         if (emptyView != null) {
             boolean filtered = typeFilter != 0 || (chatFilter != 0 && fixedDialogId == 0);
             emptyTitle.setText(LocaleController.getString(filtered ? R.string.PlusF20EmptyFilteredTitle : R.string.PlusF20EmptyTitle));
-            emptyText.setText(LocaleController.getString(filtered ? R.string.PlusF20EmptyFiltered : R.string.PlusF20Empty));
+            CharSequence note = notesText();
+            String empty = LocaleController.getString(filtered ? R.string.PlusF20EmptyFiltered : R.string.PlusF20Empty);
+            emptyText.setText(note != null ? empty + "\n\n" + note : empty);
             emptyView.setVisibility(!loading && shown.isEmpty() ? View.VISIBLE : View.GONE);
             progressView.setVisibility(loading ? View.VISIBLE : View.GONE);
             listView.setVisibility(!loading && !shown.isEmpty() ? View.VISIBLE : View.GONE);
@@ -513,6 +556,10 @@ public class PlusDeletedMediaActivity extends BaseFragment {
             return;
         }
         it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.DELETED_MEDIA_VIEW); // hanako: usage statistics (off by default)
+        if (item.category == PlusDeletedMedia.CAT_STICKER) {
+            showStickerPreview(item);
+            return;
+        }
         if (!item.opensInViewer()) {
             PlusDeletedMedia.openExternal(getParentActivity(), item);
             return;
@@ -537,17 +584,20 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         if (item == null || getParentActivity() == null) {
             return;
         }
-        CharSequence save = LocaleController.getString(item.category == PlusDeletedMedia.CAT_FILE
+        CharSequence save = LocaleController.getString(!toGallery(item)
                 ? R.string.PlusF20SaveDownloads : R.string.PlusF20SaveGallery);
+        final long did = item.entry.dialogId;
+        final boolean mediaOff = it.belloworld.mercurygram.MgDeletedRetention.isChatMediaOff(currentAccount, did);
         CharSequence[] labels = {
                 LocaleController.getString(R.string.PlusF20Open),
                 save,
                 LocaleController.getString(R.string.PlusF20Share),
                 LocaleController.getString(R.string.PlusF20Details),
+                LocaleController.getString(mediaOff ? R.string.HanakoMediaResumeHere : R.string.HanakoMediaStopHere),
                 LocaleController.getString(R.string.Delete)
         };
         int[] icons = {R.drawable.msg_openin, R.drawable.msg_gallery, R.drawable.msg_shareout,
-                R.drawable.msg_info, R.drawable.msg_delete};
+                R.drawable.msg_info, mediaOff ? R.drawable.msg_media : R.drawable.msg_block, R.drawable.msg_delete};
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle(item.displayName);
         builder.setItems(labels, icons, (dialog, which) -> {
@@ -565,11 +615,112 @@ public class PlusDeletedMediaActivity extends BaseFragment {
                     showDetails(item);
                     break;
                 case 4:
+                    if (mediaOff) {
+                        setMediaOff(did, false);
+                    } else {
+                        confirmMediaOff(did);
+                    }
+                    break;
+                case 5:
                     confirmDelete(item);
                     break;
             }
         });
         showDialog(builder.create());
+    }
+
+    private static boolean toGallery(PlusDeletedMedia.Item item) {
+        return item.category == PlusDeletedMedia.CAT_PHOTO || item.category == PlusDeletedMedia.CAT_VIDEO;
+    }
+
+    // ---- hanako 2.01: what was not kept, and "stop keeping media here" ----
+
+    private void loadNotes() {
+        final long did = chatFilter;
+        final int account = currentAccount;
+        notesDialog = did;
+        notKept = null;
+        Utilities.globalQueue.postRunnable(() -> {
+            int[] counts = MgMessageHistory.getInstance().countNotKept(account, did);
+            AndroidUtilities.runOnUIThread(() -> {
+                if (notesDialog == did) {
+                    notKept = counts;
+                    applyFilters();
+                }
+            });
+        });
+    }
+
+    /** "Media not kept: 12 never downloaded · 3 over the size limit", plus the chat's own switch. */
+    private CharSequence notesText() {
+        StringBuilder sb = new StringBuilder();
+        if (chatFilter != 0 && it.belloworld.mercurygram.MgDeletedRetention.isChatMediaOff(currentAccount, chatFilter)) {
+            sb.append(LocaleController.getString(R.string.HanakoMediaOffHere));
+        }
+        if (notKept != null && notesDialog == chatFilter) {
+            final int[] res = {0, R.string.HanakoNotKeptMediaOff, R.string.HanakoNotKeptTooBig, R.string.HanakoNotKeptChatOff,
+                    R.string.HanakoNotKeptNotDownloaded, R.string.HanakoNotKeptPruned};
+            StringBuilder parts = new StringBuilder();
+            for (int i = 1; i < notKept.length && i < res.length; i++) {
+                if (notKept[i] > 0) {
+                    if (parts.length() > 0) {
+                        parts.append(" · ");
+                    }
+                    parts.append(LocaleController.formatString(res[i], notKept[i]));
+                }
+            }
+            if (parts.length() > 0) {
+                if (sb.length() > 0) {
+                    sb.append("\n");
+                }
+                sb.append(LocaleController.formatString(R.string.HanakoNotKept, parts));
+            }
+        }
+        return sb.length() > 0 ? sb : null;
+    }
+
+    private void confirmMediaOff(long did) {
+        if (did == 0 || getParentActivity() == null) {
+            return;
+        }
+        String title = PlusDeletedMedia.chatTitle(currentAccount, did);
+        showDialog(new AlertDialog.Builder(getParentActivity())
+                .setTitle(LocaleController.getString(R.string.HanakoMediaStopHere))
+                .setMessage(LocaleController.formatString(R.string.HanakoMediaStopHereInfo, title))
+                .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
+                .setPositiveButton(LocaleController.getString(R.string.HanakoMediaStop), (d, w) -> setMediaOff(did, true))
+                .create());
+    }
+
+    private void setMediaOff(long did, boolean off) {
+        if (did == 0) {
+            return;
+        }
+        it.belloworld.mercurygram.MgDeletedRetention.setChatMediaOff(currentAccount, did, off);
+        toast(LocaleController.formatString(off ? R.string.HanakoMediaStopped : R.string.HanakoMediaResumed,
+                PlusDeletedMedia.chatTitle(currentAccount, did)));
+        applyFilters();
+    }
+
+    /** Sticker shown whole, animated (Lottie / video stickers play), on a plain dialog. */
+    private void showStickerPreview(PlusDeletedMedia.Item item) {
+        Context context = getParentActivity();
+        if (context == null) {
+            return;
+        }
+        FrameLayout box = new FrameLayout(context);
+        BackupImageView view = new BackupImageView(context);
+        view.getImageReceiver().setAspectFit(true);
+        view.getImageReceiver().setAutoRepeat(1);
+        view.setImage(ImageLocation.getForPath(item.file.getAbsolutePath()), "512_512", item.stickerExt(), null, null);
+        box.addView(view, LayoutHelper.createFrame(220, 220, Gravity.CENTER, 0, 16, 0, 8));
+        String from = senderName(currentAccount, item);
+        showDialog(new AlertDialog.Builder(context)
+                .setTitle(from != null ? from : PlusDeletedMedia.chatTitle(currentAccount, item.entry.dialogId))
+                .setView(box)
+                .setNegativeButton(LocaleController.getString(R.string.Close), null)
+                .setPositiveButton(LocaleController.getString(R.string.PlusF20Share), (d, w) -> PlusDeletedMedia.share(getParentActivity(), item))
+                .create());
     }
 
     private void exportItem(PlusDeletedMedia.Item item) {
@@ -578,7 +729,7 @@ public class PlusDeletedMediaActivity extends BaseFragment {
             return;
         }
         PlusDeletedMedia.export(item, ok -> toast(LocaleController.getString(ok
-                ? (item.category == PlusDeletedMedia.CAT_FILE ? R.string.PlusF20SavedDownloads : R.string.PlusF20SavedGallery)
+                ? (!toGallery(item) ? R.string.PlusF20SavedDownloads : R.string.PlusF20SavedGallery)
                 : R.string.PlusF20SaveFailed)));
     }
 
@@ -776,6 +927,9 @@ public class PlusDeletedMediaActivity extends BaseFragment {
                 case ROW_FILE:
                     view = new FileCell(context);
                     break;
+                case ROW_NOTE:
+                    view = new org.telegram.ui.Cells.TextInfoPrivacyCell(context);
+                    break;
                 default:
                     view = new GraySectionCell(context);
                     break;
@@ -803,6 +957,9 @@ public class PlusDeletedMediaActivity extends BaseFragment {
                     ((FileCell) holder.itemView).bind(currentAccount, row.item, next != null && next.type == ROW_FILE);
                     break;
                 }
+                case ROW_NOTE:
+                    ((org.telegram.ui.Cells.TextInfoPrivacyCell) holder.itemView).setText(row.title);
+                    break;
                 default:
                     ((GraySectionCell) holder.itemView).setText(row.title, row.info, null);
                     break;
@@ -890,6 +1047,7 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         private final TextView name;
         private final TextView duration;
         private final TextView once;
+        private final TextView copies;
         private final View shade;
         private final TextView sender;
         private final TextView time;
@@ -957,6 +1115,16 @@ public class PlusDeletedMediaActivity extends BaseFragment {
             once.setPadding(AndroidUtilities.dp(6), AndroidUtilities.dp(1), AndroidUtilities.dp(6), AndroidUtilities.dp(1));
             inner.addView(once, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT,
                     Gravity.LEFT | Gravity.TOP, 4, 4, 0, 0));
+
+            // hanako 2.01: "×N" when the same file was deleted N times in this chat
+            copies = new TextView(context);
+            copies.setTextColor(0xffffffff);
+            copies.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+            copies.setTypeface(AndroidUtilities.bold());
+            copies.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(4), 0x66000000));
+            copies.setPadding(AndroidUtilities.dp(5), AndroidUtilities.dp(1), AndroidUtilities.dp(5), AndroidUtilities.dp(1));
+            inner.addView(copies, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT,
+                    Gravity.LEFT | Gravity.TOP, 4, 4, 0, 0));
         }
 
         @Override
@@ -970,7 +1138,21 @@ public class PlusDeletedMediaActivity extends BaseFragment {
             bound = item;
             image.setImageDrawable(null);
             String preview = item.previewPath();
-            if (preview != null) {
+            boolean sticker = item.category == PlusDeletedMedia.CAT_STICKER;
+            // stickers: whole (fit, not cropped), transparent, first frame; they play when opened
+            image.getImageReceiver().setAspectFit(sticker);
+            image.getImageReceiver().setAllowStartLottieAnimation(false);
+            ((View) image.getParent()).setBackgroundColor(sticker ? 0 : Theme.getColor(Theme.key_windowBackgroundGray));
+            int pad = sticker ? AndroidUtilities.dp(10) : 0;
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) image.getLayoutParams();
+            if (lp.leftMargin != pad) {
+                lp.setMargins(pad, pad, pad, pad + (sticker ? AndroidUtilities.dp(8) : 0));
+                image.setLayoutParams(lp);
+            }
+            if (sticker) {
+                image.setImage(ImageLocation.getForPath(preview), "200_200", item.stickerExt(), null, null);
+                name.setText(null);
+            } else if (preview != null) {
                 image.setImage(ImageLocation.getForPath(preview), "200_200", (Drawable) null, null);
                 name.setText(null);
             } else if (item.category == PlusDeletedMedia.CAT_VIDEO) {
@@ -1006,6 +1188,8 @@ public class PlusDeletedMediaActivity extends BaseFragment {
             duration.setCompoundDrawablesWithIntrinsicBounds(play ? R.drawable.play_mini_video : 0, 0, 0, 0);
             duration.setVisibility(durationText != null ? View.VISIBLE : View.GONE);
             once.setVisibility(item.origin == PlusDeletedMedia.ORIGIN_VIEW_ONCE ? View.VISIBLE : View.GONE);
+            copies.setText(item.copies > 1 ? "×" + item.copies : null);
+            copies.setVisibility(item.copies > 1 && item.origin != PlusDeletedMedia.ORIGIN_VIEW_ONCE ? View.VISIBLE : View.GONE);
 
             String from = senderName(account, item);
             sender.setText(from);
