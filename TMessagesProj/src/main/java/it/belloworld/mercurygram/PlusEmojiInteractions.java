@@ -91,10 +91,10 @@ public final class PlusEmojiInteractions {
 
     public static void addSettingsItems(ArrayList<UItem> items, int account) {
         items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF15Header)));
-        items.add(UItem.asCheck(ID_INTERACTIONS, LocaleController.getString(R.string.PlusF15DisableInteractions))
-                .setChecked(isInteractionsDisabled(account)));
-        items.add(UItem.asCheck(ID_CHOOSING_STICKER, LocaleController.getString(R.string.PlusF15HideChoosingSticker))
-                .setChecked(isChoosingStickerHidden(account)));
+        items.add(UItem.asCheck(ID_INTERACTIONS, LocaleController.getString(R.string.HanakoSendEmojiInteractions))
+                .setChecked(!isInteractionsDisabled(account)));
+        items.add(UItem.asCheck(ID_CHOOSING_STICKER, LocaleController.getString(R.string.HanakoSendChoosingSticker))
+                .setChecked(!isChoosingStickerHidden(account)));
         items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF15About)));
     }
 

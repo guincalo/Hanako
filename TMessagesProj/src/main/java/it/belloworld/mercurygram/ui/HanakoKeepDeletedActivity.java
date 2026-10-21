@@ -266,6 +266,8 @@ public class HanakoKeepDeletedActivity extends UniversalFragment {
             io.addGap();
             io.add(R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title),
                     () -> chat.presentFragment(new PlusDeletedMediaActivity(did)));
+            io.add(R.drawable.msg_customize, LocaleController.getString(R.string.HanakoRuleChatMenu),
+                    () -> chat.presentFragment(new HanakoKeepRuleActivity(did, 0)));
             io.add(R.drawable.msg_clear, LocaleController.getString(R.string.HanakoDeletedClearChat), true,
                     () -> confirmClearChat(chat, acc, did));
             io.show();

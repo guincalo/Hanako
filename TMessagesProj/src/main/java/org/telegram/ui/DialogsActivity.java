@@ -8596,7 +8596,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         if (!actionBar.isActionModeShowed() && !AndroidUtilities.isTablet() && !onlySelect && view instanceof DialogCell && !getMessagesController().isForum(((DialogCell) view).getDialogId()) && !rightSlidingDialogContainer.hasFragment()) {
             DialogCell cell = (DialogCell) view;
-            if (it.belloworld.mercurygram.PlusPeek.wantsPeek(cell.isPointInsideAvatar(x, y))) { // plus f12: was cell.isPointInsideAvatar(x, y)
+            if (cell.isPointInsideAvatar(x, y)) {
                 return showChatPreview(cell);
             }
         }

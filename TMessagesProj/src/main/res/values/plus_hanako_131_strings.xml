@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- hanako 1.3.1: own-profile ghost status and saved exact last seen -->
-<resources>
-    <string name="HanakoSelfOffline">offline</string>
-    <string name="HanakoSelfOnlineOtherDevice">online on another device</string>
-    <string name="HanakoSavedLastSeen">%1$s (saved)</string>
-    <string name="HanakoSelfGhostIcon">Ghost mode is on. Tap for ghost settings</string>
-</resources>

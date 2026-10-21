@@ -228,40 +228,9 @@ public class SharedConfig {
                 .commit();
     }
 
-    public static void setMgTranslateMode(String mode) {
-        mode = sanitizeMgTranslateMode(mode);
-        mg_translateMode = mode;
-        ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
-                .edit()
-                .putString("mg_translateMode", mode)
-                .apply();
-    }
 
-    private static String sanitizeMgTranslateMode(String mode) {
-        if (MG_TRANSLATE_MODE_DEFAULT.equals(mode)
-                || MG_TRANSLATE_MODE_CLOUD.equals(mode)
-                || MG_TRANSLATE_MODE_ALTERNATIVE.equals(mode)
-                || MG_TRANSLATE_MODE_OFFLINE.equals(mode)) {
-            return mode;
-        }
-        return MG_TRANSLATE_MODE_DEFAULT;
-    }
 
-    public static void toggleMgTranslateAutoFallback() {
-        mg_translateAutoFallback = !mg_translateAutoFallback;
-        ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
-                .edit()
-                .putBoolean("mg_translateAutoFallback", mg_translateAutoFallback)
-                .apply();
-    }
 
-    public static void setMgTranslateOfflineFormatToastShown() {
-        mg_translateOfflineFormatToastShown = true;
-        ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
-                .edit()
-                .putBoolean("mg_translateOfflineFormatToastShown", true)
-                .apply();
-    }
 
 
     public static void toggleMgDisableProximitySensor() {
@@ -283,39 +252,9 @@ public class SharedConfig {
         Emoji.clearEmojiCache();
     }
 
-    public static void setMgTranslateAltEngine(String engine) {
-        engine = sanitizeMgTranslateAltEngine(engine);
-        mg_translateAltEngine = engine;
-        ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
-                .edit()
-                .putString("mg_translateAltEngine", engine)
-                .apply();
-    }
 
-    public static void setMgTranslateAltInstanceMode(String mode) {
-        mode = sanitizeMgTranslateAltInstanceMode(mode);
-        mg_translateAltInstanceMode = mode;
-        ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
-                .edit()
-                .putString("mg_translateAltInstanceMode", mode)
-                .apply();
-    }
 
-    public static void setMgTranslateAltPinnedInstance(String url) {
-        mg_translateAltPinnedInstance = url == null ? "" : url;
-        ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
-                .edit()
-                .putString("mg_translateAltPinnedInstance", mg_translateAltPinnedInstance)
-                .apply();
-    }
 
-    public static void setMgTranslateAltCustomInstance(String url) {
-        mg_translateAltCustomInstance = url == null ? "" : url;
-        ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
-                .edit()
-                .putString("mg_translateAltCustomInstance", mg_translateAltCustomInstance)
-                .apply();
-    }
 
     private static String sanitizeMgTranslateAltEngine(String engine) {
         if (MG_TRANSLATE_ALT_ENGINE_DUCKDUCKGO.equals(engine)
@@ -326,110 +265,11 @@ public class SharedConfig {
         return MG_TRANSLATE_ALT_ENGINE_DUCKDUCKGO;
     }
 
-    private static String sanitizeMgTranslateAltInstanceMode(String mode) {
-        if (MG_TRANSLATE_ALT_INSTANCE_MODE_AUTO.equals(mode)
-                || MG_TRANSLATE_ALT_INSTANCE_MODE_PINNED.equals(mode)
-                || MG_TRANSLATE_ALT_INSTANCE_MODE_CUSTOM.equals(mode)) {
-            return mode;
-        }
-        return MG_TRANSLATE_ALT_INSTANCE_MODE_AUTO;
-    }
 
-    /**
-     * Returns the ordered list of Mozhi instances to attempt for the current
-     * {@link #mg_translateAltInstanceMode}: the full default pool for "auto"
-     * (rotation), a single configured URL for "pinned" / "custom". Falls back
-     * to the default pool when a pinned/custom mode is selected but no URL is
-     * configured.
-     */
-    public static java.util.List<String> getMgTranslateAltActiveInstances() {
-        if (MG_TRANSLATE_ALT_INSTANCE_MODE_PINNED.equals(mg_translateAltInstanceMode)
-                && mg_translateAltPinnedInstance != null
-                && !mg_translateAltPinnedInstance.isEmpty()) {
-            return java.util.Collections.singletonList(mg_translateAltPinnedInstance);
-        }
-        if (MG_TRANSLATE_ALT_INSTANCE_MODE_CUSTOM.equals(mg_translateAltInstanceMode)
-                && mg_translateAltCustomInstance != null
-                && !mg_translateAltCustomInstance.isEmpty()) {
-            return java.util.Collections.singletonList(mg_translateAltCustomInstance);
-        }
-        return MG_TRANSLATE_ALT_DEFAULT_INSTANCES;
-    }
 
-    public static void setMgTorIdleStopMinutes(int minutes) {
-        if (minutes < 0) minutes = 0;
-        int previous = mg_torIdleStopMinutes;
-        mg_torIdleStopMinutes = minutes;
-        ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
-                .edit()
-                .putInt("mg_torIdleStopMinutes", minutes)
-                .apply();
-        if (previous == minutes) return;
-        try {
-            // The plugin caches idleStopMinutes from the bind-time push;
-            // without this AIDL re-push the user's new threshold doesn't
-            // reach the controller until the next bind cycle (e.g. plugin
-            // crash + recover), so 5→60 keeps killing tor at 5 minutes
-            // and 60→5 leaves it running for the longer window.
-            // 0 → non-zero: idleCheck previously cancelled the ticker, so
-            // the new finite idle never fires without an explicit re-arm.
-            // pushAggregatedClientPaused has the side-effect of arming
-            // the ticker if any client is paused; no-ops when tor isn't
-            // running.
-            if (previous <= 0 && minutes > 0) {
-            }
-        } catch (Throwable t) {
-            FileLog.e(t);
-        }
-    }
 
-    // Clamp a persisted/incoming transport value to the known set so a manual
-    // prefs edit or a future-version downgrade can't push an out-of-range mode
-    // to the plugin (falls back to Direct).
-    public static int sanitizeMgTorTransportMode(int mode) {
-        return (mode < MG_TOR_TRANSPORT_DIRECT || mode > MG_TOR_TRANSPORT_OBFS4)
-                ? MG_TOR_TRANSPORT_DIRECT : mode;
-    }
 
-    public static void setMgTorTransportMode(int mode) {
-        mode = sanitizeMgTorTransportMode(mode);
-        if (mode == mg_torTransportMode) return;
-        mg_torTransportMode = mode;
-        ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
-                .edit()
-                .putInt("mg_torTransportMode", mode)
-                .apply();
-        try {
-            // The plugin reads the transport only when it assembles its start()
-            // argv, so a live change requires a daemon relaunch. No-op when Tor
-            // is off or unbound (the next start picks up the new value).
-        } catch (Throwable t) {
-            FileLog.e(t);
-        }
-    }
 
-    // Persist the obfs4 bridge blob. Stored verbatim (the plugin validates each
-    // line). Only the obfs4 transport consumes these, so a live daemon relaunch
-    // is needed only when obfs4 is the ACTIVE mode; editing the field under
-    // Direct/Snowflake (or pre-filling bridges before the switch) must not drop
-    // MTProto onto the blocking stub for a value the running daemon isn't using.
-    // When switching INTO obfs4 the settings screen sets the lines first (no-op
-    // here) then setMgTorTransportMode(OBFS4), which drives the single relaunch
-    // that picks up both.
-    public static void setMgTorBridgeLines(String lines) {
-        if (lines == null) lines = "";
-        if (lines.equals(mg_torBridgeLines)) return;
-        mg_torBridgeLines = lines;
-        ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
-                .edit()
-                .putString("mg_torBridgeLines", lines)
-                .apply();
-        if (mg_torTransportMode != MG_TOR_TRANSPORT_OBFS4) return;
-        try {
-        } catch (Throwable t) {
-            FileLog.e(t);
-        }
-    }
 
     // Propagate the reduce-tracking flag to the native MTProto layer for every
     // account: changes TEMP_AUTH_KEY_EXPIRE_TIME between the upstream 24h
@@ -592,36 +432,7 @@ public class SharedConfig {
     // Mercurygram: Privacy
     public static boolean reduceTrackingFingerprint = false;
     public static boolean mg_useTor = false;
-    public static int mg_torIdleStopMinutes = 5;
-    // Anti-censorship transport for the Tor daemon. "Direct" is vanilla Tor (no
-    // bridges), which is DPI-blocked in Russia/Iran/etc. "Snowflake" routes the
-    // Tor handshake through domain-fronted WebRTC so it bootstraps behind those
-    // blocks. "obfs4" routes it through user-supplied obfs4 bridges (obtained
-    // out-of-band, e.g. Telegram's @GetBridgesBot). These int values are a wire
-    // contract with the plugin; keep in sync with MgTorController.TRANSPORT_* on
-    // the plugin side.
-    public static final int MG_TOR_TRANSPORT_DIRECT = 0;
-    public static final int MG_TOR_TRANSPORT_SNOWFLAKE = 1;
-    public static final int MG_TOR_TRANSPORT_OBFS4 = 2;
-    public static int mg_torTransportMode = MG_TOR_TRANSPORT_DIRECT;
-    // Newline-separated obfs4 bridge lines used when mg_torTransportMode ==
-    // MG_TOR_TRANSPORT_OBFS4. Empty for direct/snowflake. Pushed verbatim to the
-    // plugin, which parses/validates each line (MgTorController.parseObfs4Bridges).
-    public static String mg_torBridgeLines = "";
 
-    // Mercurygram: Translation engine selection. "default" defers to
-    // upstream MessagesController.translationsAutoEnabled; "cloud" forces
-    // the Telegram MTProto messages.translateText RPC; "alternative" forces
-    // the non-MTProto HTTP path (TranslateAlert2.alternativeTranslate);
-    // "offline" delegates each translation to dev.davidv.translator's
-    // background AIDL ITranslationService (see MgAidlTranslate).
-    public static final String MG_TRANSLATE_MODE_DEFAULT = "default";
-    public static final String MG_TRANSLATE_MODE_CLOUD = "cloud";
-    public static final String MG_TRANSLATE_MODE_ALTERNATIVE = "alternative";
-    public static final String MG_TRANSLATE_MODE_OFFLINE = "offline";
-    public static String mg_translateMode = MG_TRANSLATE_MODE_DEFAULT;
-    public static boolean mg_translateAutoFallback = true;
-    public static boolean mg_translateOfflineFormatToastShown = false;
 
     // Mercurygram: Alternative HTTP translation routes through a user-picked
     // Mozhi instance (https://codeberg.org/aryak/mozhi) — a multi-engine
@@ -638,27 +449,9 @@ public class SharedConfig {
     public static final String MG_TRANSLATE_ALT_ENGINE_GOOGLE     = "google";
     public static final String MG_TRANSLATE_ALT_ENGINE_YANDEX     = "yandex";
 
-    public static final String MG_TRANSLATE_ALT_INSTANCE_MODE_AUTO   = "auto";
-    public static final String MG_TRANSLATE_ALT_INSTANCE_MODE_PINNED = "pinned";
-    public static final String MG_TRANSLATE_ALT_INSTANCE_MODE_CUSTOM = "custom";
 
-    public static final java.util.List<String> MG_TRANSLATE_ALT_DEFAULT_INSTANCES =
-            java.util.Collections.unmodifiableList(java.util.Arrays.asList(
-                    "https://mozhi.aryak.me",
-                    "https://mozhi.pussthecat.org",
-                    "https://mozhi.catsarch.com",
-                    "https://translate.projectsegfau.lt",
-                    "https://mozhi.ducks.party"
-            ));
 
-    public static String mg_translateAltEngine         = MG_TRANSLATE_ALT_ENGINE_DUCKDUCKGO;
-    public static String mg_translateAltInstanceMode   = MG_TRANSLATE_ALT_INSTANCE_MODE_AUTO;
-    public static String mg_translateAltPinnedInstance = "";
-    public static String mg_translateAltCustomInstance = "";
 
-    // Hanako Classic: MG's on-device transcription (whisper.cpp / Parakeet) was removed in favour of
-    // Forkgram's voice-to-text. The language sentinels stay for the per-account migration below.
-    public static final String MG_TRANSCRIBE_LANG_AUTO = "auto";
     public static final String MG_TRANSCRIBE_LANG_DEVICE = "device";
 
     public static long pushStringGetTimeStart;
@@ -921,16 +714,6 @@ public class SharedConfig {
         editor.putBoolean("mg_useSystemFont", useSystemFont);
         editor.putBoolean("mg_reduceTrackingFingerprint", reduceTrackingFingerprint);
         editor.putBoolean("mg_useTor", mg_useTor);
-        editor.putInt("mg_torIdleStopMinutes", mg_torIdleStopMinutes);
-        editor.putInt("mg_torTransportMode", mg_torTransportMode);
-        editor.putString("mg_torBridgeLines", mg_torBridgeLines);
-        editor.putString("mg_translateMode", mg_translateMode);
-        editor.putBoolean("mg_translateAutoFallback", mg_translateAutoFallback);
-        editor.putBoolean("mg_translateOfflineFormatToastShown", mg_translateOfflineFormatToastShown);
-        editor.putString("mg_translateAltEngine", mg_translateAltEngine);
-        editor.putString("mg_translateAltInstanceMode", mg_translateAltInstanceMode);
-        editor.putString("mg_translateAltPinnedInstance", mg_translateAltPinnedInstance);
-        editor.putString("mg_translateAltCustomInstance", mg_translateAltCustomInstance);
         editor.putBoolean("mg_useCustomEmojiPack", mg_useCustomEmojiPack);
         editor.putBoolean("mg_disableProximitySensor", mg_disableProximitySensor);
         if (mgPendingUpdate != null) {
@@ -966,17 +749,6 @@ public class SharedConfig {
         useSystemFont = preferences.getBoolean("mg_useSystemFont", false);
         reduceTrackingFingerprint = preferences.getBoolean("mg_reduceTrackingFingerprint", false);
         mg_useTor = preferences.getBoolean("mg_useTor", false);
-        mg_torIdleStopMinutes = preferences.getInt("mg_torIdleStopMinutes", 5);
-        mg_torTransportMode = sanitizeMgTorTransportMode(
-                preferences.getInt("mg_torTransportMode", MG_TOR_TRANSPORT_DIRECT));
-        mg_torBridgeLines = preferences.getString("mg_torBridgeLines", "");
-        mg_translateMode = sanitizeMgTranslateMode(preferences.getString("mg_translateMode", MG_TRANSLATE_MODE_DEFAULT));
-        mg_translateAutoFallback = preferences.getBoolean("mg_translateAutoFallback", true);
-        mg_translateOfflineFormatToastShown = preferences.getBoolean("mg_translateOfflineFormatToastShown", false);
-        mg_translateAltEngine = sanitizeMgTranslateAltEngine(preferences.getString("mg_translateAltEngine", MG_TRANSLATE_ALT_ENGINE_DUCKDUCKGO));
-        mg_translateAltInstanceMode = sanitizeMgTranslateAltInstanceMode(preferences.getString("mg_translateAltInstanceMode", MG_TRANSLATE_ALT_INSTANCE_MODE_AUTO));
-        mg_translateAltPinnedInstance = preferences.getString("mg_translateAltPinnedInstance", "");
-        mg_translateAltCustomInstance = preferences.getString("mg_translateAltCustomInstance", "");
         mg_useCustomEmojiPack = preferences.getBoolean("mg_useCustomEmojiPack", false);
         mg_disableProximitySensor = preferences.getBoolean("mg_disableProximitySensor", false);
         migratePerAccountSettingsV1(preferences);
@@ -1539,9 +1311,6 @@ public class SharedConfig {
     }
 
 
-    public static boolean isMgUpdateAvailable() {
-        return mgPendingUpdate != null && it.belloworld.mercurygram.MgUpdateChecker.canSelfInstall();
-    }
 
     public static it.belloworld.mercurygram.MgUpdateInfo getMgPendingUpdate() {
         return it.belloworld.mercurygram.MgUpdateInfo.fromJson(mgPendingUpdate);
@@ -1572,10 +1341,6 @@ public class SharedConfig {
         saveConfig();
     }
 
-    public static void setMgDismissedPluginPromptTag(String tag) {
-        mgDismissedPluginPromptTag = tag;
-        saveConfig();
-    }
 
     public static void clearMgPendingUpdate() {
         deleteCachedUpdateApk();

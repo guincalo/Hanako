@@ -1,5 +1,8 @@
 package it.belloworld.mercurygram.ui;
 
+import android.os.Bundle;
+import org.telegram.ui.ChatActivity;
+
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -77,8 +80,7 @@ public class PlusDeletedMediaActivity extends BaseFragment {
     private static final int MENU_CHATS = 2015;
     private static final int MENU_DELETE_SHOWN = 2016;
     private static final int MENU_TYPE_STICKER = 2017;
-    private static final int MENU_MEDIA_OFF = 2018;
-    private static final int MENU_MEDIA_ON = 2019;
+    private static final int MENU_RULE = 2018;
 
     private static final int ROW_CHAT = 0;
     private static final int ROW_SECTION = 1;
@@ -161,10 +163,8 @@ public class PlusDeletedMediaActivity extends BaseFragment {
                     setTypeFilter(PlusDeletedMedia.CAT_FILE);
                 } else if (id == MENU_TYPE_STICKER) {
                     setTypeFilter(PlusDeletedMedia.CAT_STICKER);
-                } else if (id == MENU_MEDIA_OFF) {
-                    confirmMediaOff(chatFilter);
-                } else if (id == MENU_MEDIA_ON) {
-                    setMediaOff(chatFilter, false);
+                } else if (id == MENU_RULE) {
+                    presentFragment(new HanakoKeepRuleActivity(chatFilter, 0));
                 } else if (id == MENU_CHATS) {
                     showChatPicker();
                 } else if (id == MENU_DELETE_SHOWN) {
@@ -182,8 +182,9 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         if (fixedDialogId == 0) {
             other.addSubItem(MENU_CHATS, R.drawable.msg_discussion, LocaleController.getString(R.string.PlusF20FilterChat));
         }
-        other.addSubItem(MENU_MEDIA_OFF, R.drawable.msg_block, LocaleController.getString(R.string.HanakoMediaStopHere));
-        other.addSubItem(MENU_MEDIA_ON, R.drawable.msg_media, LocaleController.getString(R.string.HanakoMediaResumeHere));
+        if (fixedDialogId != 0) {
+            other.addSubItem(MENU_RULE, R.drawable.msg_customize, LocaleController.getString(R.string.HanakoRuleChatMenu));
+        }
         other.addSubItem(MENU_DELETE_SHOWN, R.drawable.msg_delete, LocaleController.getString(R.string.PlusF20DeleteShown));
 
         FrameLayout frame = new FrameLayout(context);
@@ -248,15 +249,13 @@ public class PlusDeletedMediaActivity extends BaseFragment {
                 return;
             }
             if (row.type == ROW_NOTE) {
-                if (chatFilter != 0 && it.belloworld.mercurygram.MgDeletedRetention.isChatMediaOff(currentAccount, chatFilter)) {
-                    setMediaOff(chatFilter, false);
+                if (chatFilter != 0) {
+                    presentFragment(new HanakoKeepRuleActivity(chatFilter, 0));
                 }
                 return;
             }
             if (row.type == ROW_CHAT) {
-                chatFilter = row.dialogId;
-                applyFilters();
-                listView.scrollToPosition(0);
+                openChat(row.dialogId); // hanako 2.02: a chat is its own screen, same filters, normal back
             } else if (row.item != null) {
                 openItem(row.item);
             }
@@ -285,18 +284,6 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         return fragmentView;
     }
 
-    @Override
-    public boolean onBackPressed(boolean invoked) {
-        // In the all-chats browser, a chat picked from its header goes back to all chats first.
-        if (fixedDialogId == 0 && chatFilter != 0) {
-            if (invoked) {
-                chatFilter = 0;
-                applyFilters();
-            }
-            return false;
-        }
-        return super.onBackPressed(invoked);
-    }
 
     private Row rowAt(int position) {
         return position >= 0 && position < rows.size() ? rows.get(position) : null;
@@ -529,11 +516,6 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         String subtitle = loading ? LocaleController.getString(R.string.Loading)
                 : scope + (type != null ? " · " + type : "") + " · " + countAndSize(shown.size(), shownSize);
         actionBar.setSubtitle(subtitle);
-        if (otherItem != null) {
-            boolean off = chatFilter != 0 && it.belloworld.mercurygram.MgDeletedRetention.isChatMediaOff(currentAccount, chatFilter);
-            otherItem.setSubItemShown(MENU_MEDIA_OFF, chatFilter != 0 && !off);
-            otherItem.setSubItemShown(MENU_MEDIA_ON, off);
-        }
         if (emptyView != null) {
             boolean filtered = typeFilter != 0 || (chatFilter != 0 && fixedDialogId == 0);
             emptyTitle.setText(LocaleController.getString(filtered ? R.string.PlusF20EmptyFilteredTitle : R.string.PlusF20EmptyTitle));
@@ -587,17 +569,16 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         CharSequence save = LocaleController.getString(!toGallery(item)
                 ? R.string.PlusF20SaveDownloads : R.string.PlusF20SaveGallery);
         final long did = item.entry.dialogId;
-        final boolean mediaOff = it.belloworld.mercurygram.MgDeletedRetention.isChatMediaOff(currentAccount, did);
         CharSequence[] labels = {
                 LocaleController.getString(R.string.PlusF20Open),
                 save,
                 LocaleController.getString(R.string.PlusF20Share),
                 LocaleController.getString(R.string.PlusF20Details),
-                LocaleController.getString(mediaOff ? R.string.HanakoMediaResumeHere : R.string.HanakoMediaStopHere),
+                LocaleController.getString(R.string.HanakoShowInChat),
                 LocaleController.getString(R.string.Delete)
         };
         int[] icons = {R.drawable.msg_openin, R.drawable.msg_gallery, R.drawable.msg_shareout,
-                R.drawable.msg_info, mediaOff ? R.drawable.msg_media : R.drawable.msg_block, R.drawable.msg_delete};
+                R.drawable.msg_info, R.drawable.msg_message, R.drawable.msg_delete};
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle(item.displayName);
         builder.setItems(labels, icons, (dialog, which) -> {
@@ -615,11 +596,7 @@ public class PlusDeletedMediaActivity extends BaseFragment {
                     showDetails(item);
                     break;
                 case 4:
-                    if (mediaOff) {
-                        setMediaOff(did, false);
-                    } else {
-                        confirmMediaOff(did);
-                    }
+                    showInChat(did, item.entry.message != null ? item.entry.message.id : 0);
                     break;
                 case 5:
                     confirmDelete(item);
@@ -654,8 +631,11 @@ public class PlusDeletedMediaActivity extends BaseFragment {
     /** "Media not kept: 12 never downloaded · 3 over the size limit", plus the chat's own switch. */
     private CharSequence notesText() {
         StringBuilder sb = new StringBuilder();
-        if (chatFilter != 0 && it.belloworld.mercurygram.MgDeletedRetention.isChatMediaOff(currentAccount, chatFilter)) {
-            sb.append(LocaleController.getString(R.string.HanakoMediaOffHere));
+        it.belloworld.mercurygram.MgDeletedRetention.Rule rule = chatFilter != 0
+                ? it.belloworld.mercurygram.MgDeletedRetention.getRule(currentAccount, chatFilter, 0) : null;
+        if (rule != null) {
+            sb.append(LocaleController.getString(R.string.HanakoRulesHeader)).append(": ")
+                    .append(it.belloworld.mercurygram.MgDeletedRetention.keepLabel(rule.keep));
         }
         if (notKept != null && notesDialog == chatFilter) {
             final int[] res = {0, R.string.HanakoNotKeptMediaOff, R.string.HanakoNotKeptTooBig, R.string.HanakoNotKeptChatOff,
@@ -679,27 +659,25 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         return sb.length() > 0 ? sb : null;
     }
 
-    private void confirmMediaOff(long did) {
-        if (did == 0 || getParentActivity() == null) {
-            return;
-        }
-        String title = PlusDeletedMedia.chatTitle(currentAccount, did);
-        showDialog(new AlertDialog.Builder(getParentActivity())
-                .setTitle(LocaleController.getString(R.string.HanakoMediaStopHere))
-                .setMessage(LocaleController.formatString(R.string.HanakoMediaStopHereInfo, title))
-                .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
-                .setPositiveButton(LocaleController.getString(R.string.HanakoMediaStop), (d, w) -> setMediaOff(did, true))
-                .create());
+    /** One chat's deleted media, as its own screen with the current type filter. */
+    private void openChat(long did) {
+        PlusDeletedMediaActivity f = new PlusDeletedMediaActivity(did);
+        f.typeFilter = typeFilter;
+        presentFragment(f);
     }
 
-    private void setMediaOff(long did, boolean off) {
-        if (did == 0) {
-            return;
+    /** The deleted message in its chat, where it stays as a grayed-out "deleted" bubble. */
+    private void showInChat(long did, int mid) {
+        Bundle args = new Bundle();
+        if (DialogObject.isUserDialog(did)) {
+            args.putLong("user_id", did);
+        } else {
+            args.putLong("chat_id", -did);
         }
-        it.belloworld.mercurygram.MgDeletedRetention.setChatMediaOff(currentAccount, did, off);
-        toast(LocaleController.formatString(off ? R.string.HanakoMediaStopped : R.string.HanakoMediaResumed,
-                PlusDeletedMedia.chatTitle(currentAccount, did)));
-        applyFilters();
+        if (mid > 0) {
+            args.putInt("message_id", mid);
+        }
+        presentFragment(new ChatActivity(args));
     }
 
     /** Sticker shown whole, animated (Lottie / video stickers play), on a plain dialog. */
@@ -845,8 +823,7 @@ public class PlusDeletedMediaActivity extends BaseFragment {
         new AlertDialog.Builder(getParentActivity())
                 .setTitle(LocaleController.getString(R.string.PlusF20FilterChat))
                 .setItems(labels, (dialog, which) -> {
-                    chatFilter = which >= 0 && which < ids.length ? ids[which] : 0;
-                    applyFilters();
+                    if (which > 0 && which < ids.length) openChat(ids[which]);
                 })
                 .show();
     }

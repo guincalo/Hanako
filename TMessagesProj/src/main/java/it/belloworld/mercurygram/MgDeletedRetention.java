@@ -272,7 +272,7 @@ public final class MgDeletedRetention {
     //
     // Everything is kept, stickers and GIFs included, with three plain limits the user can see:
     //  1. the size limit for one file (or "don't keep media"),
-    //  2. chats where the user said "stop keeping media here" (from the deleted-media screen),
+    //  2. keep rules per chat / person (see below), which can leave out media types,
     //  3. the storage limit: over it, the oldest copies are dropped first (the messages stay).
     // Only files already on the device are copied; nothing is downloaded again. Copies are shared
     // by photo / document id, so a picture or sticker posted a hundred times is stored once.
@@ -324,39 +324,182 @@ public final class MgDeletedRetention {
                 : org.telegram.messenger.AndroidUtilities.formatFileSize(v);
     }
 
-    /** "Stop keeping media here", set from the deleted-media screen of a chat. */
-    public static boolean isChatMediaOff(int account, long dialogId) {
-        return prefs().getBoolean("mo" + account + "_" + dialogId, false);
-    }
+    // ---- keep rules (hanako 2.02): what to keep, per chat and / or per person ----
+    //
+    // A rule is (chat, person, what). chat 0 = every chat, person 0 = everyone in the chat.
+    // The most specific rule wins: chat + person, then person in every chat, then the chat;
+    // without a rule everything is kept (the global switches above still apply).
 
-    public static void setChatMediaOff(int account, long dialogId, boolean off) {
-        if (off) {
-            prefs().edit().putBoolean("mo" + account + "_" + dialogId, true).apply();
-        } else {
-            prefs().edit().remove("mo" + account + "_" + dialogId).apply();
+    public static final int KEEP_TEXT = 1;
+    public static final int KEEP_PHOTO = 2;
+    public static final int KEEP_VIDEO = 4; // videos and GIFs
+    public static final int KEEP_STICKER = 8;
+    public static final int KEEP_VOICE = 16; // voice and round video messages
+    public static final int KEEP_FILE = 32; // files and music
+    public static final int KEEP_MEDIA = KEEP_PHOTO | KEEP_VIDEO | KEEP_STICKER | KEEP_VOICE | KEEP_FILE;
+    public static final int KEEP_ALL = KEEP_TEXT | KEEP_MEDIA;
+
+    public static final class Rule {
+        public final long chat;
+        public final long user;
+        public final int keep;
+
+        Rule(long chat, long user, int keep) {
+            this.chat = chat;
+            this.user = user;
+            this.keep = keep;
         }
     }
 
-    /** Number of chats (all accounts) where media is not kept. */
-    public static int countChatsMediaOff() {
-        int n = 0;
-        for (String k : prefs().getAll().keySet()) {
-            if (k.startsWith("mo")) {
-                n++;
+    @SuppressWarnings("unchecked")
+    private static final LinkedHashMap<String, Rule>[] rules = new LinkedHashMap[UserConfig.MAX_ACCOUNT_COUNT];
+
+    private static LinkedHashMap<String, Rule> ruleMap(int account) {
+        synchronized (rules) {
+            LinkedHashMap<String, Rule> m = rules[account];
+            if (m != null) {
+                return m;
+            }
+            m = new LinkedHashMap<>();
+            String raw = prefs().getString("r" + account, "");
+            for (String part : raw.split(";")) {
+                String[] f = part.split(":");
+                if (f.length == 3) {
+                    try {
+                        Rule r = new Rule(Long.parseLong(f[0]), Long.parseLong(f[1]), Integer.parseInt(f[2]));
+                        m.put(r.chat + ":" + r.user, r);
+                    } catch (NumberFormatException ignore) {
+                    }
+                }
+            }
+            // 2.01's "stop keeping media here" becomes a chat rule that keeps text only
+            SharedPreferences.Editor e = null;
+            String prefix = "mo" + account + "_";
+            for (String k : prefs().getAll().keySet()) {
+                if (k.startsWith(prefix)) {
+                    try {
+                        long did = Long.parseLong(k.substring(prefix.length()));
+                        m.put(did + ":0", new Rule(did, 0, KEEP_TEXT));
+                    } catch (NumberFormatException ignore) {
+                    }
+                    if (e == null) e = prefs().edit();
+                    e.remove(k);
+                }
+            }
+            rules[account] = m;
+            if (e != null) {
+                e.apply();
+                saveRules(account);
+            }
+            return m;
+        }
+    }
+
+    private static void saveRules(int account) {
+        StringBuilder sb = new StringBuilder();
+        synchronized (rules) {
+            for (Rule r : ruleMap(account).values()) {
+                if (sb.length() > 0) sb.append(';');
+                sb.append(r.chat).append(':').append(r.user).append(':').append(r.keep);
             }
         }
-        return n;
+        prefs().edit().putString("r" + account, sb.toString()).apply();
     }
 
-    /** Turns media back on in every chat where it was switched off. */
-    public static void clearChatsMediaOff() {
-        SharedPreferences.Editor e = prefs().edit();
-        for (String k : prefs().getAll().keySet()) {
-            if (k.startsWith("mo")) {
-                e.remove(k);
+    /** Every rule of the account, newest first. */
+    public static ArrayList<Rule> rules(int account) {
+        ArrayList<Rule> out;
+        synchronized (rules) {
+            out = new ArrayList<>(ruleMap(account).values());
+        }
+        Collections.reverse(out);
+        return out;
+    }
+
+    /** The rule for exactly this chat and person, or null. */
+    public static Rule getRule(int account, long chat, long user) {
+        synchronized (rules) {
+            return ruleMap(account).get(chat + ":" + user);
+        }
+    }
+
+    /** Saves a rule; keep &lt; 0 removes it. */
+    public static void setRule(int account, long chat, long user, int keep) {
+        synchronized (rules) {
+            LinkedHashMap<String, Rule> m = ruleMap(account);
+            String key = chat + ":" + user;
+            m.remove(key);
+            if (keep >= 0) {
+                m.put(key, new Rule(chat, user, keep));
             }
         }
-        e.apply();
+        saveRules(account);
+    }
+
+    /** What is kept for a message from {@code user} in {@code chat} (KEEP_* bits). */
+    public static int keepFor(int account, long chat, long user) {
+        synchronized (rules) {
+            LinkedHashMap<String, Rule> m = ruleMap(account);
+            Rule r = user != 0 ? m.get(chat + ":" + user) : null;
+            if (r == null && user != 0) r = m.get("0:" + user);
+            if (r == null) r = m.get(chat + ":0");
+            return r != null ? r.keep : KEEP_ALL;
+        }
+    }
+
+    /** Who sent a message: the sender peer, else the private chat's peer; 0 when unknown. */
+    public static long senderOf(long dialogId, TLRPC.Message m) {
+        long from = m != null ? MessageObject.getFromChatId(m) : 0;
+        return from != 0 ? from : (DialogObject.isUserDialog(dialogId) ? dialogId : 0);
+    }
+
+    /** KEEP_* bit of a message's media, 0 for text-only messages. */
+    public static int mediaKind(TLRPC.Message m) {
+        TLRPC.MessageMedia media = MessageObject.getMedia(m);
+        if (media instanceof TLRPC.TL_messageMediaPhoto) {
+            return KEEP_PHOTO;
+        }
+        if (media instanceof TLRPC.TL_messageMediaDocument && media.document != null) {
+            TLRPC.Document d = media.document;
+            if (MessageObject.isStickerDocument(d) || MessageObject.isAnimatedStickerDocument(d, true) || MessageObject.isVideoStickerDocument(d)) {
+                return KEEP_STICKER;
+            }
+            if (MessageObject.isVoiceDocument(d) || MessageObject.isRoundVideoDocument(d)) {
+                return KEEP_VOICE;
+            }
+            if (MessageObject.isVideoDocument(d) || MessageObject.isGifDocument(d)) {
+                return KEEP_VIDEO;
+            }
+            return KEEP_FILE;
+        }
+        return 0;
+    }
+
+    /** Whether a deleted / edited message is kept at all under the rules. */
+    public static boolean keepsMessage(int keep, TLRPC.Message m) {
+        int kind = mediaKind(m);
+        return (keep & KEEP_TEXT) != 0 || kind != 0 && (keep & kind) != 0;
+    }
+
+    /** "Text, photos, stickers" / "Nothing" for a rule. */
+    public static String keepLabel(int keep) {
+        if (keep == KEEP_ALL) {
+            return LocaleController.getString(R.string.HanakoRuleKeepAll);
+        }
+        if (keep == 0) {
+            return LocaleController.getString(R.string.HanakoRuleKeepNothing);
+        }
+        final int[] bits = {KEEP_TEXT, KEEP_PHOTO, KEEP_VIDEO, KEEP_STICKER, KEEP_VOICE, KEEP_FILE};
+        final int[] names = {R.string.HanakoRuleText, R.string.PlusF20FilterPhotos, R.string.PlusF20FilterVideos,
+                R.string.PlusF20FilterStickers, R.string.HanakoRuleVoice, R.string.PlusF20FilterFiles};
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < bits.length; i++) {
+            if ((keep & bits[i]) != 0) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(LocaleController.getString(names[i]));
+            }
+        }
+        return sb.toString();
     }
 
     /**
@@ -368,16 +511,17 @@ public final class MgDeletedRetention {
     }
 
     /**
-     * Whether the media of this message is copied when it is deleted / edited away:
+     * Whether the media of this message is copied when it is deleted / edited away
+     * ({@code keep} = {@link #keepFor} of its chat and sender):
      * {@link #NOTE_KEPT}, or the NOTE_* reason it is not.
      */
-    public static int mediaNote(int account, long dialogId, TLRPC.Message m) {
+    public static int mediaNote(int account, long dialogId, TLRPC.Message m, int keep) {
         long max = getMediaMax();
         if (max == 0) {
             return NOTE_MEDIA_OFF;
         }
-        if (isChatMediaOff(account, dialogId)) {
-            return NOTE_CHAT_OFF;
+        if ((keep & mediaKind(m)) == 0) {
+            return NOTE_CHAT_OFF; // a keep rule for this chat or person leaves this media type out
         }
         TLRPC.MessageMedia media = MessageObject.getMedia(m);
         long size = 0;

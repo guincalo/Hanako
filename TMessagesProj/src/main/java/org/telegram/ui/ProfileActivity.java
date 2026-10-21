@@ -10924,7 +10924,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (user != null && username != null && !(myProfile && SharedConfig.hideSensitiveUsername())) {
                     usernameRow = rowCount++;
                 }
-                idRow = rowCount++;
                 if (userInfo != null) {
                     if (userInfo.birthday != null) {
                         birthdayRow = rowCount++;
@@ -15086,7 +15085,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     new SearchResult(9522, getString(R.string.HanakoBackupTitle), getString(R.string.MercurygramSettings), R.drawable.msg_download, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.HanakoBackupActivity())),
                     new SearchResult(9523, getString(R.string.HanakoBackupCreate), getString(R.string.MercurygramSettings), R.drawable.msg_download, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.HanakoBackupActivity())),
                     new SearchResult(9524, getString(R.string.HanakoBackupExportChat), getString(R.string.MercurygramSettings), R.drawable.msg_download, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.HanakoBackupActivity())),
-                    new SearchResult(9525, getString(R.string.PlusF12Header), getString(R.string.MercurygramSettings), R.drawable.plus_ghost, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, it.belloworld.mercurygram.ui.HanakoSettingsSection.screenAt(it.belloworld.mercurygram.PlusPeek.ID_GUARD))),
                     new SearchResult(9526, getString(R.string.HanakoApiTitle), getString(R.string.MercurygramSettings), R.drawable.msg_link, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.HanakoApiActivity())),
 
                     new SearchResult(9540, getString(R.string.MercurygramReduceTrackingFingerprint), getString(R.string.MercurygramSettings), R.drawable.msg2_secret, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, it.belloworld.mercurygram.ui.HanakoSettingsSection.screenAt(it.belloworld.mercurygram.ui.HanakoSettingsSection.ID_REDUCE_TRACKING_FINGERPRINT))), // hanako: merged row

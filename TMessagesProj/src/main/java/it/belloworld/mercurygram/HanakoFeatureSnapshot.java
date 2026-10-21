@@ -78,8 +78,6 @@ final class HanakoFeatureSnapshot {
         put(s, "ghost_exceptions", () -> PlusGhostExceptions.count(a));
         put(s, "story_open_mode", () -> PlusStoryGuard.getOpenMode(a));
         put(s, "story_confirm_interact", () -> PlusStoryGuard.isConfirmInteract(a));
-        put(s, "peek_guard", PlusPeek::isGuardOn);
-        put(s, "peek_long_press_anywhere", PlusPeek::isLongPressAnywhere);
         put(s, "emoji_interactions_off", () -> PlusEmojiInteractions.isInteractionsDisabled(a));
         put(s, "choosing_sticker_hidden", () -> PlusEmojiInteractions.isChoosingStickerHidden(a));
         final String[] prompts = {"voice", "round", "sticker", "gif", "voice_call", "video_call"};
@@ -118,8 +116,7 @@ final class HanakoFeatureSnapshot {
             put(s, "history_keep_" + types[t], () -> MgDeletedRetention.getTypePeriod(a, type));
         }
         put(s, "history_keep_reactions", PlusDeletedReactions::isKeepEnabled);
-        put(s, "deleted_media_chat_menu", PlusDeletedMedia::isChatMenuEnabled);
-        put(s, "deleted_media_chats_off", MgDeletedRetention::countChatsMediaOff); // hanako 2.01
+        put(s, "deleted_keep_rules", () -> MgDeletedRetention.rules(org.telegram.messenger.UserConfig.selectedAccount).size()); // hanako 2.02
         put(s, "vanished_chats_log", () -> PlusDeletedDialogs.isEnabled(a));
 
         // message filters

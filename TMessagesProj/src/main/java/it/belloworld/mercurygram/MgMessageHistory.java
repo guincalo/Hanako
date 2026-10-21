@@ -328,10 +328,15 @@ public class MgMessageHistory {
                             || !MgDeletedRetention.shouldSave(account, uid)) { // hanako: retention "Don't save"
                         continue;
                     }
+                    // hanako 2.02: keep rules per chat / person
+                    final int keep = MgDeletedRetention.keepFor(account, uid, MgDeletedRetention.senderOf(uid, message));
+                    if (!MgDeletedRetention.keepsMessage(keep, message)) {
+                        continue;
+                    }
                     MgHistoryMedia.Plan plan = null;
                     // hanako 2.01: media rules; a message whose media is not kept says why
                     int note = MgHistoryMedia.hasSavableMedia(message)
-                            ? MgDeletedRetention.mediaNote(account, uid, message) : MgDeletedRetention.NOTE_KEPT;
+                            ? MgDeletedRetention.mediaNote(account, uid, message, keep) : MgDeletedRetention.NOTE_KEPT;
                     if (note != MgDeletedRetention.NOTE_KEPT) {
                         // keep the text only
                     } else if (deleted) {
@@ -365,7 +370,8 @@ public class MgMessageHistory {
     public void archiveExpiringSync(int account, long dialogId, TLRPC.Message message) {
         if (!UserConfig.getInstance(account).mg.savedMessagesHistory || message == null
                 || DialogObject.isEncryptedDialog(dialogId) || !MgHistoryMedia.hasSavableMedia(message)
-                || !MgDeletedRetention.shouldSave(account, dialogId)) { // hanako: retention "Don't save"
+                || !MgDeletedRetention.shouldSave(account, dialogId) // hanako: retention "Don't save"
+                || (MgDeletedRetention.keepFor(account, dialogId, MgDeletedRetention.senderOf(dialogId, message)) & MgDeletedRetention.mediaKind(message)) == 0) { // hanako 2.02: keep rules
             return;
         }
         try {

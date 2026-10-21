@@ -84,8 +84,6 @@ public class HanakoSettingsSection {
     public static final int ID_F07_KEEP_REACTIONS = 702;
     // plus f20: saved deleted-media browser (ids 2000-2099)
     public static final int ID_F20_OPEN = 2000;
-    public static final int ID_F20_CHAT_MENU = 2001;
-    public static final int ID_F20_INCLUDE_EDITS = 2002;
 
     // hanako: the old hub's page ids. Pages are gone (everything is one list in the merged
     // "Hanako" screen); a page id now only says which row to scroll to, see open().
@@ -247,7 +245,9 @@ public class HanakoSettingsSection {
     public static final int ID_NAV = 8900;
     public static final int ID_MEDIA_MAX = 2110;
     public static final int ID_MEDIA_CAP = 2111;
-    public static final int ID_MEDIA_CHATS_OFF = 2112;
+    public static final int ID_RULE_ADD = 2113;
+    public static final int ID_RULE = 2200; // + index into shownRules
+    private final java.util.ArrayList<it.belloworld.mercurygram.MgDeletedRetention.Rule> shownRules = new java.util.ArrayList<>();
 
     public void fill(int part, ArrayList<UItem> items) {
         final int acc = getCurrentAccount();
@@ -287,8 +287,8 @@ public class HanakoSettingsSection {
                         .setChecked(getUserConfig().mg.hideStories));
                 break;
             case PART_MEDIA:
-                items.add(MgSettingsScope.globalCheck(ID_DISABLE_PROXIMITY_SENSOR, LocaleController.getString(R.string.MercurygramDisableProximitySensor))
-                        .setChecked(SharedConfig.mg_disableProximitySensor));
+                items.add(MgSettingsScope.globalCheck(ID_DISABLE_PROXIMITY_SENSOR, LocaleController.getString(R.string.HanakoProximitySensor))
+                        .setChecked(!SharedConfig.mg_disableProximitySensor));
                 break;
             case PART_NETWORK:
                 fillNetwork(items);
@@ -392,9 +392,9 @@ public class HanakoSettingsSection {
         items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDisableInstantViewAbout)));
 
         items.add(UItem.asCheck(ID_DISABLE_LINK_PREVIEWS,
-                        LocaleController.getString(R.string.MercurygramDisableLinkPreviews))
-                .setChecked(getUserConfig().mg.disableLinkPreviews));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDisableLinkPreviewsAbout)));
+                        LocaleController.getString(R.string.HanakoLinkPreviews))
+                .setChecked(!getUserConfig().mg.disableLinkPreviews));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoLinkPreviewsInfo)));
 
         items.add(UItem.asCheck(ID_STRIP_TRACKING_PARAMS,
                         LocaleController.getString(R.string.MercurygramStripTrackingParams))
@@ -420,9 +420,9 @@ public class HanakoSettingsSection {
     private void fillUpdates(ArrayList<UItem> items) {
         if (MgUpdateChecker.canSelfInstall()) {
             items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsUpdates)));
-            items.add(MgSettingsScope.globalCheck(ID_DISABLE_AUTO_UPDATE, LocaleController.getString(R.string.MercurygramDisableAutoUpdate))
-                    .setChecked(SharedConfig.disableAutoUpdate));
-            items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDisableAutoUpdateAbout)));
+            items.add(MgSettingsScope.globalCheck(ID_DISABLE_AUTO_UPDATE, LocaleController.getString(R.string.HanakoCheckUpdates))
+                    .setChecked(!SharedConfig.disableAutoUpdate));
+            items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoCheckUpdatesInfo)));
 
             // Hidden on the .beta package — that channel already follows
             // /releases unconditionally, so the toggle would be meaningless.
@@ -451,15 +451,17 @@ public class HanakoSettingsSection {
         items.add(UItem.asHeader(LocaleController.getString(R.string.PlusGhostMode)));
         items.add(UItem.asCheck(ID_GHOST_ON, LocaleController.getString(R.string.PlusGhostMode)).setChecked(ghostOn));
         if (ghostOn) {
-            // order matches PlusGhost option indices
-            final int[] ghostLabelRes = {R.string.PlusGhostOptNoReads, R.string.PlusGhostOptNoTyping, R.string.PlusGhostOptStayOffline,
-                    R.string.PlusGhostOptNoStories, R.string.PlusGhostOptReadOnReply, R.string.PlusGhostOptForceOffline};
-            final String[] ghostLabels = new String[ghostLabelRes.length];
+            // order matches PlusGhost option indices: the first four are what ghost mode hides
+            final int[] ghostLabelRes = {R.string.PlusGhostExcSendReads, R.string.PlusGhostExcSendTyping, R.string.HanakoGhostOnline,
+                    R.string.HanakoGhostStories, R.string.PlusGhostOptReadOnReply, R.string.PlusGhostOptForceOffline};
+            items.add(UItem.asShadow(null));
+            items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoGhostHides)));
             for (int i = 0; i < ghostLabelRes.length; i++) {
-                ghostLabels[i] = LocaleController.getString(ghostLabelRes[i]);
-            }
-            for (int i = 0; i < ghostLabels.length; i++) {
-                items.add(UItem.asCheck(ID_GHOST_OPT + i, ghostLabels[i])
+                if (i == 4) {
+                    items.add(UItem.asShadow(null));
+                    items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoGhostBehaviour)));
+                }
+                items.add(UItem.asCheck(ID_GHOST_OPT + i, LocaleController.getString(ghostLabelRes[i]))
                         .setChecked(it.belloworld.mercurygram.PlusGhost.isHidden(acc, i)));
             }
             // plus f09: send without sound while ghost mode is on
@@ -482,9 +484,6 @@ public class HanakoSettingsSection {
         it.belloworld.mercurygram.PlusStoryGuard.addSettingsItems(items, acc);
         // plus f06 end
 
-        // plus f12 begin
-        it.belloworld.mercurygram.PlusPeek.addSettingsItems(items);
-        // plus f12 end
 
         // plus f15 begin
         it.belloworld.mercurygram.PlusEmojiInteractions.addSettingsItems(items, acc);
@@ -515,18 +514,26 @@ public class HanakoSettingsSection {
                     it.belloworld.mercurygram.MgDeletedRetention.mediaMaxLabel(it.belloworld.mercurygram.MgDeletedRetention.getMediaMax())));
             items.add(UItem.asButton(ID_MEDIA_CAP, LocaleController.getString(R.string.HanakoDeletedMediaCap),
                     it.belloworld.mercurygram.MgDeletedRetention.mediaCapLabel(it.belloworld.mercurygram.MgDeletedRetention.getMediaCap())));
-            int chatsOff = it.belloworld.mercurygram.MgDeletedRetention.countChatsMediaOff();
-            if (chatsOff > 0) {
-                items.add(UItem.asButton(ID_MEDIA_CHATS_OFF, LocaleController.getString(R.string.HanakoDeletedMediaChatsOff), Integer.toString(chatsOff)));
-            }
             items.add(UItem.asButton(ID_F20_OPEN, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title), deletedMediaSize));
             items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.HanakoDeletedMediaInfo))));
+
+            // hanako 2.02: keep rules per chat / person, on top of the defaults above
+            items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoRulesHeader)));
+            java.util.ArrayList<it.belloworld.mercurygram.MgDeletedRetention.Rule> rules = it.belloworld.mercurygram.MgDeletedRetention.rules(acc);
+            shownRules.clear();
+            for (int i = 0; i < rules.size() && i < 200; i++) {
+                it.belloworld.mercurygram.MgDeletedRetention.Rule r = rules.get(i);
+                shownRules.add(r);
+                String who = r.user == 0 ? HanakoKeepRuleActivity.chatName(acc, r.chat)
+                        : HanakoKeepRuleActivity.userName(acc, r.user) + " · " + HanakoKeepRuleActivity.chatName(acc, r.chat);
+                items.add(UItem.asButton(ID_RULE + i, who, it.belloworld.mercurygram.MgDeletedRetention.keepLabel(r.keep)));
+            }
+            items.add(UItem.asButton(ID_RULE_ADD, R.drawable.msg_add, LocaleController.getString(R.string.HanakoRuleAdd)));
+            items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoRulesInfo)));
 
             items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoDeletedInChatsHeader)));
             items.add(MgSettingsScope.globalCheck(ID_F07_KEEP_REACTIONS, LocaleController.getString(R.string.PlusF07KeepReactions))
                     .setChecked(it.belloworld.mercurygram.PlusDeletedReactions.isKeepEnabled()));
-            items.add(UItem.asCheck(ID_F20_CHAT_MENU, LocaleController.getString(R.string.PlusF20ChatMenu))
-                    .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isChatMenuEnabled()));
             items.add(UItem.asCheck(ID_F07_LOG_DIALOGS, LocaleController.getString(R.string.PlusF07LogDialogs))
                     .setChecked(it.belloworld.mercurygram.PlusDeletedDialogs.isEnabled(acc)));
             items.add(UItem.asButton(ID_F07_OPEN_LOG, LocaleController.getString(R.string.PlusF07DeletedDialogsTitle),
@@ -680,18 +687,13 @@ public class HanakoSettingsSection {
             presentFragment(new org.telegram.ui.ForkSettingsActivity(item.id - ID_NAV).unlockedFrom(host));
             return;
         }
-        if (item.id == ID_MEDIA_CHATS_OFF) {
-            if (getParentActivity() == null) return;
-            showDialog(new org.telegram.ui.ActionBar.AlertDialog.Builder(getParentActivity())
-                    .setTitle(LocaleController.getString(R.string.HanakoDeletedMediaChatsOff))
-                    .setMessage(LocaleController.formatString(R.string.HanakoDeletedMediaChatsOffConfirm,
-                            it.belloworld.mercurygram.MgDeletedRetention.countChatsMediaOff()))
-                    .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
-                    .setPositiveButton(LocaleController.getString(R.string.HanakoMediaResumeAll), (d, w) -> {
-                        it.belloworld.mercurygram.MgDeletedRetention.clearChatsMediaOff();
-                        refreshList();
-                    })
-                    .create());
+        if (item.id == ID_RULE_ADD) {
+            presentFragment(new HanakoKeepRuleActivity(0, 0));
+            return;
+        }
+        if (item.id >= ID_RULE && item.id < ID_RULE + shownRules.size()) {
+            it.belloworld.mercurygram.MgDeletedRetention.Rule r = shownRules.get(item.id - ID_RULE);
+            presentFragment(new HanakoKeepRuleActivity(r.chat, r.user));
             return;
         }
         if (item.id == ID_MEDIA_MAX || item.id == ID_MEDIA_CAP) {
@@ -733,11 +735,6 @@ public class HanakoSettingsSection {
             return;
         }
         // plus f08 end
-        // plus f12 begin
-        if (it.belloworld.mercurygram.PlusPeek.onSettingsClick(item.id, refresh)) {
-            return;
-        }
-        // plus f12 end
         // plus f13: message shot toggle
         if (item.id == ID_MESSAGE_SHOT) {
             it.belloworld.mercurygram.PlusMessageShot.setEnabled(!it.belloworld.mercurygram.PlusMessageShot.isEnabled());
@@ -841,11 +838,6 @@ public class HanakoSettingsSection {
         // plus f20 begin: saved deleted-media browser
         if (item.id == ID_F20_OPEN) {
             presentFragment(new PlusDeletedMediaActivity(0));
-            return;
-        }
-        if (item.id == ID_F20_CHAT_MENU) {
-            it.belloworld.mercurygram.PlusDeletedMedia.setChatMenuEnabled(!it.belloworld.mercurygram.PlusDeletedMedia.isChatMenuEnabled());
-            refreshList();
             return;
         }
         // plus f20 end

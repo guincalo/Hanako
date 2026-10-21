@@ -3393,7 +3393,6 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
-        it.belloworld.mercurygram.PlusPeek.onDestroy(this); // plus f12
         if (chatActivityEnterView != null) {
             chatActivityEnterView.onDestroy();
         }
@@ -4138,9 +4137,6 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 } else if (id == it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.CHAT_MENU_ID) { // hanako: deleted messages in this chat
                     it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_DELETED); // hanako: usage statistics (off by default)
                     it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.showChatMenu(ChatActivity.this, headerItem, currentAccount, dialog_id);
-                } else if (id == it.belloworld.mercurygram.PlusDeletedMedia.MENU_ID) { // plus f20
-                    it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_DELETED_MEDIA); // hanako: usage statistics (off by default)
-                    presentFragment(new it.belloworld.mercurygram.ui.PlusDeletedMediaActivity(dialog_id));
                 } else if (id == it.belloworld.mercurygram.ui.HanakoChatExportActivity.CHAT_MENU_ID) { // hanako: chat export
                     it.belloworld.mercurygram.HanakoTelemetry.count(it.belloworld.mercurygram.HanakoTelemetry.CHAT_MENU_EXPORT); // hanako: usage statistics (off by default)
                     presentFragment(new it.belloworld.mercurygram.ui.HanakoChatExportActivity(dialog_id));
@@ -4558,9 +4554,6 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             }
             if (it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.showChatMenuItem(currentAccount, dialog_id, chatMode)) { // hanako: deleted messages in this chat
                 headerItem.lazilyAddSubItem(it.belloworld.mercurygram.ui.HanakoKeepDeletedActivity.CHAT_MENU_ID, R.drawable.msg_delete_auto, LocaleController.getString(R.string.HanakoDeletedChatMenu));
-            }
-            if (it.belloworld.mercurygram.PlusDeletedMedia.showChatMenu(currentAccount, dialog_id)) { // plus f20
-                headerItem.lazilyAddSubItem(it.belloworld.mercurygram.PlusDeletedMedia.MENU_ID, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title));
             }
             if (chatMode == 0 && it.belloworld.mercurygram.ui.HanakoChatExportActivity.showChatMenu(dialog_id)) { // hanako: chat export
                 headerItem.lazilyAddSubItem(it.belloworld.mercurygram.ui.HanakoChatExportActivity.CHAT_MENU_ID, R.drawable.msg_download, LocaleController.getString(R.string.HanakoChatExportMenu));
@@ -16779,7 +16772,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                 }
 
                 // [classic] #95: a visible unvoted poll clears itself, same as an unread reaction does.
-                if (messageObject != null && fragmentOpened && openAnimationEnded && !it.belloworld.mercurygram.PlusPeek.frozen(ChatActivity.this.isInPreviewMode()) /* plus f12 */ && (chatListItemAnimator == null || !chatListItemAnimator.isRunning()) && messageCell.checkUnreadPollVotes()) {
+                if (messageObject != null && fragmentOpened && openAnimationEnded && !ChatActivity.this.isInPreviewMode() /* hanako: a preview leaves reactions and polls unread */ && (chatListItemAnimator == null || !chatListItemAnimator.isRunning()) && messageCell.checkUnreadPollVotes()) {
                     pollVotesMentionCount--;
                     getMessagesStorage().markMessagePollVotesAsRead(getDialogId(), getTopicId(), messageObject.getId());
                     if (pollVotesMentionCount <= 0) {
@@ -16793,7 +16786,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     }
                     updatePollVotesMentionButton(true);
                 }
-                if (messageObject != null && fragmentOpened && openAnimationEnded && !it.belloworld.mercurygram.PlusPeek.frozen(ChatActivity.this.isInPreviewMode()) /* plus f12 */ && (chatListItemAnimator == null || !chatListItemAnimator.isRunning()) && messageCell.checkUnreadReactions(clipTop, chatListView.getMeasuredHeight() - blurredViewBottomOffset)) {
+                if (messageObject != null && fragmentOpened && openAnimationEnded && !ChatActivity.this.isInPreviewMode() /* hanako: a preview leaves reactions and polls unread */ && (chatListItemAnimator == null || !chatListItemAnimator.isRunning()) && messageCell.checkUnreadReactions(clipTop, chatListView.getMeasuredHeight() - blurredViewBottomOffset)) {
                     reactionsMentionCount--;
                     getMessagesStorage().markMessageReactionsAsRead(getDialogId(), getTopicId(), messageObject.getId());
                     if (reactionsMentionCount <= 0) {
@@ -16827,7 +16820,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     maxVisibleId = Math.max(maxVisibleId, messageObject.getId());
                 }
                 hasTopicSeparator = cell.topicSeparator != null;
-                if (messageObject != null && fragmentOpened && openAnimationEnded && !it.belloworld.mercurygram.PlusPeek.frozen(ChatActivity.this.isInPreviewMode()) /* plus f12 */ && (chatListItemAnimator == null || !chatListItemAnimator.isRunning()) && cell.checkUnreadReactions(clipTop, chatListView.getMeasuredHeight() - blurredViewBottomOffset)) {
+                if (messageObject != null && fragmentOpened && openAnimationEnded && !ChatActivity.this.isInPreviewMode() /* hanako: a preview leaves reactions and polls unread */ && (chatListItemAnimator == null || !chatListItemAnimator.isRunning()) && cell.checkUnreadReactions(clipTop, chatListView.getMeasuredHeight() - blurredViewBottomOffset)) {
                     reactionsMentionCount--;
                     getMessagesStorage().markMessageReactionsAsRead(getDialogId(), getTopicId(), messageObject.getId());
                     if (reactionsMentionCount <= 0) {
@@ -21592,7 +21585,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
 
                 resumeDelayedFragmentAnimation();
                 MessageObject messageObject = messArr.get(0);
-                if (!it.belloworld.mercurygram.PlusPeek.frozen(inPreviewMode)) { // plus f12: a peek leaves the chat unread
+                if (!inPreviewMode) { // hanako: a preview leaves the chat unread
                     getMessagesController().markDialogAsRead(dialog_id, messageObject.getId(), messageObject.getId(), messageObject.messageOwner.date, false, 0, 0, true, 0);
                 }
                 AndroidUtilities.cancelRunOnUIThread(fragmentTransitionRunnable);
@@ -30881,7 +30874,6 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     @Override
     public void setInPreviewMode(boolean value) {
         super.setInPreviewMode(value);
-        it.belloworld.mercurygram.PlusPeek.onPreviewMode(this, currentAccount, dialog_id, value); // plus f12
         if (currentUser != null && audioCallIconItem != null) {
             TLRPC.UserFull userFull = getMessagesController().getUserFull(currentUser.id);
             if (userFull != null && userFull.phone_calls_available) {
@@ -35130,6 +35122,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
             }
             case OPTION_EDIT_HISTORY: {
                 presentFragment(new it.belloworld.mercurygram.ui.MgMessageEditHistoryActivity(selectedObject));
+                break;
+            }
+            case it.belloworld.mercurygram.ui.HanakoKeepRuleActivity.OPTION_KEEP_RULE: { // hanako 2.02
+                presentFragment(it.belloworld.mercurygram.ui.HanakoKeepRuleActivity.forMessage(currentAccount, dialog_id, selectedObject));
                 break;
             }
             case it.belloworld.mercurygram.PlusMessageFilters.OPTION_MESSAGE_FILTERS: { // plus f04
@@ -46520,6 +46516,11 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     icons.add(R.drawable.msg_archive_hide);
                 }
                 // plus f04 end
+                if (it.belloworld.mercurygram.ui.HanakoKeepRuleActivity.canShowMenu(currentAccount, selectedObject, chatMode)) { // hanako 2.02: keep rule for this sender / chat
+                    items.add(LocaleController.getString(R.string.HanakoRuleMenu));
+                    options.add(it.belloworld.mercurygram.ui.HanakoKeepRuleActivity.OPTION_KEEP_RULE);
+                    icons.add(R.drawable.msg_delete_auto);
+                }
             } else {
                 if (allowChatActions && !isInsideContainer) {
                     items.add(LocaleController.getString(R.string.Reply));

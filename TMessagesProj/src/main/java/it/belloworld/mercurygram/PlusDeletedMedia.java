@@ -55,7 +55,6 @@ import java.util.regex.Pattern;
 public final class PlusDeletedMedia {
 
     /** ChatActivity header-menu id (f20 range 2000-2099). */
-    public static final int MENU_ID = 2050;
 
     public static final int CAT_PHOTO = 1;
     public static final int CAT_VIDEO = 2;
@@ -69,7 +68,6 @@ public final class PlusDeletedMedia {
     public static final int ORIGIN_EDITED = 2;
 
     private static final String PREFS = "plus_f20";
-    private static final String KEY_CHAT_MENU = "chat_menu";
     private static final int LOAD_LIMIT = 3000;
     private static final long SHARE_TTL_MS = 60 * 60 * 1000L;
 
@@ -151,18 +149,6 @@ public final class PlusDeletedMedia {
         return ApplicationLoader.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    public static boolean isChatMenuEnabled() {
-        return prefs().getBoolean(KEY_CHAT_MENU, true);
-    }
-
-    public static void setChatMenuEnabled(boolean value) {
-        prefs().edit().putBoolean(KEY_CHAT_MENU, value).apply();
-    }
-
-    /** ChatActivity hook: whether to offer "Deleted media" in this chat's header menu. */
-    public static boolean showChatMenu(int account, long dialogId) {
-        return dialogId != 0 && !DialogObject.isEncryptedDialog(dialogId) && isChatMenuEnabled();
-    }
 
     // ---- viewer guard ----
 

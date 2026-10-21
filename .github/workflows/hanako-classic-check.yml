@@ -24,6 +24,8 @@ jobs:
           submodules: false
       - name: Gradle-config submodules only
         run: git submodule update --init --depth 1 TMessagesProj/lib/jlatexmath TMessagesProj_Modules/media
+      - name: String keys (no LOC_ERR)
+        run: python3 scripts/check_string_keys.py .
       - uses: actions/setup-java@v4
         with:
           java-version: '17'

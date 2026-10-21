@@ -650,8 +650,8 @@ public class ForkSettingsActivity extends BaseFragment {
                 fillForkPrivacy(items);
                 fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_TRACKING, items);
                 items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoAiSearchHeader)));
-                items.add(UItem.asButtonCheck(ID_DISABLE_GLOBAL_SEARCH, LocaleController.getString(R.string.DisableGlobalSearch), LocaleController.getString(R.string.DisableGlobalSearchInfo))
-                    .setChecked(pref("disableGlobalSearch", false)).setMultiline(true));
+                items.add(UItem.asButtonCheck(ID_DISABLE_GLOBAL_SEARCH, LocaleController.getString(R.string.HanakoGlobalSearch), LocaleController.getString(R.string.HanakoGlobalSearchInfo))
+                    .setChecked(!pref("disableGlobalSearch", false)).setMultiline(true));
                 items.add(UItem.asButtonCheck(ID_HIDE_AI_EDITOR, LocaleController.getString(R.string.HideAiEditor), LocaleController.getString(R.string.HideAiEditorInfo))
                     .setChecked(pref("hideAiEditor", false)).setMultiline(true));
                 items.add(UItem.asButtonCheck(ID_SHOW_AI_SUMMARY, LocaleController.getString(R.string.ShowAiSummary), LocaleController.getString(R.string.ShowAiSummaryInfo))
@@ -752,8 +752,8 @@ public class ForkSettingsActivity extends BaseFragment {
             .setChecked(pref("openArchiveOnPull", true)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_HIDE_STORIES_IN_ARCHIVE, LocaleController.getString(R.string.HideStoriesInArchive), LocaleController.getString(R.string.HideStoriesInArchiveInfo))
             .setChecked(pref("hideStoriesInArchive", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_DISABLE_THUMBS_IN_DIALOG_LIST, LocaleController.getString(R.string.DisableThumbsInDialogList), LocaleController.getString(R.string.DisableThumbsInDialogListInfo))
-            .setChecked(pref("disableThumbsInDialogList", false)).setMultiline(true));
+        items.add(UItem.asButtonCheck(ID_DISABLE_THUMBS_IN_DIALOG_LIST, LocaleController.getString(R.string.HanakoThumbsInList), LocaleController.getString(R.string.HanakoThumbsInListInfo))
+            .setChecked(!pref("disableThumbsInDialogList", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_HIDE_CONTACTS_IN_DIALOGS, LocaleController.getString(R.string.HideContactsInDialogs), LocaleController.getString(R.string.HideContactsInDialogsInfo))
             .setChecked(pref("hideContactsInDialogs", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_ENABLE_LAST_SEEN_DOTS, LocaleController.getString(R.string.EnableLastSeenDots), LocaleController.getString(R.string.EnableLastSeenDotsInfo))
@@ -793,8 +793,8 @@ public class ForkSettingsActivity extends BaseFragment {
             .setChecked(pref("hideSendAs", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_DELETE_ALL_UNPINNED, LocaleController.getString(R.string.AddDeleteAllUnpinnedMessages), LocaleController.getString(R.string.AddDeleteAllUnpinnedMessagesInfo))
             .setChecked(pref("addItemToDeleteAllUnpinnedMessages", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_DISABLE_SLIDE_TO_NEXT_CHANNEL, LocaleController.getString(R.string.DisableSlideToNextChannel), LocaleController.getString(R.string.DisableSlideToNextChannelInfo))
-            .setChecked(pref("disableSlideToNextChannel", false)).setMultiline(true));
+        items.add(UItem.asButtonCheck(ID_DISABLE_SLIDE_TO_NEXT_CHANNEL, LocaleController.getString(R.string.HanakoSlideNextChannel), LocaleController.getString(R.string.HanakoSlideNextChannelInfo))
+            .setChecked(!pref("disableSlideToNextChannel", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_FORMAT_WITH_SECONDS, LocaleController.getString(R.string.FormatWithSeconds), LocaleController.getString(R.string.FormatWithSecondsInfo))
             .setChecked(pref("formatWithSeconds", false)).setMultiline(true));
         items.add(UItem.asSettingsCell(ID_FORMATTING_MENU, LocaleController.getString(R.string.FormattingMenu), null));
@@ -806,8 +806,8 @@ public class ForkSettingsActivity extends BaseFragment {
 
     private void fillForkStickers(ArrayList<UItem> items) {
         items.add(UItem.asHeader(LocaleController.getString(R.string.Reactions)));
-        items.add(UItem.asButtonCheck(ID_DISABLE_QUICK_REACTION, LocaleController.getString(R.string.DisableQuickReaction), LocaleController.getString(R.string.DisableQuickReactionInfo))
-            .setChecked(pref("disableQuickReaction", false)).setMultiline(true));
+        items.add(UItem.asButtonCheck(ID_DISABLE_QUICK_REACTION, LocaleController.getString(R.string.HanakoQuickReaction), LocaleController.getString(R.string.HanakoQuickReactionInfo))
+            .setChecked(!pref("disableQuickReaction", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_HIDE_MESSAGE_REACTIONS, LocaleController.getString(R.string.HideMessageReactions), LocaleController.getString(R.string.HideMessageReactionsInfo))
             .setChecked(pref("hideMessageReactions", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_HIDE_SAVED_MESSAGES_TAGS, LocaleController.getString(R.string.HideSavedMessagesTags), LocaleController.getString(R.string.HideSavedMessagesTagsInfo))
@@ -835,8 +835,8 @@ public class ForkSettingsActivity extends BaseFragment {
             .setChecked(pref("botSkipShare", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_BOT_SKIP_FULLSCREEN, LocaleController.getString(R.string.BotSkipFullscreen), LocaleController.getString(R.string.BotSkipFullscreenInfo))
             .setChecked(pref("botSkipFullscreen", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_DISABLE_PARAMETERS_FROM_BOT_LINKS, LocaleController.getString(R.string.DisableParametersFromBotLinks), LocaleController.getString(R.string.DisableParametersFromBotLinksInfo))
-            .setChecked(pref("disableParametersFromBotLinks", false)).setMultiline(true));
+        items.add(UItem.asButtonCheck(ID_DISABLE_PARAMETERS_FROM_BOT_LINKS, LocaleController.getString(R.string.HanakoBotLinkParams), LocaleController.getString(R.string.HanakoBotLinkParamsInfo))
+            .setChecked(!pref("disableParametersFromBotLinks", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_DISABLE_DEFAULT_IN_APP_BROWSER, LocaleController.getString(R.string.DisableDefaultInAppBrowser), LocaleController.getString(R.string.DisableDefaultInAppBrowserInfo))
             .setChecked(pref("disableDefaultInAppBrowser", org.telegram.messenger.BuildConfig.SKIP_INTERNAL_BROWSER_BY_DEFAULT)).setMultiline(true));
         items.add(UItem.asShadow(null));
@@ -853,29 +853,29 @@ public class ForkSettingsActivity extends BaseFragment {
             .setMultiline(true));
         items.add(UItem.asButtonCheck(ID_PHOTO_HAS_STICKER, LocaleController.getString(R.string.PhotoHasSticker), LocaleController.getString(R.string.PhotoHasStickerInfo))
             .setChecked(pref("photoHasSticker", true)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_DISABLE_MOTION_PHOTO, LocaleController.getString(R.string.DisableMotionPhoto), LocaleController.getString(R.string.DisableMotionPhotoInfo))
-            .setChecked(pref("disableMotionPhoto", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_DISABLE_FLIP_PHOTOS, LocaleController.getString(R.string.DisableFlipPhotos), LocaleController.getString(R.string.DisableFlipPhotosInfo))
-            .setChecked(pref("disableFlipPhotos", false)).setMultiline(true));
+        items.add(UItem.asButtonCheck(ID_DISABLE_MOTION_PHOTO, LocaleController.getString(R.string.HanakoMotionPhotos), LocaleController.getString(R.string.HanakoMotionPhotosInfo))
+            .setChecked(!pref("disableMotionPhoto", false)).setMultiline(true));
+        items.add(UItem.asButtonCheck(ID_DISABLE_FLIP_PHOTOS, LocaleController.getString(R.string.HanakoTapFlipPhotos), LocaleController.getString(R.string.HanakoTapFlipPhotosInfo))
+            .setChecked(!pref("disableFlipPhotos", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_REAR_VIDEO_MESSAGES, LocaleController.getString(R.string.RearVideoMessages), LocaleController.getString(R.string.RearVideoMessagesInfo))
             .setChecked(pref("rearVideoMessages", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_DISABLE_PLAY_VISIBLE_VIDEO_ON_VOLUME, LocaleController.getString(R.string.DisablePlayVisibleVideoOnVolume), LocaleController.getString(R.string.DisablePlayVisibleVideoOnVolumeInfo))
-            .setChecked(pref("disablePlayVisibleVideoOnVolume", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_DISABLE_RECENT_FILES_ATTACHMENT, LocaleController.getString(R.string.DisableRecentFilesAttachment), LocaleController.getString(R.string.DisableRecentFilesAttachmentInfo))
-            .setChecked(pref("disableRecentFilesAttachment", false)).setMultiline(true));
+        items.add(UItem.asButtonCheck(ID_DISABLE_PLAY_VISIBLE_VIDEO_ON_VOLUME, LocaleController.getString(R.string.HanakoVolumeUnmute), LocaleController.getString(R.string.HanakoVolumeUnmuteInfo))
+            .setChecked(!pref("disablePlayVisibleVideoOnVolume", false)).setMultiline(true));
+        items.add(UItem.asButtonCheck(ID_DISABLE_RECENT_FILES_ATTACHMENT, LocaleController.getString(R.string.HanakoRecentFiles), LocaleController.getString(R.string.HanakoRecentFilesInfo))
+            .setChecked(!pref("disableRecentFilesAttachment", false)).setMultiline(true));
         fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_MEDIA, items);
         items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.ForkSectionVoice)));
         items.add(UItem.asSettingsCell(ID_VOICE_QUALITY, LocaleController.getString(R.string.VoiceMessageQuality), getVoiceQualityText()));
-        items.add(UItem.asButtonCheck(ID_DISABLE_AUTOPLAY_NEXT_VOICE, LocaleController.getString(R.string.DisableAutoplayNextVoice), LocaleController.getString(R.string.DisableAutoplayNextVoiceInfo))
-            .setChecked(pref("disableAutoplayNextVoice", false)).setMultiline(true));
+        items.add(UItem.asButtonCheck(ID_DISABLE_AUTOPLAY_NEXT_VOICE, LocaleController.getString(R.string.HanakoAutoplayNextVoice), LocaleController.getString(R.string.HanakoAutoplayNextVoiceInfo))
+            .setChecked(!pref("disableAutoplayNextVoice", false)).setMultiline(true));
         items.add(UItem.asSettingsCell(ID_OFFLINE_STT, LocaleController.getString(R.string.OfflineTranscription), getOfflineTranscriberText()));
         items.add(UItem.asCheck(ID_CLOUDFLARE_ENABLE_STT, LocaleController.getString(R.string.CloudflareEnableSTT))
             .setChecked(SharedConfig.cfEnableStt));
         items.add(UItem.asSettingsCell(ID_CLOUDFLARE_CREDENTIALS, LocaleController.getString(R.string.CloudflareCredentials), ""));
         items.add(UItem.asSettingsCell(ID_TRANSLATION_PROVIDER, LocaleController.getString(R.string.TranslationEngine), getTranslationProviderText()));
-        items.add(UItem.asShadow(null));
+        items.add(UItem.asShadow(AndroidUtilities.replaceTags(LocaleController.getString(R.string.HanakoVoiceToTextInfo)))); // hanako
 
     }
 
@@ -923,6 +923,15 @@ public class ForkSettingsActivity extends BaseFragment {
         editor.commit();
         setCellChecked(view, value);
         return value;
+    }
+
+    /** hanako: rows shown as the positive option ("Double-tap to react") over Forkgram's negative pref ("disableQuickReaction"). */
+    private boolean toggleInverted(String option, UItem item, View view) {
+        final boolean shown = !item.checked;
+        item.checked = shown;
+        prefs().edit().putBoolean(option, !shown).commit();
+        setCellChecked(view, shown);
+        return !shown;
     }
 
     private static void setCellChecked(View view, boolean value) {
@@ -998,9 +1007,9 @@ public class ForkSettingsActivity extends BaseFragment {
         } else if (id == ID_HIDE_STORIES_IN_ARCHIVE) {
             toggle("hideStoriesInArchive", item, view);
         } else if (id == ID_DISABLE_THUMBS_IN_DIALOG_LIST) {
-            toggle("disableThumbsInDialogList", item, view);
+            toggleInverted("disableThumbsInDialogList", item, view);
         } else if (id == ID_DISABLE_GLOBAL_SEARCH) {
-            toggle("disableGlobalSearch", item, view);
+            toggleInverted("disableGlobalSearch", item, view);
         } else if (id == ID_HIDE_CONTACTS_IN_DIALOGS) {
             toggle("hideContactsInDialogs", item, view);
         } else if (id == ID_ENABLE_LAST_SEEN_DOTS) {
@@ -1023,7 +1032,7 @@ public class ForkSettingsActivity extends BaseFragment {
         } else if (id == ID_DELETE_ALL_UNPINNED) {
             toggle("addItemToDeleteAllUnpinnedMessages", item, view);
         } else if (id == ID_DISABLE_SLIDE_TO_NEXT_CHANNEL) {
-            toggle("disableSlideToNextChannel", item, view);
+            toggleInverted("disableSlideToNextChannel", item, view);
         } else if (id == ID_FORMAT_WITH_SECONDS) {
             toggle("formatWithSeconds", item, view);
         } else if (id == ID_HIDE_AI_EDITOR) {
@@ -1036,7 +1045,7 @@ public class ForkSettingsActivity extends BaseFragment {
             presentFragment(new LinkReplacementsActivity());
 
         } else if (id == ID_DISABLE_QUICK_REACTION) {
-            toggle("disableQuickReaction", item, view);
+            toggleInverted("disableQuickReaction", item, view);
         } else if (id == ID_HIDE_MESSAGE_REACTIONS) {
             toggle("hideMessageReactions", item, view);
         } else if (id == ID_HIDE_SAVED_MESSAGES_TAGS) {
@@ -1061,20 +1070,20 @@ public class ForkSettingsActivity extends BaseFragment {
         } else if (id == ID_PHOTO_HAS_STICKER) {
             toggle("photoHasSticker", item, view);
         } else if (id == ID_DISABLE_MOTION_PHOTO) {
-            toggle("disableMotionPhoto", item, view);
+            toggleInverted("disableMotionPhoto", item, view);
         } else if (id == ID_DISABLE_FLIP_PHOTOS) {
-            toggle("disableFlipPhotos", item, view);
+            toggleInverted("disableFlipPhotos", item, view);
         } else if (id == ID_REAR_VIDEO_MESSAGES) {
             toggle("rearVideoMessages", item, view);
         } else if (id == ID_DISABLE_PLAY_VISIBLE_VIDEO_ON_VOLUME) {
-            toggle("disablePlayVisibleVideoOnVolume", item, view);
+            toggleInverted("disablePlayVisibleVideoOnVolume", item, view);
         } else if (id == ID_DISABLE_RECENT_FILES_ATTACHMENT) {
-            toggle("disableRecentFilesAttachment", item, view);
+            toggleInverted("disableRecentFilesAttachment", item, view);
 
         } else if (id == ID_VOICE_QUALITY) {
             showVoiceQualityDialog();
         } else if (id == ID_DISABLE_AUTOPLAY_NEXT_VOICE) {
-            toggle("disableAutoplayNextVoice", item, view);
+            toggleInverted("disableAutoplayNextVoice", item, view);
         } else if (id == ID_OFFLINE_STT) {
             showOfflineTranscriberDialog();
         } else if (id == ID_CLOUDFLARE_ENABLE_STT) {
@@ -1095,7 +1104,7 @@ public class ForkSettingsActivity extends BaseFragment {
         } else if (id == ID_BOT_SKIP_FULLSCREEN) {
             toggle("botSkipFullscreen", item, view);
         } else if (id == ID_DISABLE_PARAMETERS_FROM_BOT_LINKS) {
-            toggle("disableParametersFromBotLinks", item, view);
+            toggleInverted("disableParametersFromBotLinks", item, view);
         } else if (id == ID_DISABLE_DEFAULT_IN_APP_BROWSER) {
             toggle("disableDefaultInAppBrowser", item, view);
 
