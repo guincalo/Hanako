@@ -11,6 +11,22 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+## [2.03d] - 2026-10-21
+
+Development build: fixes from testing 2.02d, Rin recoloured.
+
+### Changed
+- **Rin (dark)** is auburn like her hair (header, accents, your bubbles) with her dark-green eyes for links,
+  switches, checkboxes and the compose button; cream text.
+- Telemetry crash reports include the Hanako version and ABI.
+
+### Removed
+- The fading "recently online" ring on avatars (and its setting); only people online now get the dot.
+
+### Fixed
+- Chat folder tabs missing on cold start until Settings > Chat folders was opened (after updating from 1.x).
+- A crash when the launch screen closes (the theme receiver was unregistered twice).
+
 ## [2.02d] - 2026-10-21
 
 Development build: settings cleanup, keep rules, new default themes.
