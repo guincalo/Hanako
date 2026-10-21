@@ -179,6 +179,25 @@ public class ForkSettingsActivity extends BaseFragment {
     private boolean unlocked = true;
     private AlertDialog unlockDialog;
 
+    // hanako 2.01: which page of the Hanako hub this screen shows (HanakoSettingsSection.PAGE_*)
+    private int page;
+    private boolean preUnlocked;
+
+    public ForkSettingsActivity() {
+        this(it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_HUB);
+    }
+
+    public ForkSettingsActivity(int page) {
+        super();
+        this.page = page;
+    }
+
+    /** A page opened from an unlocked Hanako screen does not ask for the settings code again. */
+    public ForkSettingsActivity unlockedFrom(BaseFragment from) {
+        preUnlocked = from instanceof ForkSettingsActivity && ((ForkSettingsActivity) from).unlocked;
+        return this;
+    }
+
     public ForkSettingsActivity highlight(int itemId) {
         highlightItemId = itemId;
         return this;
@@ -186,7 +205,7 @@ public class ForkSettingsActivity extends BaseFragment {
 
     @Override
     public boolean onFragmentCreate() {
-        unlocked = !ForkSettingsLock.hasCode();
+        unlocked = preUnlocked || !ForkSettingsLock.hasCode();
         return super.onFragmentCreate();
     }
 
@@ -354,7 +373,11 @@ public class ForkSettingsActivity extends BaseFragment {
     @Override
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
-        actionBar.setTitle(LocaleController.getString(R.string.MercurygramSettings)); // hanako: one merged "Hanako" screen
+        if (page == it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_HUB && highlightItemId != 0) {
+            page = pageOf(highlightItemId); // hanako 2.01: a search result opens the page that holds the row
+        }
+        it.belloworld.mercurygram.HanakoTelemetry.countPage(page);
+        actionBar.setTitle(pageTitle(page));
         actionBar.setAllowOverlayTitle(true);
 
         if (AndroidUtilities.isTablet()) {
@@ -468,7 +491,7 @@ public class ForkSettingsActivity extends BaseFragment {
 
     private void fillSearchResults(ArrayList<UItem> items) {
         final ArrayList<UItem> all = new ArrayList<>();
-        fillSettings(all);
+        fillAll(all); // hanako 2.01: search reaches every page
 
         final String[] tokens = searchQuery.trim().toLowerCase().split("\\s+");
 
@@ -529,8 +552,8 @@ public class ForkSettingsActivity extends BaseFragment {
         return true;
     }
 
-    // hanako: Hanako's rows first, then Forkgram's. Ids are offset so they never collide.
-    private void fillHanako(ArrayList<UItem> items) {
+    // hanako: Hanako's rows, ids offset so they never collide with Forkgram's.
+    private void fillHanako(int part, ArrayList<UItem> items) {
         if (hanako == null) {
             hanako = new it.belloworld.mercurygram.ui.HanakoSettingsSection(this, () -> {
                 if (listView != null && listView.adapter != null) {
@@ -539,7 +562,7 @@ public class ForkSettingsActivity extends BaseFragment {
             });
         }
         final int start = items.size();
-        hanako.fill(items);
+        hanako.fill(part, items);
         for (int i = start; i < items.size(); ++i) {
             final UItem item = items.get(i);
             if (item.id > 0) {
@@ -548,25 +571,125 @@ public class ForkSettingsActivity extends BaseFragment {
         }
     }
 
+    // hanako 2.01: the Hanako hub and its pages. Page ids are HanakoSettingsSection.PAGE_*.
+    private static final int[] ALL_PAGES = {
+        it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_HUB, it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_GHOST, it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_STREAMER, it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_PRIVACY,
+        it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_DELETED, it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_ACTIVITY_LOG, it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_APPEARANCE, it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_CHATS,
+        it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_MEDIA, it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_NETWORK, it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_UPDATES,
+    };
+
+    public static String pageTitle(int page) {
+        switch (page) {
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_GHOST: return LocaleController.getString(R.string.PlusGhostMode);
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_STREAMER: return LocaleController.getString(R.string.PlusF10StreamerMode);
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_PRIVACY: return LocaleController.getString(R.string.HanakoPagePrivacy);
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_DELETED: return LocaleController.getString(R.string.HanakoPageDeleted);
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_ACTIVITY_LOG: return LocaleController.getString(R.string.HanakoPageActivityLog);
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_APPEARANCE: return LocaleController.getString(R.string.HanakoPageAppearance);
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_CHATS: return LocaleController.getString(R.string.HanakoPageChatsMessages);
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_MEDIA: return LocaleController.getString(R.string.HanakoPageMedia);
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_NETWORK: return LocaleController.getString(R.string.HanakoPageNetwork);
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_UPDATES: return LocaleController.getString(R.string.MercurygramSettingsUpdates);
+            default: return LocaleController.getString(R.string.MercurygramSettings);
+        }
+    }
+
+    /** Page that holds a row (offset id for Hanako rows); the hub when none does. */
+    private int pageOf(int itemId) {
+        final ArrayList<UItem> tmp = new ArrayList<>();
+        for (int p : ALL_PAGES) {
+            if (p == it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_HUB) continue;
+            tmp.clear();
+            fillPage(p, tmp);
+            for (int i = 0; i < tmp.size(); ++i) {
+                if (tmp.get(i).id == itemId) return p;
+            }
+        }
+        return it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_HUB;
+    }
+
     private void fillSettings(ArrayList<UItem> items) {
-        fillHanako(items);
+        fillPage(page, items);
+    }
+
+    /** Every page, each under its own title, for the search. */
+    private void fillAll(ArrayList<UItem> items) {
+        for (int p : ALL_PAGES) {
+            items.add(UItem.asHeader(pageTitle(p)));
+            fillPage(p, items);
+        }
+    }
+
+    private void fillPage(int p, ArrayList<UItem> items) {
+        switch (p) {
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_GHOST:
+                fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_GHOST, items);
+                break;
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_STREAMER:
+                fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_STREAMER, items);
+                items.add(UItem.asHeader(LocaleController.getString(R.string.HideSensitiveData)));
+                if (!SharedConfig.isUserOwner()) {
+                    items.add(UItem.asButtonCheck(ID_HIDE_SENSITIVE_DATA, LocaleController.getString(R.string.HideSensitiveData), LocaleController.getString(R.string.ForkRestartRequired))
+                        .setChecked(pref("hideSensitiveData", false)).setMultiline(true));
+                }
+                // [classic] #85: pick what "Hide Sensitive Data" actually hides. Only worth showing once the
+                // master toggle is on — for the owner it is always on and the master row itself is hidden.
+                if (SharedConfig.hideSensitiveData()) {
+                    items.add(UItem.asButtonCheck(ID_HIDE_SENSITIVE_PHONE, LocaleController.getString(R.string.HideSensitivePhone), null)
+                        .setChecked(pref("hideSensitivePhone", true)));
+                    items.add(UItem.asButtonCheck(ID_HIDE_SENSITIVE_USERNAME, LocaleController.getString(R.string.HideSensitiveUsername), null)
+                        .setChecked(pref("hideSensitiveUsername", true)));
+                    items.add(UItem.asButtonCheck(ID_HIDE_SENSITIVE_BIO, LocaleController.getString(R.string.HideSensitiveBio), null)
+                        .setChecked(pref("hideSensitiveBio", true)));
+                    items.add(UItem.asButtonCheck(ID_HIDE_SENSITIVE_ID, LocaleController.getString(R.string.HideSensitiveId), null)
+                        .setChecked(pref("hideSensitiveId", true)));
+                }
+                items.add(UItem.asShadow(LocaleController.getString(R.string.ForkRestartRequired)));
+                break;
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_PRIVACY:
+                fillForkPrivacy(items);
+                fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_TRACKING, items);
+                items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoAiSearchHeader)));
+                items.add(UItem.asButtonCheck(ID_DISABLE_GLOBAL_SEARCH, LocaleController.getString(R.string.DisableGlobalSearch), LocaleController.getString(R.string.DisableGlobalSearchInfo))
+                    .setChecked(pref("disableGlobalSearch", false)).setMultiline(true));
+                items.add(UItem.asButtonCheck(ID_HIDE_AI_EDITOR, LocaleController.getString(R.string.HideAiEditor), LocaleController.getString(R.string.HideAiEditorInfo))
+                    .setChecked(pref("hideAiEditor", false)).setMultiline(true));
+                items.add(UItem.asButtonCheck(ID_SHOW_AI_SUMMARY, LocaleController.getString(R.string.ShowAiSummary), LocaleController.getString(R.string.ShowAiSummaryInfo))
+                    .setChecked(pref("showAiSummary", false)).setMultiline(true)); // [classic] #118
+                items.add(UItem.asShadow(null));
+                break;
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_DELETED:
+                fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_DELETED, items);
+                break;
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_ACTIVITY_LOG:
+                fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_ACTIVITY_LOG, items);
+                break;
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_APPEARANCE:
+                fillForkAppearance(items);
+                break;
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_CHATS:
+                fillForkChats(items);
+                fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_SEND_PROMPTS, items);
+                fillForkStickers(items);
+                fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_PROFILES, items);
+                break;
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_MEDIA:
+                fillForkMedia(items);
+                break;
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_NETWORK:
+                fillForkNetwork(items);
+                break;
+            case it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_UPDATES:
+                fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_UPDATES, items);
+                break;
+            default:
+                fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_HUB, items);
+                break;
+        }
+    }
+
+    private void fillForkPrivacy(ArrayList<UItem> items) {
         items.add(UItem.asHeader(LocaleController.getString(R.string.PrivacySettings)));
-        if (!SharedConfig.isUserOwner()) {
-            items.add(UItem.asButtonCheck(ID_HIDE_SENSITIVE_DATA, LocaleController.getString(R.string.HideSensitiveData), LocaleController.getString(R.string.ForkRestartRequired))
-                .setChecked(pref("hideSensitiveData", false)).setMultiline(true));
-        }
-        // [classic] #85: pick what "Hide Sensitive Data" actually hides. Only worth showing once the
-        // master toggle is on — for the owner it is always on and the master row itself is hidden.
-        if (SharedConfig.hideSensitiveData()) {
-            items.add(UItem.asButtonCheck(ID_HIDE_SENSITIVE_PHONE, LocaleController.getString(R.string.HideSensitivePhone), null)
-                .setChecked(pref("hideSensitivePhone", true)));
-            items.add(UItem.asButtonCheck(ID_HIDE_SENSITIVE_USERNAME, LocaleController.getString(R.string.HideSensitiveUsername), null)
-                .setChecked(pref("hideSensitiveUsername", true)));
-            items.add(UItem.asButtonCheck(ID_HIDE_SENSITIVE_BIO, LocaleController.getString(R.string.HideSensitiveBio), null)
-                .setChecked(pref("hideSensitiveBio", true)));
-            items.add(UItem.asButtonCheck(ID_HIDE_SENSITIVE_ID, LocaleController.getString(R.string.HideSensitiveId), null)
-                .setChecked(pref("hideSensitiveId", true)));
-        }
         items.add(UItem.asButtonCheck(ID_FORCE_BLOCK_SCREENSHOTS, LocaleController.getString(R.string.ForceBlockScreenshots), LocaleController.getString(R.string.ForceBlockScreenshotsInfo))
             .setChecked(pref("forceBlockScreenshots", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_SHOW_NOTIFICATION_CONTENT, LocaleController.getString(R.string.ShowNotificationContent), LocaleController.getString(R.string.ShowNotificationContentInfo))
@@ -579,6 +702,9 @@ public class ForkSettingsActivity extends BaseFragment {
         items.add(UItem.asSettingsCell(ID_FORK_SETTINGS_LOCK, LocaleController.getString(R.string.ForkSettingsLock), getForkSettingsLockText()));
         items.add(UItem.asShadow(null));
 
+    }
+
+    private void fillForkAppearance(ArrayList<UItem> items) {
         items.add(UItem.asHeader(LocaleController.getString(R.string.ForkSectionAppearance)));
         items.add(UItem.asButtonCheck(ID_HIDE_IN_APP_HINTS, LocaleController.getString(R.string.HideInAppHints), LocaleController.getString(R.string.HideInAppHintsInfo))
             .setChecked(pref("hideInAppHints", false)).setMultiline(true));
@@ -596,7 +722,10 @@ public class ForkSettingsActivity extends BaseFragment {
             hiddenDrawerItems == 0
                 ? LocaleController.getString(R.string.ForkDrawerItemsAllShown)
                 : LocaleController.formatString(R.string.ForkDrawerItemsHidden, hiddenDrawerItems)));
-        items.add(UItem.asSettingsCell(ID_CUSTOM_TITLE, LocaleController.getString(R.string.EditAdminRank), prefs().getString("forkCustomTitle", "Forkgram Classic")));
+        items.add(UItem.asSettingsCell(ID_CUSTOM_TITLE, LocaleController.getString(R.string.EditAdminRank), prefs().getString("forkCustomTitle", "Hanako")));
+        items.add(UItem.asButtonCheck(ID_LOCK_PREMIUM, LocaleController.getString(R.string.LockPremium), LocaleController.getString(R.string.LockPremiumInfo))
+            .setChecked(pref("lockPremium", false)).setMultiline(true));
+        fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_LOOK, items);
         items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.AvatarShape)));
@@ -625,8 +754,6 @@ public class ForkSettingsActivity extends BaseFragment {
             .setChecked(pref("hideStoriesInArchive", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_DISABLE_THUMBS_IN_DIALOG_LIST, LocaleController.getString(R.string.DisableThumbsInDialogList), LocaleController.getString(R.string.DisableThumbsInDialogListInfo))
             .setChecked(pref("disableThumbsInDialogList", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_DISABLE_GLOBAL_SEARCH, LocaleController.getString(R.string.DisableGlobalSearch), LocaleController.getString(R.string.DisableGlobalSearchInfo))
-            .setChecked(pref("disableGlobalSearch", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_HIDE_CONTACTS_IN_DIALOGS, LocaleController.getString(R.string.HideContactsInDialogs), LocaleController.getString(R.string.HideContactsInDialogsInfo))
             .setChecked(pref("hideContactsInDialogs", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_ENABLE_LAST_SEEN_DOTS, LocaleController.getString(R.string.EnableLastSeenDots), LocaleController.getString(R.string.EnableLastSeenDotsInfo))
@@ -635,6 +762,7 @@ public class ForkSettingsActivity extends BaseFragment {
         items.add(UItem.asButtonCheck(ID_HIDE_ALL_CHATS_TAB, LocaleController.getString(R.string.HideAllChatsTab), LocaleController.getString(R.string.HideAllChatsTabInfo))
             .setChecked(pref("hideAllChatsTab", false)).setMultiline(true));
         items.add(UItem.asSettingsCell(ID_DEFAULT_FOLDER, LocaleController.getString(R.string.DefaultFolder), getDefaultFolderText()));
+        fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_CHAT_LIST, items);
         items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.FolderTabsStyle)));
@@ -653,6 +781,9 @@ public class ForkSettingsActivity extends BaseFragment {
             }).setId(ID_FOLDER_TABS_STYLE), R.string.FolderTabsStyle));
         items.add(UItem.asShadow(LocaleController.getString(R.string.FolderTabsStyleInfo)));
 
+    }
+
+    private void fillForkChats(ArrayList<UItem> items) {
         items.add(UItem.asHeader(LocaleController.getString(R.string.FilterChats)));
         items.add(UItem.asButtonCheck(ID_REPLACE_FORWARD, LocaleController.getString(R.string.ReplaceForward), LocaleController.getString(R.string.ReplaceForwardInfo))
             .setChecked(pref("replaceForward", true)).setMultiline(true));
@@ -660,22 +791,20 @@ public class ForkSettingsActivity extends BaseFragment {
             .setChecked(pref("mentionByName", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_HIDE_SEND_AS, LocaleController.getString(R.string.HideSendAs), LocaleController.getString(R.string.HideSendAsInfo))
             .setChecked(pref("hideSendAs", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_DISABLE_LINK_PREVIEW_BY_DEFAULT, LocaleController.getString(R.string.DisableLinkPreviewByDefault), LocaleController.getString(R.string.DisableLinkPreviewByDefaultInfo))
-            .setChecked(pref("disableLinkPreviewByDefault", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_DELETE_ALL_UNPINNED, LocaleController.getString(R.string.AddDeleteAllUnpinnedMessages), LocaleController.getString(R.string.AddDeleteAllUnpinnedMessagesInfo))
             .setChecked(pref("addItemToDeleteAllUnpinnedMessages", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_DISABLE_SLIDE_TO_NEXT_CHANNEL, LocaleController.getString(R.string.DisableSlideToNextChannel), LocaleController.getString(R.string.DisableSlideToNextChannelInfo))
             .setChecked(pref("disableSlideToNextChannel", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_FORMAT_WITH_SECONDS, LocaleController.getString(R.string.FormatWithSeconds), LocaleController.getString(R.string.FormatWithSecondsInfo))
             .setChecked(pref("formatWithSeconds", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_HIDE_AI_EDITOR, LocaleController.getString(R.string.HideAiEditor), LocaleController.getString(R.string.HideAiEditorInfo))
-            .setChecked(pref("hideAiEditor", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_SHOW_AI_SUMMARY, LocaleController.getString(R.string.ShowAiSummary), LocaleController.getString(R.string.ShowAiSummaryInfo))
-            .setChecked(pref("showAiSummary", false)).setMultiline(true)); // [classic] #118
         items.add(UItem.asSettingsCell(ID_FORMATTING_MENU, LocaleController.getString(R.string.FormattingMenu), null));
         items.add(UItem.asSettingsCell(ID_LINK_REPLACEMENTS, LocaleController.getString(R.string.ReplaceLinksOnPaste), getLinkReplacementsText()));
+        fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_MESSAGES, items);
         items.add(UItem.asShadow(null));
 
+    }
+
+    private void fillForkStickers(ArrayList<UItem> items) {
         items.add(UItem.asHeader(LocaleController.getString(R.string.Reactions)));
         items.add(UItem.asButtonCheck(ID_DISABLE_QUICK_REACTION, LocaleController.getString(R.string.DisableQuickReaction), LocaleController.getString(R.string.DisableQuickReactionInfo))
             .setChecked(pref("disableQuickReaction", false)).setMultiline(true));
@@ -701,6 +830,20 @@ public class ForkSettingsActivity extends BaseFragment {
         items.add(searchable(UItem.asCustom(ID_STICKER_SIZE, stickerSizeCell), R.string.StickerSize));
         items.add(UItem.asShadow(null));
 
+        items.add(UItem.asHeader(LocaleController.getString(R.string.ForkSectionBots)));
+        items.add(UItem.asButtonCheck(ID_BOT_SKIP_SHARE, LocaleController.getString(R.string.BotSkipShare), LocaleController.getString(R.string.BotSkipShareInfo))
+            .setChecked(pref("botSkipShare", false)).setMultiline(true));
+        items.add(UItem.asButtonCheck(ID_BOT_SKIP_FULLSCREEN, LocaleController.getString(R.string.BotSkipFullscreen), LocaleController.getString(R.string.BotSkipFullscreenInfo))
+            .setChecked(pref("botSkipFullscreen", false)).setMultiline(true));
+        items.add(UItem.asButtonCheck(ID_DISABLE_PARAMETERS_FROM_BOT_LINKS, LocaleController.getString(R.string.DisableParametersFromBotLinks), LocaleController.getString(R.string.DisableParametersFromBotLinksInfo))
+            .setChecked(pref("disableParametersFromBotLinks", false)).setMultiline(true));
+        items.add(UItem.asButtonCheck(ID_DISABLE_DEFAULT_IN_APP_BROWSER, LocaleController.getString(R.string.DisableDefaultInAppBrowser), LocaleController.getString(R.string.DisableDefaultInAppBrowserInfo))
+            .setChecked(pref("disableDefaultInAppBrowser", org.telegram.messenger.BuildConfig.SKIP_INTERNAL_BROWSER_BY_DEFAULT)).setMultiline(true));
+        items.add(UItem.asShadow(null));
+
+    }
+
+    private void fillForkMedia(ArrayList<UItem> items) {
         items.add(UItem.asHeader(LocaleController.getString(R.string.ForkSectionMedia)));
         items.add(UItem.asButtonCheck(ID_INAPP_CAMERA, LocaleController.getString(R.string.InAppCamera), LocaleController.getString(R.string.InAppCameraInfo))
             .setChecked(pref("inappCamera", true)).setMultiline(true));
@@ -720,6 +863,7 @@ public class ForkSettingsActivity extends BaseFragment {
             .setChecked(pref("disablePlayVisibleVideoOnVolume", false)).setMultiline(true));
         items.add(UItem.asButtonCheck(ID_DISABLE_RECENT_FILES_ATTACHMENT, LocaleController.getString(R.string.DisableRecentFilesAttachment), LocaleController.getString(R.string.DisableRecentFilesAttachmentInfo))
             .setChecked(pref("disableRecentFilesAttachment", false)).setMultiline(true));
+        fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_MEDIA, items);
         items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader(LocaleController.getString(R.string.ForkSectionVoice)));
@@ -733,17 +877,9 @@ public class ForkSettingsActivity extends BaseFragment {
         items.add(UItem.asSettingsCell(ID_TRANSLATION_PROVIDER, LocaleController.getString(R.string.TranslationEngine), getTranslationProviderText()));
         items.add(UItem.asShadow(null));
 
-        items.add(UItem.asHeader(LocaleController.getString(R.string.ForkSectionBots)));
-        items.add(UItem.asButtonCheck(ID_BOT_SKIP_SHARE, LocaleController.getString(R.string.BotSkipShare), LocaleController.getString(R.string.BotSkipShareInfo))
-            .setChecked(pref("botSkipShare", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_BOT_SKIP_FULLSCREEN, LocaleController.getString(R.string.BotSkipFullscreen), LocaleController.getString(R.string.BotSkipFullscreenInfo))
-            .setChecked(pref("botSkipFullscreen", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_DISABLE_PARAMETERS_FROM_BOT_LINKS, LocaleController.getString(R.string.DisableParametersFromBotLinks), LocaleController.getString(R.string.DisableParametersFromBotLinksInfo))
-            .setChecked(pref("disableParametersFromBotLinks", false)).setMultiline(true));
-        items.add(UItem.asButtonCheck(ID_DISABLE_DEFAULT_IN_APP_BROWSER, LocaleController.getString(R.string.DisableDefaultInAppBrowser), LocaleController.getString(R.string.DisableDefaultInAppBrowserInfo))
-            .setChecked(pref("disableDefaultInAppBrowser", org.telegram.messenger.BuildConfig.SKIP_INTERNAL_BROWSER_BY_DEFAULT)).setMultiline(true));
-        items.add(UItem.asShadow(null));
+    }
 
+    private void fillForkNetwork(ArrayList<UItem> items) {
         items.add(UItem.asHeader(LocaleController.getString(R.string.ForkSectionSystem)));
         items.add(UItem.asButtonCheck(ID_WEBSOCKET_TRANSPORT, LocaleController.getString(R.string.WebSocketTransport), LocaleController.getString(R.string.WebSocketTransportInfo))
             .setChecked(pref("webSocketTransport", false)).setMultiline(true));
@@ -763,10 +899,9 @@ public class ForkSettingsActivity extends BaseFragment {
                 .setChecked(SharedConfig.forceDisableTabletMode)
                 .setMultiline(true));
         }
-        items.add(UItem.asButtonCheck(ID_LOCK_PREMIUM, LocaleController.getString(R.string.LockPremium), LocaleController.getString(R.string.LockPremiumInfo))
-            .setChecked(pref("lockPremium", false)).setMultiline(true));
         items.add(UItem.asShadow(null));
 
+        fillHanako(it.belloworld.mercurygram.ui.HanakoSettingsSection.PART_NETWORK, items);
         if (BuildVars.LASTFM_API_KEY != null && BuildVars.LASTFM_API_KEY.length() > 2 &&
             BuildVars.LASTFM_API_SECRET != null && BuildVars.LASTFM_API_SECRET.length() > 2) {
             items.add(UItem.asHeader(LocaleController.getString(R.string.ThirdParty)));
@@ -778,10 +913,6 @@ public class ForkSettingsActivity extends BaseFragment {
         items.add(UItem.asSettingsCell(ID_WEB_PUBLISH, LocaleController.getString(R.string.WebPublish), getWebPublishText()));
         items.add(UItem.asShadow(LocaleController.getString(R.string.WebPublishInfo)));
 
-        items.add(UItem.asHeader(LocaleController.getString(R.string.ForkSectionBackup)));
-        items.add(UItem.asSettingsCell(ID_EXPORT_SETTINGS, LocaleController.getString(R.string.ExportSettings), ""));
-        items.add(UItem.asSettingsCell(ID_IMPORT_SETTINGS, LocaleController.getString(R.string.ImportSettings), ""));
-        items.add(UItem.asShadow(null));
     }
 
     private boolean toggle(String option, UItem item, View view) {
@@ -1236,7 +1367,7 @@ public class ForkSettingsActivity extends BaseFragment {
     }
 
     private void showCustomTitleDialog(View view) {
-        final String defaultValue = "Forkgram Classic";
+        final String defaultValue = "Hanako";
         org.telegram.messenger.forkgram.ForkDialogs.createFieldAlert(
             getContext(),
             LocaleController.getString(R.string.EditAdminRank),

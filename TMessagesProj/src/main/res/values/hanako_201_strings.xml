@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- hanako 2.01: the Hanako hub and its pages, deleted-message media rules -->
+<resources>
+    <string name="HanakoHubHistory">History</string>
+    <string name="HanakoHubChats">Chats</string>
+    <string name="HanakoHubAdvanced">Advanced</string>
+    <string name="HanakoHubSearchInfo">The search at the top finds every option on every page.</string>
+    <string name="HanakoPagePrivacy">Privacy and tracking</string>
+    <string name="HanakoPageAppearance">Appearance</string>
+    <string name="HanakoPageChatsMessages">Chats and messages</string>
+    <string name="HanakoPageMedia">Media and voice</string>
+    <string name="HanakoPageNetwork">Network and system</string>
+    <string name="HanakoAiSearchHeader">AI and search</string>
+    <string name="HanakoDeletedMediaHeader">Media</string>
+    <string name="HanakoDeletedMediaMax">Copy media</string>
+    <string name="HanakoDeletedMediaCap">Storage limit</string>
+    <string name="HanakoDeletedMediaNone">Never</string>
+    <string name="HanakoDeletedMediaAny">Any size</string>
+    <string name="HanakoDeletedMediaUpTo">Up to %1$s</string>
+    <string name="HanakoDeletedMediaNoCap">No limit</string>
+    <string name="HanakoDeletedMediaInfo">Only files you already downloaded are copied, and each picture or file is stored once. Never copied: stickers, GIFs, bot messages, channels and groups over %1$d members, unless the chat has its own exception under Keep for. Over the limit, the oldest copies go first; the messages stay. Bot posts and service messages in groups aren\'t kept at all.</string>
+</resources>

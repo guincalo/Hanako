@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="HanakoHubHistory">История</string>
+    <string name="HanakoHubChats">Чаты</string>
+    <string name="HanakoHubAdvanced">Дополнительно</string>
+    <string name="HanakoHubSearchInfo">Поиск вверху находит любую настройку на любой странице.</string>
+    <string name="HanakoPagePrivacy">Приватность и слежка</string>
+    <string name="HanakoPageAppearance">Внешний вид</string>
+    <string name="HanakoPageChatsMessages">Чаты и сообщения</string>
+    <string name="HanakoPageMedia">Медиа и голос</string>
+    <string name="HanakoPageNetwork">Сеть и система</string>
+    <string name="HanakoAiSearchHeader">ИИ и поиск</string>
+    <string name="HanakoDeletedMediaHeader">Медиа</string>
+    <string name="HanakoDeletedMediaMax">Копировать медиа</string>
+    <string name="HanakoDeletedMediaCap">Лимит места</string>
+    <string name="HanakoDeletedMediaNone">Никогда</string>
+    <string name="HanakoDeletedMediaAny">Любого размера</string>
+    <string name="HanakoDeletedMediaUpTo">До %1$s</string>
+    <string name="HanakoDeletedMediaNoCap">Без лимита</string>
+    <string name="HanakoDeletedMediaInfo">Копируются только уже скачанные файлы, каждый файл хранится один раз. Никогда не копируются: стикеры, GIF, сообщения ботов, каналы и группы больше %1$d участников, если у чата нет своего исключения в «Хранить». При превышении лимита первыми удаляются самые старые копии, сами сообщения остаются. Посты ботов и служебные сообщения в группах не сохраняются вовсе.</string>
+</resources>

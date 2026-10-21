@@ -133,7 +133,7 @@ public final class HanakoTelemetry {
     public static final String VPN_BYPASS_USED = "vpn_bypass_used";
     private static final String[] PAGE_NAMES = {
             "hub", "ghost", "deleted", "activity_log", "streamer", "chats", "tracking_ai", "network",
-            "security", "updates",
+            "security", "updates", "appearance", "media", "network2",
     };
 
     private static final Object lock = new Object();

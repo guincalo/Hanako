@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.text.TextUtils;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
@@ -96,6 +97,10 @@ public class HanakoSettingsSection {
     public static final int PAGE_CHATS = 5;
     public static final int PAGE_PRIVACY = 6;
     public static final int PAGE_UPDATES = 9;
+    // hanako 2.01: the hub's other pages
+    public static final int PAGE_APPEARANCE = 10;
+    public static final int PAGE_MEDIA = 11;
+    public static final int PAGE_NETWORK = 12;
     public static final int ID_HUB_CHAT_LOCK = 8820;
     public static final int ID_HUB_FILTERS = 8821;
     public static final int ID_HUB_BACKUP = 8822;
@@ -111,7 +116,6 @@ public class HanakoSettingsSection {
     public HanakoSettingsSection(BaseFragment host, Runnable refresh) {
         this.host = host;
         this.refresh = refresh;
-        it.belloworld.mercurygram.HanakoTelemetry.countPage(PAGE_HUB); // hanako: usage statistics (off by default)
     }
 
     /** The row (un-offset id) an old page id scrolls to, or 0 for the top of the screen. */
@@ -136,14 +140,9 @@ public class HanakoSettingsSection {
         }
     }
 
-    /** The merged Hanako settings screen, scrolled to an old page's first row. */
+    /** One Hanako page (PAGE_*); PAGE_HUB is the hub. */
     public static org.telegram.ui.ForkSettingsActivity screen(int page) {
-        org.telegram.ui.ForkSettingsActivity f = new org.telegram.ui.ForkSettingsActivity();
-        int row = pageRow(page);
-        if (row != 0) {
-            f.highlight(ID_OFFSET + row);
-        }
-        return f;
+        return new org.telegram.ui.ForkSettingsActivity(page);
     }
 
     /** The merged Hanako settings screen, scrolled to one row (un-offset id). */
@@ -227,42 +226,129 @@ public class HanakoSettingsSection {
         return n;
     }
 
-    /**
-     * All Hanako rows, in sections with headers (un-offset ids; the host offsets them).
-     * Order: privacy (ghost mode, chat lock, streamer mode, tracking), messages (deleted
-     * messages, activity log, message filters, chats), device (updates, backup and export,
-     * App API ID, telemetry).
-     */
-    public void fill(ArrayList<UItem> items) {
-        final int acc = getCurrentAccount();
-        fillGhost(items);
+    // hanako 2.01: the Hanako hub and its pages. ForkSettingsActivity is the host for every
+    // page; it asks for one PART at a time and offsets the ids (see ForkSettingsActivity.fillPage).
+    public static final int PART_HUB = 0;
+    public static final int PART_GHOST = 1;
+    public static final int PART_STREAMER = 2;
+    public static final int PART_TRACKING = 3;
+    public static final int PART_DELETED = 4;
+    public static final int PART_ACTIVITY_LOG = 5;
+    public static final int PART_MESSAGES = 6;
+    public static final int PART_SEND_PROMPTS = 7;
+    public static final int PART_PROFILES = 8;
+    public static final int PART_LOOK = 9;
+    public static final int PART_CHAT_LIST = 10;
+    public static final int PART_MEDIA = 11;
+    public static final int PART_NETWORK = 12;
+    public static final int PART_UPDATES = 13;
 
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF08Title)));
+    // hub rows: ID_NAV + ForkSettingsActivity page
+    public static final int ID_NAV = 8900;
+    public static final int ID_MEDIA_MAX = 2110;
+    public static final int ID_MEDIA_CAP = 2111;
+
+    public void fill(int part, ArrayList<UItem> items) {
+        final int acc = getCurrentAccount();
+        switch (part) {
+            case PART_HUB:
+                fillHub(items);
+                break;
+            case PART_GHOST:
+                fillGhost(items);
+                break;
+            case PART_STREAMER:
+                fillStreamer(items);
+                break;
+            case PART_TRACKING:
+                fillPrivacy(items);
+                break;
+            case PART_DELETED:
+                fillDeleted(items);
+                break;
+            case PART_ACTIVITY_LOG:
+                PlusActivityLogActivity.fillSettings(items, acc);
+                break;
+            case PART_MESSAGES:
+                fillMessages(items);
+                break;
+            case PART_SEND_PROMPTS:
+                fillSendPrompts(items);
+                break;
+            case PART_PROFILES:
+                fillProfiles(items);
+                break;
+            case PART_LOOK:
+                fillLook(items);
+                break;
+            case PART_CHAT_LIST:
+                items.add(UItem.asCheck(ID_HIDE_STORIES, LocaleController.getString(R.string.MercurygramHideStories))
+                        .setChecked(getUserConfig().mg.hideStories));
+                break;
+            case PART_MEDIA:
+                items.add(MgSettingsScope.globalCheck(ID_DISABLE_PROXIMITY_SENSOR, LocaleController.getString(R.string.MercurygramDisableProximitySensor))
+                        .setChecked(SharedConfig.mg_disableProximitySensor));
+                break;
+            case PART_NETWORK:
+                fillNetwork(items);
+                break;
+            case PART_UPDATES:
+                fillUpdates(items);
+                break;
+        }
+    }
+
+    private static UItem nav(int page, int icon, int title, CharSequence value) {
+        return UItem.asButton(ID_NAV + page, icon, LocaleController.getString(title), value);
+    }
+
+    /** The hub: four short sections, every row opens one page (or one feature screen). */
+    private void fillHub(ArrayList<UItem> items) {
+        final int acc = getCurrentAccount();
+        requestDeletedMediaSize();
+        final boolean ghostOn = it.belloworld.mercurygram.PlusGhost.isEnabled(acc);
+        String ghostValue = onOff(ghostOn);
+        int exc = it.belloworld.mercurygram.PlusGhostExceptions.count(acc);
+        if (ghostOn && exc > 0) {
+            ghostValue += " · " + LocaleController.formatPluralString("ExceptionShort", exc);
+        }
+        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoHubPrivacy)));
+        items.add(nav(PAGE_GHOST, R.drawable.plus_ghost, R.string.PlusGhostMode, ghostValue));
         items.add(UItem.asButton(ID_HUB_CHAT_LOCK, R.drawable.msg_permissions, LocaleController.getString(R.string.PlusF08Title),
                 it.belloworld.mercurygram.PlusChatLock.settingsSummary(acc)));
+        items.add(nav(PAGE_STREAMER, R.drawable.msg_screencast, R.string.PlusF10StreamerMode,
+                onOff(it.belloworld.mercurygram.PlusStreamer.isEnabled())));
+        items.add(nav(PAGE_PRIVACY, R.drawable.msg2_secret, R.string.HanakoPagePrivacy, null));
         items.add(UItem.asShadow(null));
 
-        fillStreamer(items);
-        fillPrivacy(items);
-        fillDeleted(items);
-        // plus f05 begin
-        PlusActivityLogActivity.fillSettings(items, acc);
-        // plus f05 end
+        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoHubHistory)));
+        String deletedValue = onOff(getUserConfig().mg.savedMessagesHistory);
+        if (!TextUtils.isEmpty(deletedMediaSize)) {
+            deletedValue += " · " + deletedMediaSize;
+        }
+        items.add(nav(PAGE_DELETED, R.drawable.msg_delete, R.string.HanakoPageDeleted, deletedValue));
+        items.add(nav(PAGE_ACTIVITY_LOG, R.drawable.msg_log, R.string.HanakoPageActivityLog,
+                onOff(it.belloworld.mercurygram.PlusActivityLog.isEnabled(acc))));
+        items.add(UItem.asShadow(null));
 
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF04Title)));
+        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoHubChats)));
+        items.add(nav(PAGE_APPEARANCE, R.drawable.msg_theme, R.string.HanakoPageAppearance, null));
+        items.add(nav(PAGE_CHATS, R.drawable.msg_discussion, R.string.HanakoPageChatsMessages, null));
+        items.add(nav(PAGE_MEDIA, R.drawable.msg_media, R.string.HanakoPageMedia, null));
         items.add(UItem.asButton(ID_HUB_FILTERS, R.drawable.msg_archive_hide, LocaleController.getString(R.string.PlusF04Title), filtersSummary()));
         items.add(UItem.asShadow(null));
 
-        fillChats(items);
-        fillUpdates(items);
-
-        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoHubDevice)));
+        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoHubAdvanced)));
+        items.add(nav(PAGE_NETWORK, R.drawable.msg2_data, R.string.HanakoPageNetwork, null));
+        if (MgUpdateChecker.canSelfInstall()) {
+            items.add(nav(PAGE_UPDATES, R.drawable.msg_retry, R.string.MercurygramSettingsUpdates, MgUpdateChecker.hanakoVersion()));
+        }
         items.add(UItem.asButton(ID_HUB_BACKUP, R.drawable.msg_download, LocaleController.getString(R.string.HanakoBackupTitle)));
         items.add(UItem.asButton(ID_HUB_API, R.drawable.msg_link, LocaleController.getString(R.string.HanakoApiTitle),
                 it.belloworld.mercurygram.HanakoApiConfig.summary()));
         items.add(UItem.asButton(ID_HUB_TELEMETRY, R.drawable.msg_stats, LocaleController.getString(R.string.HanakoTelemetryTitle),
                 onOff(it.belloworld.mercurygram.HanakoTelemetry.isEnabled())));
-        items.add(UItem.asShadow(null));
+        items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoHubSearchInfo)));
     }
 
     private void fillStreamer(ArrayList<UItem> items) {
@@ -281,7 +367,7 @@ public class HanakoSettingsSection {
     }
 
     private void fillPrivacy(ArrayList<UItem> items) {
-        items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsPrivacy)));
+        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoPageTracking)));
         items.add(MgSettingsScope.globalCheck(ID_REDUCE_TRACKING_FINGERPRINT,
                         LocaleController.getString(R.string.MercurygramReduceTrackingFingerprint))
                 .setChecked(SharedConfig.reduceTrackingFingerprint));
@@ -403,25 +489,15 @@ public class HanakoSettingsSection {
         it.belloworld.mercurygram.PlusEmojiInteractions.addSettingsItems(items, acc);
         // plus f15 end
 
-        // plus f16: ask before sending voice / round / sticker / GIF and before calls (all accounts)
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusPromptHeader)));
-        for (int k = 0; k < it.belloworld.mercurygram.PlusSendPrompts.KIND_COUNT; k++) {
-            items.add(UItem.asCheck(ID_SEND_PROMPT + k, it.belloworld.mercurygram.PlusSendPrompts.label(k))
-                    .setChecked(it.belloworld.mercurygram.PlusSendPrompts.isEnabled(k)));
-        }
-        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusPromptAbout))));
-        // plus f16 end
 
     }
 
     private void fillDeleted(ArrayList<UItem> items) {
-        // hanako: one screen for the whole feature, in the order you use it:
-        // the switch, how long copies are kept (Telegram's Keep media shape),
-        // what is on the device, how ghosts look in chats, then vanished chats.
+        // hanako 2.01: switch, how long (Keep media style), what media is copied, storage, how
+        // ghosts look in chats, vanished chats. Defaults are sane; nothing needs tuning.
         requestDeletedMediaSize();
         final boolean on = getUserConfig().mg.savedMessagesHistory;
         final int acc = getCurrentAccount();
-        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoPageDeleted)));
         items.add(UItem.asCheck(ID_SAVED_MESSAGES_HISTORY, LocaleController.getString(R.string.MercurygramSavedMessagesHistory))
                 .setChecked(on));
         items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramSavedMessagesHistoryAbout)));
@@ -433,32 +509,72 @@ public class HanakoSettingsSection {
             }
             items.add(UItem.asShadow(LocaleController.getString(R.string.HanakoKeepDeletedInfo)));
 
+            items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoDeletedMediaHeader)));
+            items.add(UItem.asButton(ID_MEDIA_MAX, LocaleController.getString(R.string.HanakoDeletedMediaMax),
+                    it.belloworld.mercurygram.MgDeletedRetention.mediaMaxLabel(it.belloworld.mercurygram.MgDeletedRetention.getMediaMax())));
+            items.add(UItem.asButton(ID_MEDIA_CAP, LocaleController.getString(R.string.HanakoDeletedMediaCap),
+                    it.belloworld.mercurygram.MgDeletedRetention.mediaCapLabel(it.belloworld.mercurygram.MgDeletedRetention.getMediaCap())));
+            items.add(UItem.asButton(ID_F20_OPEN, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title), deletedMediaSize));
+            items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.formatString(R.string.HanakoDeletedMediaInfo,
+                    it.belloworld.mercurygram.MgDeletedRetention.BIG_GROUP))));
+
             items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoDeletedInChatsHeader)));
             items.add(MgSettingsScope.globalCheck(ID_F07_KEEP_REACTIONS, LocaleController.getString(R.string.PlusF07KeepReactions))
                     .setChecked(it.belloworld.mercurygram.PlusDeletedReactions.isKeepEnabled()));
             items.add(UItem.asCheck(ID_F20_CHAT_MENU, LocaleController.getString(R.string.PlusF20ChatMenu))
                     .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isChatMenuEnabled()));
-            items.add(UItem.asCheck(ID_F20_INCLUDE_EDITS, LocaleController.getString(R.string.PlusF20IncludeEdits))
-                    .setChecked(it.belloworld.mercurygram.PlusDeletedMedia.isIncludeEdits()));
-            items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.HanakoDeletedInChatsInfo))));
+            items.add(UItem.asCheck(ID_F07_LOG_DIALOGS, LocaleController.getString(R.string.PlusF07LogDialogs))
+                    .setChecked(it.belloworld.mercurygram.PlusDeletedDialogs.isEnabled(acc)));
+            items.add(UItem.asButton(ID_F07_OPEN_LOG, LocaleController.getString(R.string.PlusF07DeletedDialogsTitle),
+                    Integer.toString(it.belloworld.mercurygram.PlusDeletedDialogs.count(acc))));
+            items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF07SettingsAbout)));
         }
 
         requestSavedCounts();
-        items.add(UItem.asHeader(LocaleController.getString(R.string.HanakoDeletedStorageHeader)));
-        items.add(UItem.asButton(ID_F20_OPEN, R.drawable.msg_media, LocaleController.getString(R.string.PlusF20Title), deletedMediaSize));
         UItem clear = UItem.asButton(ID_CLEAR_SAVED_HISTORY, R.drawable.msg_clear, LocaleController.getString(R.string.MercurygramClearSavedHistory));
         clear.red = true;
         items.add(clear);
         items.add(UItem.asShadow(savedCounts != null ? savedCountsText(savedCounts)
                 : LocaleController.getString(R.string.HanakoDeletedStorageInfo)));
+    }
 
-        // plus f07: vanished-chat log
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF07DeletedDialogsTitle)));
-        items.add(UItem.asCheck(ID_F07_LOG_DIALOGS, LocaleController.getString(R.string.PlusF07LogDialogs))
-                .setChecked(it.belloworld.mercurygram.PlusDeletedDialogs.isEnabled(acc)));
-        items.add(UItem.asButton(ID_F07_OPEN_LOG, LocaleController.getString(R.string.PlusF07DeletedDialogsTitle),
-                Integer.toString(it.belloworld.mercurygram.PlusDeletedDialogs.count(acc))));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusF07SettingsAbout)));
+    private void showMediaPicker(boolean cap) {
+        final android.content.Context context = getParentActivity();
+        if (context == null) return;
+        final long[] values = cap ? it.belloworld.mercurygram.MgDeletedRetention.MEDIA_CAP : it.belloworld.mercurygram.MgDeletedRetention.MEDIA_MAX;
+        final long current = cap ? it.belloworld.mercurygram.MgDeletedRetention.getMediaCap() : it.belloworld.mercurygram.MgDeletedRetention.getMediaMax();
+        final java.util.concurrent.atomic.AtomicReference<Dialog> dialogRef = new java.util.concurrent.atomic.AtomicReference<>();
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        for (int i = 0; i < values.length; i++) {
+            final long value = values[i];
+            org.telegram.ui.Cells.RadioColorCell cell = new org.telegram.ui.Cells.RadioColorCell(context);
+            cell.setPadding(AndroidUtilities.dp(4), 0, AndroidUtilities.dp(4), 0);
+            cell.setCheckColor(Theme.getColor(Theme.key_radioBackground), Theme.getColor(Theme.key_dialogRadioBackgroundChecked));
+            cell.setTextAndValue(cap ? it.belloworld.mercurygram.MgDeletedRetention.mediaCapLabel(value)
+                    : it.belloworld.mercurygram.MgDeletedRetention.mediaMaxLabel(value), value == current);
+            cell.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), Theme.RIPPLE_MASK_ALL));
+            layout.addView(cell);
+            cell.setOnClickListener(v -> {
+                if (cap) {
+                    it.belloworld.mercurygram.MgDeletedRetention.setMediaCap(value);
+                } else {
+                    it.belloworld.mercurygram.MgDeletedRetention.setMediaMax(value);
+                }
+                Dialog d = dialogRef.get();
+                if (d != null) d.dismiss();
+                sizeRequested = false;
+                AndroidUtilities.runOnUIThread(this::refreshList, 500);
+                refreshList();
+            });
+        }
+        Dialog dialog = new AlertDialog.Builder(context)
+                .setTitle(LocaleController.getString(cap ? R.string.HanakoDeletedMediaCap : R.string.HanakoDeletedMediaMax))
+                .setView(layout)
+                .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
+                .create();
+        dialogRef.set(dialog);
+        showDialog(dialog);
     }
 
     // hanako: retention rows + saved counts
@@ -495,59 +611,31 @@ public class HanakoSettingsSection {
         });
     }
 
-    private void fillChats(ArrayList<UItem> items) {
-        // With several accounts logged in, state the default scope once; rows
-        // backed by global SharedConfig carry their own "all accounts" label.
-        if (MgSettingsScope.multiAccount()) {
-            items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramScopeDefaultFooter)));
-        }
-        items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsGeneral)));
+    /** Chats and messages: Mercurygram's message tweaks, message shot, message filters. */
+    private void fillMessages(ArrayList<UItem> items) {
         items.add(UItem.asCheck(ID_MESSAGE_DETAILS_MENU, LocaleController.getString(R.string.MercurygramMessageDetailsMenu))
                 .setChecked(getUserConfig().mg.messageDetailsMenu));
         items.add(UItem.asCheck(ID_HIDE_CHAT_KEYBOARD, LocaleController.getString(R.string.HideChatKeyboard))
                 .setChecked(getUserConfig().mg.hideChatKeyboard));
-        items.add(UItem.asCheck(ID_HIDE_STORIES, LocaleController.getString(R.string.MercurygramHideStories))
-                .setChecked(getUserConfig().mg.hideStories));
-        items.add(MgSettingsScope.globalCheck(ID_USE_SYSTEM_FONT, LocaleController.getString(R.string.MercurygramUseSystemFont))
-                .setChecked(SharedConfig.useSystemFont));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramUseSystemFontAbout)));
-
         items.add(UItem.asCheck(ID_SHOW_CHAR_COUNTER, LocaleController.getString(R.string.MercurygramShowCharCounter))
                 .setChecked(getUserConfig().mg.showCharCounter));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramShowCharCounterAbout)));
-
-        items.add(UItem.asButton(ID_EMOJI_PACK,
-                LocaleController.getString(R.string.MercurygramEmojiTitle),
-                emojiPackShortLabel()));
-        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(
-                LocaleController.getString(R.string.MercurygramEmojiRowAbout))));
-
-        items.add(UItem.asCheck(ID_DELETE_FOR_ALL_DEFAULT,
-                        LocaleController.getString(R.string.MercurygramDeleteForAllByDefault))
+        items.add(UItem.asCheck(ID_DELETE_FOR_ALL_DEFAULT, LocaleController.getString(R.string.MercurygramDeleteForAllByDefault))
                 .setChecked(getUserConfig().mg.deleteForAllByDefault));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDeleteForAllByDefaultAbout)));
-
-        items.add(UItem.asHeader(LocaleController.getString(R.string.MercurygramSettingsMedia)));
-        items.add(MgSettingsScope.globalCheck(ID_DISABLE_PROXIMITY_SENSOR, LocaleController.getString(R.string.MercurygramDisableProximitySensor))
-                .setChecked(SharedConfig.mg_disableProximitySensor));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.MercurygramDisableProximitySensorAbout)));
-
-        // plus f13: message shot (all accounts)
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusMessageShot)));
         items.add(MgSettingsScope.globalCheck(ID_MESSAGE_SHOT, LocaleController.getString(R.string.PlusMessageShotSetting))
                 .setChecked(it.belloworld.mercurygram.PlusMessageShot.isEnabled()));
-        items.add(UItem.asShadow(LocaleController.getString(R.string.PlusMessageShotSettingAbout)));
-        // plus f13 end
+    }
 
-        // plus f19: transfer boost (all accounts)
-        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF19Header)));
-        items.add(UItem.asButton(ID_PLUS_F19_DOWNLOAD, LocaleController.getString(R.string.PlusF19DownloadBoost),
-                it.belloworld.mercurygram.PlusTransferBoost.modeLabel(it.belloworld.mercurygram.PlusTransferBoost.getDownloadMode())));
-        items.add(UItem.asButton(ID_PLUS_F19_UPLOAD, LocaleController.getString(R.string.PlusF19UploadBoost),
-                it.belloworld.mercurygram.PlusTransferBoost.modeLabel(it.belloworld.mercurygram.PlusTransferBoost.getUploadMode())));
-        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusF19About))));
-        // plus f19 end
+    private void fillSendPrompts(ArrayList<UItem> items) {
+        // plus f16: ask before sending voice / round / sticker / GIF and before calls (all accounts)
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusPromptHeader)));
+        for (int k = 0; k < it.belloworld.mercurygram.PlusSendPrompts.KIND_COUNT; k++) {
+            items.add(UItem.asCheck(ID_SEND_PROMPT + k, it.belloworld.mercurygram.PlusSendPrompts.label(k))
+                    .setChecked(it.belloworld.mercurygram.PlusSendPrompts.isEnabled(k)));
+        }
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusPromptAbout))));
+    }
 
+    private void fillProfiles(ArrayList<UItem> items) {
         // plus f14: profile ID / DC / registration date
         items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF14Header)));
         items.add(UItem.asCheck(ID_F14_SHOW_DC, LocaleController.getString(R.string.PlusF14ShowDc))
@@ -555,8 +643,23 @@ public class HanakoSettingsSection {
         items.add(UItem.asCheck(ID_F14_SHOW_REG_DATE, LocaleController.getString(R.string.PlusF14ShowRegDate))
                 .setChecked(it.belloworld.mercurygram.PlusProfileInfo.isShowRegDate()));
         items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusF14About))));
-        // plus f14 end
+    }
 
+    /** Appearance: system font and the custom emoji pack (rows only, the host owns the section). */
+    private void fillLook(ArrayList<UItem> items) {
+        items.add(MgSettingsScope.globalCheck(ID_USE_SYSTEM_FONT, LocaleController.getString(R.string.MercurygramUseSystemFont))
+                .setChecked(SharedConfig.useSystemFont));
+        items.add(UItem.asButton(ID_EMOJI_PACK, LocaleController.getString(R.string.MercurygramEmojiTitle), emojiPackShortLabel()));
+    }
+
+    private void fillNetwork(ArrayList<UItem> items) {
+        // plus f19: transfer boost (all accounts)
+        items.add(UItem.asHeader(LocaleController.getString(R.string.PlusF19Header)));
+        items.add(UItem.asButton(ID_PLUS_F19_DOWNLOAD, LocaleController.getString(R.string.PlusF19DownloadBoost),
+                it.belloworld.mercurygram.PlusTransferBoost.modeLabel(it.belloworld.mercurygram.PlusTransferBoost.getDownloadMode())));
+        items.add(UItem.asButton(ID_PLUS_F19_UPLOAD, LocaleController.getString(R.string.PlusF19UploadBoost),
+                it.belloworld.mercurygram.PlusTransferBoost.modeLabel(it.belloworld.mercurygram.PlusTransferBoost.getUploadMode())));
+        items.add(UItem.asShadow(MgSettingsScope.withAllAccountsNote(LocaleController.getString(R.string.PlusF19About))));
     }
 
     /** Handles a click on one of this section's rows (un-offset id); false when the row is not ours. */
@@ -569,6 +672,14 @@ public class HanakoSettingsSection {
     private boolean clickHandled;
 
     private void handleClick(UItem item, View view) {
+        if (item.id > ID_NAV && item.id < ID_NAV + 50) { // hanako 2.01: hub rows
+            presentFragment(new org.telegram.ui.ForkSettingsActivity(item.id - ID_NAV).unlockedFrom(host));
+            return;
+        }
+        if (item.id == ID_MEDIA_MAX || item.id == ID_MEDIA_CAP) {
+            showMediaPicker(item.id == ID_MEDIA_CAP);
+            return;
+        }
         if (item.id == ID_HUB_CHAT_LOCK) {
             it.belloworld.mercurygram.PlusChatLock.openSettings(host);
             return;

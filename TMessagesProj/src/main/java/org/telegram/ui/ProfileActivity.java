@@ -13556,7 +13556,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 }
                                 break;
                         }
-                        cell.setText(formatString("TelegramVersion", R.string.TelegramVersion, String.format(Locale.US, "v%s (%d) %s", pInfo.versionName, code, abi)));
+                        cell.setText(formatString("TelegramVersion", R.string.TelegramVersion, String.format(Locale.US, "v%s (%d) %s", it.belloworld.mercurygram.MgUpdateChecker.displayVersion(), code, abi)));
                     } catch (Exception e) {
                         FileLog.e(e);
                     }
@@ -14051,8 +14051,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         textCell.setColors(-1, Theme.key_text_RedRegular);
                         textCell.setColors(-1, Theme.key_text_RedRegular);
                     } else if (position == languageRow) {
-                        textCell.setTextAndValueAndIcon(LocaleController.getString(R.string.Language), LocaleController.getCurrentLanguageName(), false, R.drawable.msg2_language, false);
-                        textCell.setImageLeft(23);
+                        textCell.setTextAndValueAndIcon(LocaleController.getString(R.string.Language), LocaleController.getCurrentLanguageName(), false, R.drawable.msg2_language, false); // hanako: no setImageLeft(23), it pushed the globe right of the other icons
                     } else if (position == notificationRow) {
                         textCell.setTextAndIcon(LocaleController.getString(R.string.NotificationsAndSounds), R.drawable.msg2_notifications, true);
                     } else if (position == privacyRow) {
@@ -15079,11 +15078,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     new SearchResult(9508, getString(R.string.MercurygramSavedMessagesHistory), getString(R.string.MercurygramSettings), R.drawable.msg_delete, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, it.belloworld.mercurygram.ui.HanakoSettingsSection.screen(it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_DELETED))),
                     new SearchResult(9509, getString(R.string.HanakoPageActivityLog), getString(R.string.MercurygramSettings), R.drawable.msg_log, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, it.belloworld.mercurygram.ui.HanakoSettingsSection.screen(it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_ACTIVITY_LOG))),
                     new SearchResult(9510, getString(R.string.PlusF04Title), getString(R.string.MercurygramSettings), R.drawable.msg_archive_hide, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.PlusMessageFiltersActivity())),
-                    new SearchResult(9511, getString(R.string.HanakoPageChats), getString(R.string.MercurygramSettings), R.drawable.msg_message, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, it.belloworld.mercurygram.ui.HanakoSettingsSection.screen(it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_CHATS))),
+                    new SearchResult(9511, getString(R.string.HanakoPageChatsMessages), getString(R.string.MercurygramSettings), R.drawable.msg_message, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, it.belloworld.mercurygram.ui.HanakoSettingsSection.screen(it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_CHATS))),
                     new SearchResult(9512, getString(R.string.PlusMessageShot), getString(R.string.MercurygramSettings), R.drawable.msg_message, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, it.belloworld.mercurygram.ui.HanakoSettingsSection.screenAt(it.belloworld.mercurygram.ui.HanakoSettingsSection.ID_MESSAGE_SHOT))),
                     new SearchResult(9513, getString(R.string.PlusF19Header), getString(R.string.MercurygramSettings), R.drawable.msg_message, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, it.belloworld.mercurygram.ui.HanakoSettingsSection.screenAt(it.belloworld.mercurygram.ui.HanakoSettingsSection.ID_PLUS_F19_DOWNLOAD))),
                     new SearchResult(9514, getString(R.string.PlusF14Header), getString(R.string.MercurygramSettings), R.drawable.msg_message, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, it.belloworld.mercurygram.ui.HanakoSettingsSection.screenAt(it.belloworld.mercurygram.ui.HanakoSettingsSection.ID_F14_SHOW_DC))),
-                    new SearchResult(9515, getString(R.string.MercurygramSettingsPrivacy), getString(R.string.MercurygramSettings), R.drawable.msg2_secret, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, it.belloworld.mercurygram.ui.HanakoSettingsSection.screen(it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_PRIVACY))),
+                    new SearchResult(9515, getString(R.string.HanakoPagePrivacy), getString(R.string.MercurygramSettings), R.drawable.msg2_secret, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, it.belloworld.mercurygram.ui.HanakoSettingsSection.screen(it.belloworld.mercurygram.ui.HanakoSettingsSection.PAGE_PRIVACY))),
                     new SearchResult(9522, getString(R.string.HanakoBackupTitle), getString(R.string.MercurygramSettings), R.drawable.msg_download, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.HanakoBackupActivity())),
                     new SearchResult(9523, getString(R.string.HanakoBackupCreate), getString(R.string.MercurygramSettings), R.drawable.msg_download, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.HanakoBackupActivity())),
                     new SearchResult(9524, getString(R.string.HanakoBackupExportChat), getString(R.string.MercurygramSettings), R.drawable.msg_download, () -> it.belloworld.mercurygram.HanakoTelemetry.searchOpen(ProfileActivity.this, new it.belloworld.mercurygram.ui.HanakoBackupActivity())),
@@ -15129,7 +15128,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     new SearchResult(1018, getString(R.string.ReplaceForward), getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_REPLACE_FORWARD))),
                     new SearchResult(1019, getString(R.string.MentionByName), getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_MENTION_BY_NAME))),
                     new SearchResult(1020, getString(R.string.HideSendAs), getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_HIDE_SEND_AS))),
-                    new SearchResult(1021, getString(R.string.DisableLinkPreviewByDefault), getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_DISABLE_LINK_PREVIEW_BY_DEFAULT))),
                     new SearchResult(1022, getString(R.string.AddDeleteAllUnpinnedMessages), getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_DELETE_ALL_UNPINNED))),
                     new SearchResult(1023, getString(R.string.DisableSlideToNextChannel), getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_DISABLE_SLIDE_TO_NEXT_CHANNEL))),
                     new SearchResult(1024, getString(R.string.FormatWithSeconds), getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_FORMAT_WITH_SECONDS))),
@@ -15169,8 +15167,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     new SearchResult(1057, getString(R.string.DisableUnifiedPush), "disableUnifiedPushRow", getString(R.string.NotificationsAndSounds), R.drawable.msg_notifications, () -> presentFragment(new NotificationsSettingsActivity().highlightUnifiedPush())),
                     new SearchResult(1053, getString(R.string.DisableTabletMode), getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_DISABLE_TABLET_MODE))),
                     new SearchResult(1054, getString(R.string.LockPremium), getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_LOCK_PREMIUM))),
-                    new SearchResult(1055, getString(R.string.ExportSettings), getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_EXPORT_SETTINGS))),
-                    new SearchResult(1056, getString(R.string.ImportSettings), getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_IMPORT_SETTINGS))),
                     new SearchResult(1057, getString(R.string.ShowBottomTabs), getString(R.string.MercurygramSettings), R.drawable.mg_settings, () -> presentFragment(new ForkSettingsActivity().highlight(ForkSettingsActivity.ID_SHOW_BOTTOM_TABS))), // [classic] #61
             };
         }
