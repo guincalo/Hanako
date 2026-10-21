@@ -8,6 +8,7 @@ import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
@@ -248,6 +249,14 @@ public final class MgDeletedRetention {
             }
             lastPrune[account] = now;
         }
+        Utilities.globalQueue.postRunnable(() -> {
+            try {
+                MgMessageHistory.getInstance().dropThrowawayCopiesOnce(); // hanako 2.01
+                MgMessageHistory.getInstance().enforceMediaCap(false);
+            } catch (Throwable t) {
+                FileLog.e(t);
+            }
+        });
         if (keepsEverything(account)) {
             return;
         }
@@ -258,6 +267,137 @@ public final class MgDeletedRetention {
                 FileLog.e(t);
             }
         });
+    }
+
+    // ---- media of deleted / edited messages (hanako 2.01) ----
+    //
+    // Few rules, in this order:
+    //  1. Never: stickers, GIFs, custom/animated emoji (Telegram can always show them again).
+    //  2. Never from bots, and never bigger than the size limit.
+    //  3. Channels and groups over BIG_GROUP members: text only, unless the chat has its own
+    //     exception under "Keep for" (an exception means "I care about this chat").
+    //  4. Only files that are already downloaded are copied; nothing is fetched again.
+    //  5. Over the storage limit the oldest copies are dropped (the messages stay).
+
+    /** Size limit choices for one copied file, bytes; 0 = don't copy media, -1 = any size. */
+    public static final long[] MEDIA_MAX = {0, 5L << 20, 20L << 20, 100L << 20, -1};
+    /** Storage limit choices for all copies together, bytes; 0 = no limit. */
+    public static final long[] MEDIA_CAP = {250L << 20, 1L << 30, 5L << 30, 0};
+    public static final int BIG_GROUP = 200;
+
+    public static long getMediaMax() {
+        return prefs().getLong("media_max", 20L << 20);
+    }
+
+    public static void setMediaMax(long v) {
+        prefs().edit().putLong("media_max", v).apply();
+    }
+
+    public static long getMediaCap() {
+        return prefs().getLong("media_cap", 1L << 30);
+    }
+
+    public static void setMediaCap(long v) {
+        prefs().edit().putLong("media_cap", v).apply();
+        Utilities.globalQueue.postRunnable(() -> MgMessageHistory.getInstance().enforceMediaCap(true));
+    }
+
+    public static String mediaMaxLabel(long v) {
+        if (v == 0) {
+            return LocaleController.getString(R.string.HanakoDeletedMediaNone);
+        }
+        if (v < 0) {
+            return LocaleController.getString(R.string.HanakoDeletedMediaAny);
+        }
+        return LocaleController.formatString(R.string.HanakoDeletedMediaUpTo, org.telegram.messenger.AndroidUtilities.formatFileSize(v));
+    }
+
+    public static String mediaCapLabel(long v) {
+        return v <= 0 ? LocaleController.getString(R.string.HanakoDeletedMediaNoCap)
+                : org.telegram.messenger.AndroidUtilities.formatFileSize(v);
+    }
+
+    private static boolean fromBot(int account, TLRPC.Message m) {
+        if (m == null || !(m.from_id instanceof TLRPC.TL_peerUser)) {
+            return false;
+        }
+        TLRPC.User u = MessagesController.getInstance(account).getUser(m.from_id.user_id);
+        return u != null && u.bot;
+    }
+
+    private static int memberCount(int account, long chatId) {
+        MessagesController mc = MessagesController.getInstance(account);
+        int n = 0;
+        TLRPC.Chat chat = mc.getChat(chatId);
+        if (chat != null) {
+            n = chat.participants_count;
+        }
+        TLRPC.ChatFull full = mc.getChatFull(chatId);
+        if (full != null) {
+            n = Math.max(n, full.participants_count);
+        }
+        return n;
+    }
+
+    /**
+     * Messages not worth keeping at all: service messages ("X joined", pins...) and bot
+     * messages in groups and channels (welcome / captcha bots delete their own posts).
+     */
+    public static boolean skipMessage(int account, long dialogId, TLRPC.Message m) {
+        if (m == null || m instanceof TLRPC.TL_messageService) {
+            return true;
+        }
+        return !DialogObject.isUserDialog(dialogId) && fromBot(account, m);
+    }
+
+    private static boolean isThrowawayDocument(TLRPC.Document d) {
+        return MessageObject.isStickerDocument(d) || MessageObject.isAnimatedStickerDocument(d, true)
+                || MessageObject.isVideoStickerDocument(d) || MessageObject.isGifDocument(d)
+                || MessageObject.isAnimatedEmoji(d);
+    }
+
+    /** Whether the media of this message should be copied when it is deleted / edited away. */
+    public static boolean shouldCopyMedia(int account, long dialogId, TLRPC.Message m) {
+        long max = getMediaMax();
+        if (max == 0 || m == null || m.media == null) {
+            return false;
+        }
+        TLRPC.MessageMedia media = MessageObject.getMedia(m);
+        long size = 0;
+        if (media instanceof TLRPC.TL_messageMediaDocument && media.document != null) {
+            if (isThrowawayDocument(media.document)) {
+                return false;
+            }
+            size = media.document.size;
+        } else if (media instanceof TLRPC.TL_messageMediaPhoto && media.photo != null) {
+            for (int i = 0; i < media.photo.sizes.size(); i++) {
+                size = Math.max(size, media.photo.sizes.get(i).size);
+            }
+        }
+        if (max > 0 && size > max) {
+            return false;
+        }
+        if (fromBot(account, m)) {
+            return false;
+        }
+        if (getException(account, dialogId) != KEEP_DEFAULT) {
+            return true;
+        }
+        int type = typeOf(account, dialogId);
+        if (type == TYPE_CHANNEL) {
+            return false;
+        }
+        return type != TYPE_GROUP || memberCount(account, -dialogId) <= BIG_GROUP;
+    }
+
+    /** True for a sticker / GIF / emoji document, whose old copies are dropped once (see MgMessageHistory). */
+    public static boolean isThrowaway(TLRPC.Message m) {
+        if (m == null || m.media == null) {
+            return false;
+        }
+        TLRPC.MessageMedia media = MessageObject.getMedia(m);
+        return media instanceof TLRPC.TL_messageMediaDocument && media.document != null
+                && isThrowawayDocument(media.document);
     }
 
     // ---- labels ----

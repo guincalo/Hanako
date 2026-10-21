@@ -180,14 +180,14 @@ public final class PlusDeletedMedia {
     /** Loads the saved media of one chat (or all chats when dialogId == 0). Call off the UI thread. */
     public static ArrayList<Item> load(int account, long dialogId) {
         ArrayList<Item> out = new ArrayList<>();
-        boolean includeEdits = isIncludeEdits();
+        java.util.HashSet<String> seenFiles = new java.util.HashSet<>(); // hanako 2.01: shared copies show once
         // The edited table also holds expired view-once media, which always belongs here.
         List<MgMessageHistory.Entry> entries =
                 MgMessageHistory.getInstance().getMediaEntries(account, dialogId, true, LOAD_LIMIT);
         for (int i = 0; i < entries.size(); i++) {
             MgMessageHistory.Entry e = entries.get(i);
             int origin = originOf(e);
-            if (origin == ORIGIN_EDITED && !includeEdits) {
+            if (e.mediaPath != null && !seenFiles.add(e.mediaPath)) {
                 continue;
             }
             Item item = makeItem(account, e, origin);

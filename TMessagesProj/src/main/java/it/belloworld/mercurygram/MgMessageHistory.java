@@ -49,7 +49,7 @@ public class MgMessageHistory {
     public static final int KIND_EDITED = 1;
 
     private static final String DB_NAME = "mg_message_history.db";
-    private static final int DB_VERSION = 2;
+    private static final int DB_VERSION = 3;
     private static final String TBL_DELETED = "deleted_messages";
     private static final String TBL_EDITED = "edited_messages";
     // Cap rows kept per (account, dialog) so an active deleter cannot grow the DB unbounded.
@@ -116,6 +116,14 @@ public class MgMessageHistory {
                     "media_path TEXT, thumb_path TEXT)");
             db.execSQL("CREATE INDEX idx_deleted_dialog ON " + TBL_DELETED + "(account, dialog_id, when_ms)");
             db.execSQL("CREATE INDEX idx_edited_dialog ON " + TBL_EDITED + "(account, dialog_id, when_ms)");
+            createMediaIndexes(db);
+        }
+
+        // hanako 2.01: media copies are shared between rows (one file per photo / document id),
+        // so deletes look up whether another row still points at a file.
+        private static void createMediaIndexes(android.database.sqlite.SQLiteDatabase db) {
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_deleted_media ON " + TBL_DELETED + "(media_path)");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_edited_media ON " + TBL_EDITED + "(media_path)");
         }
 
         @Override
@@ -126,6 +134,9 @@ public class MgMessageHistory {
                 db.execSQL("ALTER TABLE " + TBL_DELETED + " ADD COLUMN thumb_path TEXT");
                 db.execSQL("ALTER TABLE " + TBL_EDITED + " ADD COLUMN media_path TEXT");
                 db.execSQL("ALTER TABLE " + TBL_EDITED + " ADD COLUMN thumb_path TEXT");
+            }
+            if (oldVersion < 3) {
+                createMediaIndexes(db);
             }
         }
     }
@@ -139,6 +150,11 @@ public class MgMessageHistory {
     public static boolean isExcluded(long dialogId, TLRPC.Message message) {
         return DialogObject.isEncryptedDialog(dialogId)
                 || message == null;
+    }
+
+    /** {@link #isExcluded(long, TLRPC.Message)} plus the junk rule (service messages, bots in groups). */
+    public static boolean isExcluded(int account, long dialogId, TLRPC.Message message) {
+        return isExcluded(dialogId, message) || MgDeletedRetention.skipMessage(account, dialogId, message);
     }
 
     private static byte[] serialize(TLRPC.Message message) {
@@ -300,12 +316,15 @@ public class MgMessageHistory {
                     long uid = cursor.longValue(0);
                     byte[] bytes = cursor.byteArrayValue(1);
                     TLRPC.Message message = deserialize(bytes);
-                    if (message == null || isExcluded(uid, message)
+                    if (message == null || isExcluded(account, uid, message)
                             || !MgDeletedRetention.shouldSave(account, uid)) { // hanako: retention "Don't save"
                         continue;
                     }
                     MgHistoryMedia.Plan plan = null;
-                    if (deleted) {
+                    boolean copyMedia = MgDeletedRetention.shouldCopyMedia(account, uid, message); // hanako 2.01: media rules
+                    if (!copyMedia) {
+                        // keep the text only
+                    } else if (deleted) {
                         plan = MgHistoryMedia.plan(account, uid, message, "d" + now);
                     } else {
                         TLRPC.Message replacement = replacements != null ? replacements.get(message.id) : null;
@@ -677,6 +696,142 @@ public class MgMessageHistory {
         });
     }
     // plus f20 end
+
+    // hanako 2.01 begin: storage limit, shared copies, one-time sticker/GIF cleanup
+    private static volatile long lastCapCheck;
+
+    /** True when any row still points at this file (media or thumb). Off the UI thread. */
+    public boolean isReferenced(String path) {
+        final boolean[] found = {false};
+        String[] args = {path, path};
+        CursorBody body = c -> found[0] |= c.moveToFirst();
+        readCursor("SELECT 1 FROM " + TBL_DELETED + " WHERE media_path=? OR thumb_path=? LIMIT 1", args, body);
+        if (!found[0]) {
+            readCursor("SELECT 1 FROM " + TBL_EDITED + " WHERE media_path=? OR thumb_path=? LIMIT 1", args, body);
+        }
+        return found[0];
+    }
+
+    private void forgetFile(android.database.sqlite.SQLiteDatabase db, String path) {
+        String[] a = {path};
+        for (String t : new String[]{TBL_DELETED, TBL_EDITED}) {
+            db.execSQL("UPDATE " + t + " SET media_path=NULL WHERE media_path=?", a);
+            db.execSQL("UPDATE " + t + " SET thumb_path=NULL WHERE thumb_path=?", a);
+        }
+    }
+
+    /**
+     * Drops the oldest media copies while the folder is over the storage limit (the messages
+     * themselves stay). At most every 5 minutes unless forced. Off the UI thread.
+     */
+    public void enforceMediaCap(boolean force) {
+        long cap = MgDeletedRetention.getMediaCap();
+        long now = System.currentTimeMillis();
+        if (cap <= 0 || (!force && now - lastCapCheck < 5 * 60 * 1000L)) {
+            return;
+        }
+        lastCapCheck = now;
+        java.io.File[] files = MgHistoryMedia.getDir().listFiles();
+        if (files == null) {
+            return;
+        }
+        long total = 0;
+        for (java.io.File f : files) {
+            total += f.length();
+        }
+        if (total <= cap) {
+            return;
+        }
+        final long target = cap - cap / 10;
+        ArrayList<String> paths = new ArrayList<>();
+        CursorBody collect = c -> {
+            while (c.moveToNext()) {
+                if (!c.isNull(0)) paths.add(c.getString(0));
+                if (!c.isNull(1)) paths.add(c.getString(1));
+            }
+        };
+        readCursor("SELECT media_path, thumb_path, when_ms FROM " + TBL_DELETED + " WHERE media_path IS NOT NULL"
+                + " UNION ALL SELECT media_path, thumb_path, when_ms FROM " + TBL_EDITED + " WHERE media_path IS NOT NULL"
+                + " ORDER BY when_ms ASC LIMIT 20000", new String[0], collect);
+        ArrayList<String> drop = new ArrayList<>();
+        HashSet<String> seen = new HashSet<>();
+        for (int i = 0; i < paths.size() && total > target; i++) {
+            String p = paths.get(i);
+            if (!seen.add(p)) {
+                continue;
+            }
+            java.io.File f = new java.io.File(p);
+            total -= f.length();
+            drop.add(p);
+        }
+        if (drop.isEmpty()) {
+            return;
+        }
+        synchronized (writeLock) {
+            try {
+                android.database.sqlite.SQLiteDatabase db = dbHelper.getWritableDatabase();
+                db.beginTransaction();
+                try {
+                    for (int i = 0; i < drop.size(); i++) {
+                        forgetFile(db, drop.get(i));
+                    }
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+                return;
+            }
+        }
+        MgHistoryMedia.deleteAsync(drop);
+    }
+
+    /**
+     * Once per install: drops copies of stickers, GIFs and emoji made by older versions
+     * (Telegram can always show those again; they only filled the deleted-media browser).
+     */
+    public void dropThrowawayCopiesOnce() {
+        android.content.SharedPreferences prefs = ApplicationLoader.applicationContext
+                .getSharedPreferences("hanako_deleted_retention", android.content.Context.MODE_PRIVATE);
+        if (prefs.getBoolean("throwaway_dropped", false)) {
+            return;
+        }
+        ArrayList<String> drop = new ArrayList<>();
+        for (String t : new String[]{TBL_DELETED, TBL_EDITED}) {
+            readCursor("SELECT data, media_path, thumb_path FROM " + t + " WHERE media_path IS NOT NULL", new String[0], c -> {
+                while (c.moveToNext()) {
+                    TLRPC.Message m = deserialize(c.getBlob(0));
+                    if (MgDeletedRetention.isThrowaway(m)) {
+                        drop.add(c.getString(1));
+                        if (!c.isNull(2)) drop.add(c.getString(2));
+                    }
+                }
+            });
+        }
+        if (!drop.isEmpty()) {
+            synchronized (writeLock) {
+                try {
+                    android.database.sqlite.SQLiteDatabase db = dbHelper.getWritableDatabase();
+                    db.beginTransaction();
+                    try {
+                        for (int i = 0; i < drop.size(); i++) {
+                            forgetFile(db, drop.get(i));
+                        }
+                        db.setTransactionSuccessful();
+                    } finally {
+                        db.endTransaction();
+                    }
+                } catch (Exception e) {
+                    FileLog.e(e);
+                    return;
+                }
+            }
+            MgHistoryMedia.deleteAsync(drop);
+        }
+        prefs.edit().putBoolean("throwaway_dropped", true).apply();
+    }
+    // hanako 2.01 end
 
     // hanako begin: retention (MgDeletedRetention), per-chat clear, revision delete, stats
     /**

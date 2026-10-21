@@ -226,7 +226,7 @@ public final class MgChatGhostController {
         for (int e = 0; e < entries.size() && injected < MG_GHOST_INJECT_CAP_PER_CALL; e++) {
             MgMessageHistory.Entry entry = entries.get(e);
             TLRPC.Message m = entry == null ? null : entry.message;
-            if (m == null || MgMessageHistory.isExcluded(host.getDialogId(), m)) {
+            if (m == null || MgMessageHistory.isExcluded(host.getCurrentAccount(), host.getDialogId(), m)) {
                 continue;
             }
             if (host.mgMessagesDict0().indexOfKey(m.id) >= 0) {
@@ -341,7 +341,7 @@ public final class MgChatGhostController {
             Set<Integer> remote = MgMessageHistory.getInstance().takeRemote(-channelId);
             for (int i = 0; i < resolved.size(); i++) {
                 MessageObject mo = resolved.get(i);
-                if (!mo.scheduled && remote.contains(mo.getId()) && !MgMessageHistory.isExcluded(host.getDialogId(), mo.messageOwner)) {
+                if (!mo.scheduled && remote.contains(mo.getId()) && !MgMessageHistory.isExcluded(host.getCurrentAccount(), host.getDialogId(), mo.messageOwner)) {
                     mo.mgDeletedGhost = true;
                     mo.mgDeletedWhenMs = System.currentTimeMillis();
                     it.belloworld.mercurygram.PlusDeletedReactions.onGhost(mo); // plus f07
@@ -460,7 +460,7 @@ public final class MgChatGhostController {
             for (int i = 0; i < messageObjects.size(); i++) {
                 MessageObject mo = messageObjects.get(i);
                 if (mo != null && mo.messageOwner != null && mo.messageOwner.edit_date != 0
-                        && !MgMessageHistory.isExcluded(host.getDialogId(), mo.messageOwner)) {
+                        && !MgMessageHistory.isExcluded(host.getCurrentAccount(), host.getDialogId(), mo.messageOwner)) {
                     editedMids.add(mo.getId());
                 }
             }

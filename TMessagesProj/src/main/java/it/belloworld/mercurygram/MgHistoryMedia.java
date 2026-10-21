@@ -182,7 +182,11 @@ public final class MgHistoryMedia {
         if (photo == null && document == null) {
             return null;
         }
-        String base = "a" + account + "_" + dialogId + "_" + m.id + "_" + tag;
+        // hanako 2.01: deleted / edited copies are named by the photo / document id, so the
+        // same picture posted many times (welcome spam, forwards) is stored once. View-once
+        // copies ("x" tag) keep the per-message name the deleted-media browser reads.
+        String base = tag.startsWith("x") ? "a" + account + "_" + dialogId + "_" + m.id + "_" + tag
+                : "h" + (document != null ? document.id : photo.id);
         File d = getDir();
         String mediaPath;
         String thumbPath = null;
@@ -206,6 +210,7 @@ public final class MgHistoryMedia {
             for (int i = 0; i < copy.size(); i++) {
                 runCopy(copy.get(i));
             }
+            MgMessageHistory.getInstance().enforceMediaCap(false); // hanako 2.01: storage limit
         });
     }
 
@@ -332,6 +337,10 @@ public final class MgHistoryMedia {
                 String path = copy.get(i);
                 // Never touch anything outside our own directory.
                 if (path == null || !path.startsWith(prefix)) {
+                    continue;
+                }
+                // hanako 2.01: shared copies (h<id>) go only when no row points at them any more
+                if (new File(path).getName().startsWith("h") && MgMessageHistory.getInstance().isReferenced(path)) {
                     continue;
                 }
                 try {
