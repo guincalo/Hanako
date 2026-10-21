@@ -107,9 +107,6 @@ public final class HanakoTelemetry {
     // features used outside the settings pages (telemetry snapshot, 1.3.x)
     public static final String TRANSCRIBE_PARAKEET = "transcribe_parakeet";
     public static final String TRANSCRIBE_WHISPER = "transcribe_whisper";
-    public static final String TRANSLATE_OFFLINE = "translate_offline";
-    public static final String TRANSLATE_ALTERNATIVE = "translate_alternative";
-    public static final String TRANSLATE_CLOUD = "translate_cloud";
     public static final String DELETED_MEDIA_OPEN = "deleted_media_open";
     public static final String DELETED_MEDIA_VIEW = "deleted_media_view";
     public static final String EDIT_HISTORY_OPEN = "edit_history_open";

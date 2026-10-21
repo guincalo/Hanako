@@ -19,17 +19,7 @@
     <string name="HanakoDeletedMediaUpTo">Up to %1$s</string>
     <string name="HanakoDeletedMediaNoCap">No limit</string>
     <string name="HanakoDeletedMediaInfo">Photos, videos, stickers, GIFs and files of deleted and edited messages are kept if they were already on your device; nothing is downloaded again. A file posted many times is stored once. Over the storage limit the oldest copies go first; the messages stay. Join and leave notices aren\'t kept. The deleted media screen shows what wasn\'t kept and why, and can stop keeping media from one chat.</string>
-    <string name="HanakoDeletedMediaChatsOff">Chats with media off</string>
-    <string name="HanakoDeletedMediaChatsOffConfirm">Keep media in all %1$d chats again?</string>
-    <string name="HanakoMediaResumeAll">Keep in all</string>
     <string name="PlusF20FilterStickers">Stickers</string>
-    <string name="HanakoMediaStopHere">Stop keeping media here</string>
-    <string name="HanakoMediaResumeHere">Keep media here again</string>
-    <string name="HanakoMediaStop">Stop</string>
-    <string name="HanakoMediaStopHereInfo">New deleted media from %1$s won\'t be kept. Deleted messages still are, and media already kept stays until you delete it.</string>
-    <string name="HanakoMediaOffHere">Media isn\'t kept in this chat. Tap to keep it again.</string>
-    <string name="HanakoMediaStopped">Media from %1$s won\'t be kept</string>
-    <string name="HanakoMediaResumed">Media from %1$s is kept again</string>
     <string name="HanakoNotKept">Media not kept: %1$s.</string>
     <string name="HanakoNotKeptMediaOff">%1$d while Keep media was Never</string>
     <string name="HanakoNotKeptTooBig">%1$d over the size limit</string>
@@ -63,10 +53,6 @@
     <string name="PlusGhostModeIsOn">Ghost mode is on for this account</string>
     <string name="PlusGhostTurnOff">Turn off ghost mode</string>
     <string name="PlusGhostSettings">Ghost mode settings</string>
-    <string name="PlusGhostOptNoReads">Don\'t send read receipts</string>
-    <string name="PlusGhostOptNoTyping">Don\'t send typing status</string>
-    <string name="PlusGhostOptStayOffline">Stay offline</string>
-    <string name="PlusGhostOptNoStories">Don\'t mark stories as seen</string>
     <string name="PlusGhostOptReadOnReply">Read the chat when I reply</string>
     <string name="PlusGhostOptForceOffline">Go offline again if shown online</string>
     <string name="PlusGhostSettingsInfo">Mark as read still sends a receipt for that chat, and story reactions or replies still count as views.</string>
@@ -230,8 +216,6 @@
     <string name="PlusF14DcAmsterdam">Amsterdam</string>
     <string name="PlusF14DcSingapore">Singapore</string>
     <string name="PlusF15Header">Emoji interactions</string>
-    <string name="PlusF15DisableInteractions">Disable emoji interactions</string>
-    <string name="PlusF15HideChoosingSticker">Don\'t send \"choosing a sticker\"</string>
     <string name="PlusF15About">Works even with ghost mode off. Nobody sees your emoji taps or that you\'re picking a sticker.</string>
     <string name="PlusPromptHeader">Ask before sending</string>
     <string name="PlusPromptVoiceRow">Voice messages</string>
@@ -290,7 +274,6 @@
     <string name="PlusF20OriginDeleted">the message was deleted</string>
     <string name="PlusF20OriginViewOnce">view-once / timed media expired</string>
     <string name="PlusF20OriginEdited">an edit replaced the media</string>
-    <string name="PlusF20ChatMenu">Show Deleted media in chat menu</string>
     <string name="HanakoSelfOffline">offline</string>
     <string name="HanakoSelfOnlineOtherDevice">online on another device</string>
     <string name="HanakoSavedLastSeen">%1$s (saved)</string>

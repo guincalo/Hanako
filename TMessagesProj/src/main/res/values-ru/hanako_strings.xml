@@ -19,17 +19,7 @@
     <string name="HanakoDeletedMediaUpTo">До %1$s</string>
     <string name="HanakoDeletedMediaNoCap">Без лимита</string>
     <string name="HanakoDeletedMediaInfo">Фото, видео, стикеры, GIF и файлы удалённых и изменённых сообщений сохраняются, если они уже были на устройстве; заново ничего не скачивается. Файл, отправленный много раз, хранится один раз. При превышении лимита первыми удаляются самые старые копии, сами сообщения остаются. Уведомления о входе и выходе не сохраняются. Экран удалённых медиа показывает, что не сохранилось и почему, и позволяет перестать сохранять медиа из одного чата.</string>
-    <string name="HanakoDeletedMediaChatsOff">Чаты без сохранения медиа</string>
-    <string name="HanakoDeletedMediaChatsOffConfirm">Снова сохранять медиа во всех чатах (%1$d)?</string>
-    <string name="HanakoMediaResumeAll">Сохранять везде</string>
     <string name="PlusF20FilterStickers">Стикеры</string>
-    <string name="HanakoMediaStopHere">Не сохранять медиа здесь</string>
-    <string name="HanakoMediaResumeHere">Снова сохранять медиа здесь</string>
-    <string name="HanakoMediaStop">Не сохранять</string>
-    <string name="HanakoMediaStopHereInfo">Новые удалённые медиа из «%1$s» не будут сохраняться. Удалённые сообщения сохраняются как раньше, а уже сохранённые медиа остаются, пока вы их не удалите.</string>
-    <string name="HanakoMediaOffHere">Медиа в этом чате не сохраняются. Нажмите, чтобы снова сохранять.</string>
-    <string name="HanakoMediaStopped">Медиа из «%1$s» не будут сохраняться</string>
-    <string name="HanakoMediaResumed">Медиа из «%1$s» снова сохраняются</string>
     <string name="HanakoNotKept">Не сохранено медиа: %1$s.</string>
     <string name="HanakoNotKeptMediaOff">%1$d, когда сохранение было выключено</string>
     <string name="HanakoNotKeptTooBig">%1$d больше лимита размера</string>
@@ -180,10 +170,6 @@
     <string name="PlusGhostModeIsOn">Режим призрака включён для этого аккаунта</string>
     <string name="PlusGhostTurnOff">Выключить режим призрака</string>
     <string name="PlusGhostSettings">Настройки режима призрака</string>
-    <string name="PlusGhostOptNoReads">Не отправлять прочтение</string>
-    <string name="PlusGhostOptNoTyping">Не показывать «печатает»</string>
-    <string name="PlusGhostOptStayOffline">Оставаться не в сети</string>
-    <string name="PlusGhostOptNoStories">Смотреть истории незаметно</string>
     <string name="PlusGhostOptReadOnReply">Читать чат, когда отвечаю</string>
     <string name="PlusGhostOptForceOffline">Выходить из сети принудительно</string>
     <string name="PlusGhostSettingsInfo">«Прочитать» всё равно отправляет отметку в этот чат, а реакции и ответы на истории считаются просмотром.</string>
@@ -347,8 +333,6 @@
     <string name="PlusF14DcAmsterdam">Амстердам</string>
     <string name="PlusF14DcSingapore">Сингапур</string>
     <string name="PlusF15Header">Интерактивные эмодзи</string>
-    <string name="PlusF15DisableInteractions">Отключить интерактивные эмодзи</string>
-    <string name="PlusF15HideChoosingSticker">Не показывать «выбирает стикер»</string>
     <string name="PlusF15About">Работает даже без режима призрака. Никто не видит ваши нажатия на эмодзи и выбор стикера.</string>
     <string name="PlusPromptHeader">Спрашивать перед отправкой</string>
     <string name="PlusPromptVoiceRow">Голосовые сообщения</string>
@@ -406,7 +390,6 @@
     <string name="PlusF20OriginDeleted">сообщение удалено</string>
     <string name="PlusF20OriginViewOnce">истёк срок одноразового медиа</string>
     <string name="PlusF20OriginEdited">медиа заменено при изменении</string>
-    <string name="PlusF20ChatMenu">«Удалённые медиа» в меню чата</string>
     <string name="HanakoEasterEgg">э-э?! м-меня нашли… т-только никому не говори 🌸</string>
     <string name="HanakoAuthTitle">Подтвердите, что это вы</string>
     <string name="HanakoAuthBackup">Подтвердите, что это вы, чтобы сохранить копию аккаунтов</string>

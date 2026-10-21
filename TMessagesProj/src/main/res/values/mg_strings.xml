@@ -13,8 +13,6 @@
     <string name="MercurygramScopeAllAccounts">Applies to all accounts</string>
     <string name="MercurygramScopeAllAccountsFooter">These options apply to all accounts on this device.</string>
     <string name="MercurygramMessageDetailsMenu">Show \"Message Details\"</string>
-    <string name="MercurygramDisableAutoUpdate">Disable in-app updater</string>
-    <string name="MercurygramDisableAutoUpdateAbout">Hanako will no longer check for updates on GitHub at startup. You can still trigger a manual check from the button below.</string>
     <string name="MercurygramAcceptPreReleaseUpdates">Accept pre-release updates</string>
     <string name="MercurygramAcceptPreReleaseUpdatesAbout">Get 5-dotted development snapshots through the in-app updater. They may crash or have half-done features.</string>
     <string name="MercurygramAcceptPreReleaseUpdatesWarningTitle">Enable pre-release updates?</string>
@@ -31,7 +29,6 @@
     <string name="MercurygramDisableInstantView">Open links in browser</string>
     <string name="MercurygramDisableInstantViewAbout">Links open in your browser instead of Instant View, which Telegram\'s servers render.</string>
     <string name="MercurygramDisableLinkPreviews">Disable link previews</string>
-    <string name="MercurygramDisableLinkPreviewsAbout">Don\'t fetch link previews while typing, so Telegram\'s servers don\'t load your links.</string>
     <string name="MercurygramPreferSecretChats">Start new chats as secret</string>
     <string name="MercurygramPreferSecretChatsAbout">The compose button starts an end-to-end encrypted secret chat. Secret chats don\'t sync to other devices.</string>
     <string name="MercurygramUseSystemFont">Use system font</string>

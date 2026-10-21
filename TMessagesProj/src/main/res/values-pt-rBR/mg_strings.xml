@@ -6,8 +6,6 @@
     <string name="MercurygramScopeAllAccounts">Aplica-se a todas as contas</string>
     <string name="MercurygramScopeAllAccountsFooter">Estas opções se aplicam a todas as contas neste dispositivo.</string>
     <string name="MercurygramMessageDetailsMenu">Mostrar \"Detalhes da mensagem\"</string>
-    <string name="MercurygramDisableAutoUpdate">Desativar atualizador interno</string>
-    <string name="MercurygramDisableAutoUpdateAbout">O Hanako não verificará mais atualizações no GitHub na inicialização. Você ainda pode iniciar uma verificação manual pelo botão abaixo.</string>
     <string name="MercurygramAcceptPreReleaseUpdates">Receber atualizações de pré-lançamento</string>
     <string name="MercurygramAcceptPreReleaseUpdatesWarningTitle">Ativar atualizações de pré-lançamento?</string>
     <string name="MercurygramAcceptPreReleaseUpdatesEnable">Ativar</string>

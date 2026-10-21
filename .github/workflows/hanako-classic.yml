@@ -41,6 +41,9 @@ jobs:
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL || true
           df -h /
 
+      - name: String keys (no LOC_ERR)
+        run: python3 scripts/check_string_keys.py .
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:

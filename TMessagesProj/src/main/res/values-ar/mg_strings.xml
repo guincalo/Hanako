@@ -6,8 +6,6 @@
     <string name="MercurygramScopeAllAccounts">ينطبق على جميع الحسابات</string>
     <string name="MercurygramScopeAllAccountsFooter">تنطبق هذه الخيارات على جميع الحسابات على هذا الجهاز.</string>
     <string name="MercurygramMessageDetailsMenu">إظهار \"تفاصيل الرسالة\"</string>
-    <string name="MercurygramDisableAutoUpdate">تعطيل المُحدِّث داخل التطبيق</string>
-    <string name="MercurygramDisableAutoUpdateAbout">لن يتحقق Hanako بعد الآن من التحديثات على GitHub عند بدء التشغيل. لا يزال بإمكانك تشغيل فحص يدوي من الزر أدناه.</string>
     <string name="MercurygramAcceptPreReleaseUpdates">قبول تحديثات الإصدارات قبل النهائية</string>
     <string name="MercurygramAcceptPreReleaseUpdatesWarningTitle">تفعيل تحديثات الإصدارات قبل النهائية؟</string>
     <string name="MercurygramAcceptPreReleaseUpdatesEnable">تفعيل</string>

@@ -229,10 +229,6 @@ public class SharedConfig {
     }
 
 
-
-
-
-
     public static void toggleMgDisableProximitySensor() {
         mg_disableProximitySensor = !mg_disableProximitySensor;
         ApplicationLoader.applicationContext.getSharedPreferences("userconfing", Context.MODE_PRIVATE)
@@ -251,24 +247,6 @@ public class SharedConfig {
         // newly-selected source on the next frame.
         Emoji.clearEmojiCache();
     }
-
-
-
-
-
-    private static String sanitizeMgTranslateAltEngine(String engine) {
-        if (MG_TRANSLATE_ALT_ENGINE_DUCKDUCKGO.equals(engine)
-                || MG_TRANSLATE_ALT_ENGINE_GOOGLE.equals(engine)
-                || MG_TRANSLATE_ALT_ENGINE_YANDEX.equals(engine)) {
-            return engine;
-        }
-        return MG_TRANSLATE_ALT_ENGINE_DUCKDUCKGO;
-    }
-
-
-
-
-
 
 
     // Propagate the reduce-tracking flag to the native MTProto layer for every
@@ -433,26 +411,6 @@ public class SharedConfig {
     public static boolean reduceTrackingFingerprint = false;
     public static boolean mg_useTor = false;
 
-
-    // Mercurygram: Alternative HTTP translation routes through a user-picked
-    // Mozhi instance (https://codeberg.org/aryak/mozhi) — a multi-engine
-    // privacy proxy — instead of contacting translate.googleapis.com directly.
-    // The picker keeps the privacy framing of "alternative" honest: text never
-    // reaches Google directly from the device, and the user can swap the
-    // backend engine (DuckDuckGo / Google-via-Mozhi / Yandex) or pin a
-    // self-hosted instance.
-    // Only engines that Mozhi still answers for: libre is gone from
-    // /api/engines entirely, deepl and reverso answer 500 on every default
-    // mirror, and mymemory truncates long text silently. A stored id outside
-    // this set falls back to duckduckgo in sanitizeMgTranslateAltEngine.
-    public static final String MG_TRANSLATE_ALT_ENGINE_DUCKDUCKGO = "duckduckgo";
-    public static final String MG_TRANSLATE_ALT_ENGINE_GOOGLE     = "google";
-    public static final String MG_TRANSLATE_ALT_ENGINE_YANDEX     = "yandex";
-
-
-
-
-    public static final String MG_TRANSCRIBE_LANG_DEVICE = "device";
 
     public static long pushStringGetTimeStart;
     public static long pushStringGetTimeEnd;
@@ -752,7 +710,6 @@ public class SharedConfig {
         mg_useCustomEmojiPack = preferences.getBoolean("mg_useCustomEmojiPack", false);
         mg_disableProximitySensor = preferences.getBoolean("mg_disableProximitySensor", false);
         migratePerAccountSettingsV1(preferences);
-        migrateTranscribeLangToPerAccount(preferences);
         migrateHideStoriesToPerAccount(preferences);
         migrateDisableGlobalSearchToPerAccount(preferences);
         migrateDeleteForAllByDefaultToPerAccount(preferences);
@@ -1098,27 +1055,6 @@ public class SharedConfig {
                 .apply();
     }
 
-    // transcribeLang was shipped as a global mg_ key, then reclassified
-    // per-account (a user may transcribe one account in English, another in
-    // Italian). Copy the formerly-global value into every account's userconfig,
-    // then drop the old key. Mirrors migratePerAccountSettingsV1.
-    private static void migrateTranscribeLangToPerAccount(SharedPreferences mainconfig) {
-        if (mainconfig.getBoolean("mg_transcribeLangPerAccountMigrated", false)) {
-            return;
-        }
-        String transcribeLang = mainconfig.getString("mg_transcribeLang", MG_TRANSCRIBE_LANG_DEVICE);
-        for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
-            String name = a == 0 ? "userconfing" : "userconfig" + a;
-            ApplicationLoader.applicationContext.getSharedPreferences(name, Activity.MODE_PRIVATE)
-                    .edit()
-                    .putString("transcribeLang", transcribeLang)
-                    .apply();
-        }
-        mainconfig.edit()
-                .remove("mg_transcribeLang")
-                .putBoolean("mg_transcribeLangPerAccountMigrated", true)
-                .apply();
-    }
 
     // hideStories was shipped as a global mg_ key, then reclassified per-account
     // (the stories bar shows the active account's contacts' stories — a user may

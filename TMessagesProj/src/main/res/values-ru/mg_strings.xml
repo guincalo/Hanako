@@ -6,8 +6,6 @@
     <string name="MercurygramScopeAllAccounts">Применяется ко всем аккаунтам</string>
     <string name="MercurygramScopeAllAccountsFooter">Эти настройки применяются ко всем аккаунтам на этом устройстве.</string>
     <string name="MercurygramMessageDetailsMenu">Показать «Подробности сообщения»</string>
-    <string name="MercurygramDisableAutoUpdate">Отключить встроенное обновление</string>
-    <string name="MercurygramDisableAutoUpdateAbout">Hanako больше не будет проверять обновления на GitHub при запуске. Вручную проверить можно с помощью кнопки ниже.</string>
     <string name="MercurygramAcceptPreReleaseUpdates">Принимать предварительные обновления</string>
     <string name="MercurygramAcceptPreReleaseUpdatesWarningTitle">Включить предварительные обновления?</string>
     <string name="MercurygramAcceptPreReleaseUpdatesEnable">Включить</string>
@@ -80,7 +78,6 @@
     <string name="MercurygramAcceptPreReleaseUpdatesWarningMessage">Предварительные сборки — это тестовые снимки разработки: возможны сбои и недоделанные функции. Позже можно вернуться. Продолжить?</string>
     <string name="MercurygramConfirmInternalLinksAbout">Показывает ссылки t.me и tg:// перед открытием, чтобы ссылка не вступила тайком в канал и не запустила бота.</string>
     <string name="MercurygramDisableInstantViewAbout">Ссылки открываются в браузере, а не в Instant View, который собирают серверы Telegram.</string>
-    <string name="MercurygramDisableLinkPreviewsAbout">Не загружать превью ссылок при наборе, чтобы серверы Telegram не открывали ваши ссылки.</string>
     <string name="MercurygramPreferSecretChatsAbout">Кнопка нового сообщения создаёт секретный чат со сквозным шифрованием. Он не синхронизируется с другими устройствами.</string>
     <string name="MercurygramReduceTrackingFingerprintAbout">Ключ сессии меняется каждый час, а не раз в сутки, — так сложнее отслеживать устройство. Трафика чуть больше.</string>
     <string name="MercurygramReduceTrackingFingerprintWarningMessage">Ключ сессии будет меняться каждый час. Пассивно отслеживать вас станет сложнее, но факт использования Telegram не скрывается. Продолжить?</string>

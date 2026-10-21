@@ -6,8 +6,6 @@
     <string name="MercurygramScopeAllAccounts">Geldt voor alle accounts</string>
     <string name="MercurygramScopeAllAccountsFooter">Deze opties gelden voor alle accounts op dit apparaat.</string>
     <string name="MercurygramMessageDetailsMenu">\"Berichtdetails\" tonen</string>
-    <string name="MercurygramDisableAutoUpdate">In-app-updater uitschakelen</string>
-    <string name="MercurygramDisableAutoUpdateAbout">Hanako controleert bij het opstarten niet meer op updates op GitHub. Je kunt nog steeds handmatig controleren via de knop hieronder.</string>
     <string name="MercurygramAcceptPreReleaseUpdates">Pre-release-updates accepteren</string>
     <string name="MercurygramAcceptPreReleaseUpdatesWarningTitle">Pre-release-updates inschakelen?</string>
     <string name="MercurygramAcceptPreReleaseUpdatesEnable">Inschakelen</string>

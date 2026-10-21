@@ -23,7 +23,6 @@ public class MgAccountConfig {
     public boolean messageDetailsMenu = false;
     public boolean disableLivePhotosByDefault = false;
     public boolean savedMessagesHistory = true;
-    public String transcribeLang = SharedConfig.MG_TRANSCRIBE_LANG_DEVICE;
     public boolean hideStories = false;
     public boolean hidePremiumPromo = true;
     public boolean disableGlobalSearch = false;
@@ -81,7 +80,6 @@ public class MgAccountConfig {
         editor.putBoolean("messageDetailsMenu", messageDetailsMenu);
         editor.putBoolean("disableLivePhotosByDefault", disableLivePhotosByDefault);
         editor.putBoolean("savedMessagesHistory", savedMessagesHistory);
-        editor.putString("transcribeLang", transcribeLang);
         editor.putBoolean("hideStories", hideStories);
         editor.putBoolean("hidePremiumPromo", hidePremiumPromo);
         editor.putBoolean("disableGlobalSearch", disableGlobalSearch);
@@ -109,7 +107,6 @@ public class MgAccountConfig {
         messageDetailsMenu = preferences.getBoolean("messageDetailsMenu", false);
         disableLivePhotosByDefault = preferences.getBoolean("disableLivePhotosByDefault", false);
         savedMessagesHistory = preferences.getBoolean("savedMessagesHistory", true);
-        transcribeLang = preferences.getString("transcribeLang", SharedConfig.MG_TRANSCRIBE_LANG_DEVICE);
         hideStories = preferences.getBoolean("hideStories", false);
         hidePremiumPromo = preferences.getBoolean("hidePremiumPromo", true);
         disableGlobalSearch = preferences.getBoolean("disableGlobalSearch", false);
@@ -143,7 +140,6 @@ public class MgAccountConfig {
         messageDetailsMenu = false;
         disableLivePhotosByDefault = false;
         savedMessagesHistory = true;
-        transcribeLang = SharedConfig.MG_TRANSCRIBE_LANG_DEVICE;
         hideStories = false;
         hidePremiumPromo = true;
         disableGlobalSearch = false;

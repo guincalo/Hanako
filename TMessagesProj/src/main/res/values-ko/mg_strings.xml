@@ -6,8 +6,6 @@
     <string name="MercurygramScopeAllAccounts">모든 계정에 적용</string>
     <string name="MercurygramScopeAllAccountsFooter">이 옵션은 이 기기의 모든 계정에 적용됩니다.</string>
     <string name="MercurygramMessageDetailsMenu">\"메시지 세부정보\" 표시</string>
-    <string name="MercurygramDisableAutoUpdate">인앱 업데이터 사용 안 함</string>
-    <string name="MercurygramDisableAutoUpdateAbout">Hanako이 시작 시 GitHub에서 업데이트를 더 이상 확인하지 않습니다. 아래 버튼에서 수동으로 확인할 수 있습니다.</string>
     <string name="MercurygramAcceptPreReleaseUpdates">사전 출시 업데이트 수신</string>
     <string name="MercurygramAcceptPreReleaseUpdatesWarningTitle">사전 출시 업데이트를 사용 설정하시겠습니까?</string>
     <string name="MercurygramAcceptPreReleaseUpdatesEnable">사용 설정</string>
