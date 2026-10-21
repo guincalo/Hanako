@@ -253,7 +253,7 @@ public class HanakoKeepRuleActivity extends UniversalFragment {
         @Override
         public View createView(android.content.Context context) {
             View v = super.createView(context);
-            ActionBarMenuItem search = actionBar.createMenu().addItem(0, R.drawable.ic_ab_search).setIsSearchField(true)
+            ActionBarMenuItem search = actionBar.createMenu().addItem(0, R.drawable.outline_header_search).setIsSearchField(true)
                     .setActionBarMenuItemSearchListener(new ActionBarMenuItem.ActionBarMenuItemSearchListener() {
                         @Override
                         public void onTextChanged(android.widget.EditText editText) {
