@@ -6143,6 +6143,95 @@ public class Theme {
         return hsv[1] > .02f ? adaptHue(baseColor, bubbleColor) : baseColor;
     }
 
+    // hanako: pitch black (OLED). A switch in Settings > Hanako > Appearance that, while a dark theme
+    // is active (Rin, Night, Monet Dark, any dark .attheme), overrides that theme's surfaces with
+    // #000000 at colour-refresh time, so it works on top of every dark theme without editing them.
+    // Elevated bits (popups, search fields, dividers, section gaps) become very dark grays so the
+    // UI keeps its structure. Light themes are untouched. Stored in mainconfig, read lazily so it
+    // is valid during Theme's static init.
+    private static Boolean pitchBlack;
+    private static Boolean pitchBlackWallpaper;
+
+    public static boolean isPitchBlackEnabled() {
+        if (pitchBlack == null) {
+            pitchBlack = MessagesController.getGlobalMainSettings().getBoolean("hanako_pitchBlack", false);
+        }
+        return pitchBlack;
+    }
+
+    public static boolean isPitchBlackWallpaperEnabled() {
+        if (pitchBlackWallpaper == null) {
+            pitchBlackWallpaper = MessagesController.getGlobalMainSettings().getBoolean("hanako_pitchBlackWallpaper", true);
+        }
+        return pitchBlackWallpaper;
+    }
+
+    /** True when pitch black is on and the current theme is dark, i.e. it is being applied now. */
+    public static boolean isPitchBlackActive() {
+        return currentTheme != null && currentTheme.isDark() && isPitchBlackEnabled();
+    }
+
+    public static void setPitchBlack(boolean on) {
+        pitchBlack = on;
+        MessagesController.getGlobalMainSettings().edit().putBoolean("hanako_pitchBlack", on).apply();
+        reapplyForPitchBlack();
+    }
+
+    public static void setPitchBlackWallpaper(boolean on) {
+        pitchBlackWallpaper = on;
+        MessagesController.getGlobalMainSettings().edit().putBoolean("hanako_pitchBlackWallpaper", on).apply();
+        reapplyForPitchBlack();
+    }
+
+    /** Re-applies the current theme in place (same path as an accent change), animated, no restart. */
+    private static void reapplyForPitchBlack() {
+        if (currentTheme == null || !currentTheme.isDark()) {
+            return; // light theme: nothing changes until a dark theme is applied
+        }
+        NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.needSetDayNightTheme,
+                currentTheme, currentTheme == currentNightTheme, null, -1);
+    }
+
+    private static void applyPitchBlack(SparseIntArray colors) {
+        if (colors == null || !isPitchBlackActive()) {
+            return;
+        }
+        // built here, not as a static field: Theme's static init applies the theme before later statics exist
+        final int[] keys = {
+                key_windowBackgroundWhite, key_windowBackgroundGray, key_actionBarDefault, key_actionBarDefaultArchived,
+                key_actionBarActionModeDefault, key_actionBarActionModeDefaultTop, key_avatar_backgroundActionBarBlue,
+                key_chats_menuBackground, key_chats_menuTopBackground, key_chats_menuTopBackgroundCats,
+                key_dialogBackground, key_dialogTopBackground, key_chat_messagePanelBackground, key_chat_emojiPanelBackground,
+                key_chat_topPanelBackground, key_player_background, key_iv_background, key_iv_navigationBackground,
+                key_glass_targetMainTabs, key_glass_targetMainTopPanel, key_chat_messagePanelVoiceLockBackground,
+        };
+        for (int key : keys) {
+            colors.put(key, 0xff000000);
+        }
+        colors.put(key_graySection, 0xff0a0a0a);
+        colors.put(key_dialogBackgroundGray, 0xff0a0a0a);
+        colors.put(key_iv_backgroundGray, 0xff0a0a0a);
+        colors.put(key_divider, 0xff222222);
+        colors.put(key_actionBarDefaultSubmenuBackground, 0xff141414);
+        colors.put(key_dialogSearchBackground, 0xff1a1a1a);
+        colors.put(key_chat_emojiSearchBackground, 0xff1a1a1a);
+        colors.put(key_share_linkBackground, 0xff1a1a1a);
+        colors.put(key_windowBackgroundUnchecked, 0xff1a1a1a);
+        colors.put(key_inappPlayerBackground, 0xff121212);
+        colors.put(key_undo_background, 0xf2141414);
+        colors.put(key_chat_goDownButton, 0xff141414);
+        colors.put(key_chat_unreadMessagesStartBackground, 0xff121212);
+        if (isPitchBlackWallpaperEnabled()) {
+            colors.put(key_chat_wallpaper, 0xff000000);
+            colors.delete(key_chat_wallpaper_gradient_to1);
+            colors.delete(key_chat_wallpaper_gradient_to2);
+            colors.delete(key_chat_wallpaper_gradient_to3);
+            // service bubbles ("Today", joins) stay visible on black
+            colors.put(key_chat_serviceBackground, 0xcc1f1f1f);
+            colors.put(key_chat_serviceBackgroundSelected, 0xcc2c2c2c);
+        }
+    }
+
     public static void refreshThemeColors() {
         refreshThemeColors(false, false);
     }
@@ -6156,6 +6245,7 @@ public class Theme {
         }
         applyCalculatedTableColors(currentColorsNoAccent, currentColors, currentTheme.isDark());
         applyCalculatedArticleCodeColors(currentColorsNoAccent, currentColors, currentTheme.isDark());
+        applyPitchBlack(currentColors); // hanako: pitch black (OLED)
         if (!messages) {
             boolean async = !(LaunchActivity.getLastFragment() instanceof ChatActivity);
             reloadWallpaper(async);
@@ -9482,6 +9572,13 @@ public class Theme {
     ) {
         BackgroundDrawableSettings settings = new BackgroundDrawableSettings();
         settings.wallpaper = local ? null : wallpaper;
+        if (currentTheme != null && currentTheme.isDark() && isPitchBlackEnabled() && isPitchBlackWallpaperEnabled()) {
+            // hanako: pitch black (OLED) also blacks out the chat background (own wallpapers included)
+            settings.wallpaper = new ColorDrawable(0xff000000);
+            settings.isWallpaperMotion = false;
+            settings.isPatternWallpaper = false;
+            return settings;
+        }
         boolean overrideTheme = (!hasPreviousTheme || isApplyingAccent) && overrideWallpaper != null;
         if (overrideWallpaper != null) {
             settings.isWallpaperMotion = overrideWallpaper.isMotion;

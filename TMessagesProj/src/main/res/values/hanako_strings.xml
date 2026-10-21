@@ -574,4 +574,7 @@
     <string name="HanakoAutoplayNextVoice">Play the next voice message</string>
     <string name="HanakoAutoplayNextVoiceInfo">When a voice or round video message ends, the next one plays.</string>
     <string name="HanakoVoiceToTextInfo">Voice messages are transcribed on this phone by a separate app, such as **Scrib** from F-Droid. Tap Offline Voice-to-Text to pick it, or to install it.</string>
+    <string name="HanakoPitchBlack">Pitch black (OLED)</string>
+    <string name="HanakoPitchBlackInfo">True black backgrounds while a dark theme is on (Rin, Night, Monet and others), so OLED pixels stay off. Light themes are not changed.</string>
+    <string name="HanakoPitchBlackWallpaper">Black chat background</string>
 </resources>

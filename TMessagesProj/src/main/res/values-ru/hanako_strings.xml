@@ -575,4 +575,7 @@
     <string name="HanakoAutoplayNextVoice">Играть следующее голосовое</string>
     <string name="HanakoAutoplayNextVoiceInfo">Когда голосовое или кружок заканчивается, играет следующее.</string>
     <string name="HanakoVoiceToTextInfo">Голосовые расшифровываются на телефоне отдельным приложением, например **Scrib** из F-Droid. Нажмите «Офлайн-расшифровка», чтобы выбрать или установить его.</string>
+    <string name="HanakoPitchBlack">Чёрная тема (OLED)</string>
+    <string name="HanakoPitchBlackInfo">Настоящий чёрный фон, пока включена тёмная тема (Rin, Night, Monet и другие): пиксели OLED не светятся. Светлые темы не меняются.</string>
+    <string name="HanakoPitchBlackWallpaper">Чёрный фон чатов</string>
 </resources>

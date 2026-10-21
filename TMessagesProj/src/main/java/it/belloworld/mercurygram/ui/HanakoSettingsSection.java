@@ -78,6 +78,8 @@ public class HanakoSettingsSection {
     public static final int ID_CONFIRM_INTERNAL_LINKS = 63;
     public static final int ID_SHOW_CHAR_COUNTER = 64;
     public static final int ID_DISABLE_PROXIMITY_SENSOR = 65;
+    public static final int ID_PITCH_BLACK = 66; // hanako 2.04: pitch black (OLED)
+    public static final int ID_PITCH_BLACK_WALLPAPER = 67;
     // plus f07: vanished-chat log + deleted-message reactions (ids 700-799)
     public static final int ID_F07_LOG_DIALOGS = 700;
     public static final int ID_F07_OPEN_LOG = 701;
@@ -661,6 +663,12 @@ public class HanakoSettingsSection {
         items.add(MgSettingsScope.globalCheck(ID_USE_SYSTEM_FONT, LocaleController.getString(R.string.MercurygramUseSystemFont))
                 .setChecked(SharedConfig.useSystemFont));
         items.add(UItem.asButton(ID_EMOJI_PACK, LocaleController.getString(R.string.MercurygramEmojiTitle), emojiPackShortLabel()));
+        items.add(UItem.asButtonCheck(ID_PITCH_BLACK, LocaleController.getString(R.string.HanakoPitchBlack),
+                LocaleController.getString(R.string.HanakoPitchBlackInfo)).setChecked(Theme.isPitchBlackEnabled()).setMultiline(true));
+        if (Theme.isPitchBlackEnabled()) {
+            items.add(UItem.asCheck(ID_PITCH_BLACK_WALLPAPER, LocaleController.getString(R.string.HanakoPitchBlackWallpaper))
+                    .setChecked(Theme.isPitchBlackWallpaperEnabled()));
+        }
     }
 
     private void fillNetwork(ArrayList<UItem> items) {
@@ -859,6 +867,14 @@ public class HanakoSettingsSection {
                 break;
             case ID_USE_SYSTEM_FONT:
                 SharedConfig.toggleUseSystemFont();
+                refreshList();
+                break;
+            case ID_PITCH_BLACK:
+                Theme.setPitchBlack(!Theme.isPitchBlackEnabled());
+                refreshList();
+                break;
+            case ID_PITCH_BLACK_WALLPAPER:
+                Theme.setPitchBlackWallpaper(!Theme.isPitchBlackWallpaperEnabled());
                 refreshList();
                 break;
             case ID_HIDE_STORIES:
