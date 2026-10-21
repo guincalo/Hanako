@@ -4042,8 +4042,8 @@ public class Theme {
         themesDict.put("Night", themeInfo);
 
         // hanako: the default look, a soft petal wallpaper inside each .attheme (WPS). "Hanako" (light):
-        // plum-tinted neutrals, pastel pink accent, lavender links. "Rin" (dark): auburn like her hair,
-        // dark green like her eyes for links and active controls.
+        // plum-tinted neutrals, pastel pink accent, lavender links. "Rin" (dark): colours sampled from
+        // Rin Tezuka's CG: rose-crimson hair (header, own bubbles), teal/mint eyes (links, controls).
         themeInfo = new ThemeInfo();
         themeInfo.name = "Hanako";
         themeInfo.assetName = "hanako.attheme";
@@ -4057,9 +4057,9 @@ public class Theme {
         themeInfo = new ThemeInfo();
         themeInfo.name = "Rin";
         themeInfo.assetName = "rin.attheme";
-        themeInfo.previewBackgroundColor = 0xff1c1411;
-        themeInfo.previewInColor = 0xff2a1e1a;
-        themeInfo.previewOutColor = 0xff8b3a2b;
+        themeInfo.previewBackgroundColor = 0xff181314;
+        themeInfo.previewInColor = 0xff272022;
+        themeInfo.previewOutColor = 0xff8d3e47;
         themeInfo.sortIndex = 1;
         themes.add(themeInfo);
         themesDict.put("Rin", themeInfo);
