@@ -11,6 +11,30 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+## [2.02d] - 2026-10-21
+
+Development build: settings cleanup, keep rules, new default themes.
+
+### Added
+- **Keep rules** for deleted messages: per chat and/or per person, choose text and which media types to keep.
+  From a message's long-press ("Keep deleted..."), the chat menu ("Keep rule for this chat...") or the rules
+  list in Settings. 2.01 "stop keeping media here" chats become rules.
+- **Hanako (light) and Rin (dark)** themes as the default look.
+
+### Changed
+- Settings toggles read as the positive option ("Check for updates" instead of "Disable ..."); the Ghost
+  mode page is grouped as "Ghost mode hides" and "While ghost mode is on".
+- Deleted media: a chat opens as its own screen with the same filters; "Show in chat" jumps to the message.
+- Recently-online dots use the theme's online colour.
+
+### Removed
+- Smug language, Peek (the stock long-press preview already doesn't mark messages read), the duplicate
+  "Deleted media" chat-menu entry, and leftover plugin/OpenPGP/DoH/translate settings and strings.
+
+### Fixed
+- Strings showing as "LOC_ERR:..." in Hanako's newer screens.
+- A stray version line at the bottom of other people's profiles.
+
 ## [2.01d] - 2026-10-21
 
 Development build: fixes from testing 2.0d.
