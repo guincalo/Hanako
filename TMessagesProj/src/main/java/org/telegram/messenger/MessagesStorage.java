@@ -125,7 +125,7 @@ public class MessagesStorage extends BaseController {
         }
     }
 
-    public final static int LAST_DB_VERSION = 179;
+    public final static int LAST_DB_VERSION = 180;
     private boolean databaseMigrationInProgress;
     public boolean showClearDatabaseAlert;
 

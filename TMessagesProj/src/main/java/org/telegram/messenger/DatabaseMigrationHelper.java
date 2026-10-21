@@ -1703,6 +1703,14 @@ public class DatabaseMigrationHelper {
             database.executeFast("PRAGMA user_version = 179").stepThis().dispose();
             version = 179;
         }
+        if (version == 179) {
+            // hanako: a database made by Hanako 1.x (upstream numbering) is already at 179 but never
+            // got dialog_filter.emoticon (Forkgram adds it at 176), so loading folders failed on start
+            executeNoException(database, "ALTER TABLE dialog_filter ADD COLUMN emoticon TEXT");
+            messagesStorage.getUserConfig().filtersLoaded = false; // the rows are stale (saves failed too): fetch folders once
+            database.executeFast("PRAGMA user_version = 180").stepThis().dispose();
+            version = 180;
+        }
 
         return version;
     }
