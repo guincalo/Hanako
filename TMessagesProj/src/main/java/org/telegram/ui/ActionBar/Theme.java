@@ -4041,8 +4041,9 @@ public class Theme {
         themes.add(themeInfo);
         themesDict.put("Night", themeInfo);
 
-        // hanako: the default look. "Hanako" (light) and "Rin" (dark): calm plum-tinted neutrals,
-        // pastel pink accent, lavender links, a soft petal wallpaper inside each .attheme (WPS).
+        // hanako: the default look, a soft petal wallpaper inside each .attheme (WPS). "Hanako" (light):
+        // plum-tinted neutrals, pastel pink accent, lavender links. "Rin" (dark): auburn like her hair,
+        // dark green like her eyes for links and active controls.
         themeInfo = new ThemeInfo();
         themeInfo.name = "Hanako";
         themeInfo.assetName = "hanako.attheme";
@@ -4056,9 +4057,9 @@ public class Theme {
         themeInfo = new ThemeInfo();
         themeInfo.name = "Rin";
         themeInfo.assetName = "rin.attheme";
-        themeInfo.previewBackgroundColor = 0xff1a171c;
-        themeInfo.previewInColor = 0xff27222a;
-        themeInfo.previewOutColor = 0xff4d2b3d;
+        themeInfo.previewBackgroundColor = 0xff1c1411;
+        themeInfo.previewInColor = 0xff2a1e1a;
+        themeInfo.previewOutColor = 0xff8b3a2b;
         themeInfo.sortIndex = 1;
         themes.add(themeInfo);
         themesDict.put("Rin", themeInfo);
