@@ -109,7 +109,6 @@
     <string name="DisableThumbsInDialogListInfo">إخفاء الصور المصغرة لآخر رسالة في قائمة الدردشات.</string>
     <string name="DisableGlobalSearchInfo">إظهار محادثاتك وجهات اتصالك فقط في البحث، دون نتائج عامة.</string>
     <string name="HideContactsInDialogsInfo">إخفاء جهات الاتصال الظاهرة أسفل قائمة الدردشات عند وجود دردشات قليلة.</string>
-    <string name="EnableLastSeenDotsInfo">تلوين نقطة الصورة الرمزية لمن ظهروا خلال الساعة الماضية.</string>
     <string name="HideAllChatsTab">إخفاء تبويب \"كل الدردشات\"</string>
     <string name="HideAllChatsTabInfo">يزيل تبويب \"كل الدردشات\" من شريط المجلدات. تبقى الدردشات خارج المجلدات متاحة عبر البحث والأرشيف.</string>
     <string name="DefaultFolder">المجلد الافتراضي</string>
@@ -237,7 +236,6 @@
     <string name="AudioPlayerAutoplayNext">التشغيل التلقائي للتالي</string>
     <string name="SmsOnlyOfficialWarning">ملاحظة: التحقق عبر الرسائل النصية مقتصر فقط على التطبيقات الرسمية</string>
     <string name="ThirdParty">طرف ثالث</string>
-    <string name="EnableLastSeenDots">تفعيل نقاط ملونة لآخر ظهور</string>
     <string name="HideStoriesInArchive">إخفاء القصص في الأرشيف</string>
     <string name="ExtractMediaFromPreview">إرسال الوسائط من معاينة الرابط كمرفق</string>
     <string name="ReplaceLinksOnPaste">استبدال الروابط عند اللصق</string>

@@ -109,7 +109,6 @@
     <string name="DisableThumbsInDialogListInfo">Mediaminiaturen van het laatste bericht in de chatlijst verbergen.</string>
     <string name="DisableGlobalSearchInfo">In de zoekresultaten alleen je eigen chats en contacten tonen, geen globale resultaten.</string>
     <string name="HideContactsInDialogsInfo">De contacten onder de chatlijst verbergen wanneer je weinig chats hebt.</string>
-    <string name="EnableLastSeenDotsInfo">De avatarstip kleuren voor mensen die het afgelopen uur online waren.</string>
     <string name="HideAllChatsTab">Tabblad \"Alle chats\" verbergen</string>
     <string name="HideAllChatsTabInfo">Verwijdert het tabblad \"Alle chats\" uit de mappenbalk. Chats buiten mappen blijven bereikbaar via zoeken en het archief.</string>
     <string name="DefaultFolder">Standaardmap</string>
@@ -237,7 +236,6 @@
     <string name="AudioPlayerAutoplayNext">Volgende automatisch afspelen</string>
     <string name="SmsOnlyOfficialWarning">Let op: SMS-verificatie is ALLEEN beschikbaar voor officiële mobiele apps</string>
     <string name="ThirdParty">Van derden</string>
-    <string name="EnableLastSeenDots">Gekleurde stippen voor laatst gezien inschakelen</string>
     <string name="HideStoriesInArchive">Verhalen in archief verbergen</string>
     <string name="ExtractMediaFromPreview">Media uit linkvoorbeeld als bijlage verzenden</string>
     <string name="ReplaceLinksOnPaste">Links vervangen bij plakken</string>

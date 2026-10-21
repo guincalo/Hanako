@@ -109,7 +109,6 @@
     <string name="DisableThumbsInDialogListInfo">Medien-Vorschaubilder der letzten Nachricht in der Chatliste ausblenden.</string>
     <string name="DisableGlobalSearchInfo">In der Suche nur eigene Chats und Kontakte anzeigen, keine globalen Ergebnisse.</string>
     <string name="HideContactsInDialogsInfo">Die Kontaktliste unter der Chatliste ausblenden, wenn es wenige Chats gibt.</string>
-    <string name="EnableLastSeenDotsInfo">Den Avatar-Punkt für zuletzt innerhalb der letzten Stunde gesehene Personen einfärben.</string>
     <string name="HideAllChatsTab">Tab \"Alle Chats\" ausblenden</string>
     <string name="HideAllChatsTabInfo">Entfernt den Tab \"Alle Chats\" aus der Ordnerleiste. Chats außerhalb von Ordnern bleiben über Suche und Archiv erreichbar.</string>
     <string name="DefaultFolder">Standardordner</string>
@@ -237,7 +236,6 @@
     <string name="AudioPlayerAutoplayNext">Nächstes automatisch abspielen</string>
     <string name="SmsOnlyOfficialWarning">Hinweis: Die SMS-Verifizierung ist NUR für offizielle mobile Apps verfügbar</string>
     <string name="ThirdParty">Drittanbieter</string>
-    <string name="EnableLastSeenDots">Farbige Punkte für „Zuletzt gesehen“ aktivieren</string>
     <string name="HideStoriesInArchive">Stories im Archiv ausblenden</string>
     <string name="ExtractMediaFromPreview">Medien aus der Linkvorschau als Anhang senden</string>
     <string name="ReplaceLinksOnPaste">Links beim Einfügen ersetzen</string>

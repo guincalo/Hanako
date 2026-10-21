@@ -4917,27 +4917,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             if (user != null && !MessagesController.isSupportUser(user) && !user.bot) {
                 boolean isOnline = isOnline();
                 wasDrawnOnline = isOnline;
-                int colorOnline = 0;
-                if (!user.self && user.status != null) {
-                    final int diff = user.status.expires - ConnectionsManager.getInstance(currentAccount).getCurrentTime();
-                    colorOnline = diff > 0
-                        ? Theme.getColor(Theme.key_chats_onlineCircle)
-                        : !MessagesController.getGlobalMainSettings().getBoolean("enableLastSeenDots", true)
-                        ? 0
-                        // hanako: "last seen dots" fade the theme's online colour (was yellow /
-                        // orange / red, which clashed with themes whose online dot is red)
-                        : diff > -60 * 60
-                        ? androidx.core.graphics.ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_chats_onlineCircle),
-                            diff > -15 * 60 ? 0xa0 : diff > -30 * 60 ? 0x68 : 0x38)
-                        : 0;
-                    if (colorOnline != 0) {
-                        isOnline = true;
-                    }
-                }
                 if (isOnline || onlineProgress != 0) {
-                    if (onlineProgress != 0 && colorOnline == 0) {
-                        colorOnline = Theme.getColor(Theme.key_chats_onlineCircle, resourcesProvider);
-                    }
                     int top = (int) (storyParams.originalAvatarRect.bottom - dp(useForceThreeLines || SharedConfig.useThreeLinesLayout ? 6 : 8));
                     int left;
                     if (LocaleController.isRTL) {
@@ -4948,7 +4928,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
 
                     Theme.dialogs_onlineCirclePaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider));
                     canvas.drawCircle(left, top, dp(7) * onlineProgress, Theme.dialogs_onlineCirclePaint);
-                    Theme.dialogs_onlineCirclePaint.setColor(colorOnline);
+                    Theme.dialogs_onlineCirclePaint.setColor(Theme.getColor(Theme.key_chats_onlineCircle, resourcesProvider));
                     canvas.drawCircle(left, top, dp(5) * onlineProgress, Theme.dialogs_onlineCirclePaint);
                     if (isOnline) {
                         if (onlineProgress < 1.0f) {

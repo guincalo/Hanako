@@ -109,7 +109,6 @@
     <string name="DisableThumbsInDialogListInfo">Ocultar as miniaturas de mídia da última mensagem na lista de conversas.</string>
     <string name="DisableGlobalSearchInfo">Mostrar na busca apenas suas conversas e contatos, sem resultados globais.</string>
     <string name="HideContactsInDialogsInfo">Ocultar os contatos exibidos abaixo da lista de conversas quando há poucas conversas.</string>
-    <string name="EnableLastSeenDotsInfo">Colorir o ponto do avatar de quem esteve online na última hora.</string>
     <string name="HideAllChatsTab">Ocultar a aba \"Todas as conversas\"</string>
     <string name="HideAllChatsTabInfo">Remove a aba \"Todas as conversas\" da barra de pastas. Conversas fora de pastas continuam acessíveis pela busca e pelo arquivo.</string>
     <string name="DefaultFolder">Pasta padrão</string>
@@ -237,7 +236,6 @@
     <string name="AudioPlayerAutoplayNext">Reproduzir próximo automaticamente</string>
     <string name="SmsOnlyOfficialWarning">Observação: A verificação por SMS está disponível APENAS para aplicativos oficiais</string>
     <string name="ThirdParty">Terceiros</string>
-    <string name="EnableLastSeenDots">Marcadores coloridos para visto por último</string>
     <string name="HideStoriesInArchive">Ocultar Stories no Arquivo</string>
     <string name="ExtractMediaFromPreview">Enviar mídia da visualização do link como anexo</string>
     <string name="ReplaceLinksOnPaste">Substituir links ao colar</string>

@@ -109,7 +109,6 @@
     <string name="DisableThumbsInDialogListInfo">Приховувати мініатюри медіа останнього повідомлення у списку чатів.</string>
     <string name="DisableGlobalSearchInfo">Показувати в пошуку лише ваші чати та контакти, без глобальних результатів.</string>
     <string name="HideContactsInDialogsInfo">Приховувати список контактів під списком чатів, коли чатів мало.</string>
-    <string name="EnableLastSeenDotsInfo">Підсвічувати крапку на аватарі для тих, хто був у мережі протягом останньої години.</string>
     <string name="HideAllChatsTab">Приховати вкладку «Усі чати»</string>
     <string name="HideAllChatsTabInfo">Прибрати вкладку «Усі чати» з панелі папок. Чати поза папками залишаться доступними через пошук і архів.</string>
     <string name="DefaultFolder">Папка за замовчуванням</string>
@@ -237,7 +236,6 @@
     <string name="AudioPlayerAutoplayNext">Автовідтворення наступного</string>
     <string name="SmsOnlyOfficialWarning">Примітка: SMS-підтвердження доступне ЛИШЕ у офіційних мобільних додатках</string>
     <string name="ThirdParty">Сторонні</string>
-    <string name="EnableLastSeenDots">Увімкнути кольорові крапки останнього входу</string>
     <string name="HideStoriesInArchive">Сховати історії в архіві</string>
     <string name="ExtractMediaFromPreview">Надсилати медіа з попереднього перегляду посилання як вкладення</string>
     <string name="ReplaceLinksOnPaste">Замінювати посилання при вставленні</string>

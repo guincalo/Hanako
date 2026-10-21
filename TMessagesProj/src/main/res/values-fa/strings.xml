@@ -23,7 +23,6 @@
     <string name="DisableThumbsInDialogListInfo">تصاویر بندانگشتی آخرین پیام در فهرست چت‌ها پنهان شوند.</string>
     <string name="DisableGlobalSearchInfo">در جستجو فقط چت‌ها و مخاطبین شما نمایش داده شوند، بدون نتایج سراسری.</string>
     <string name="HideContactsInDialogsInfo">وقتی چت‌های کمی دارید، مخاطبینی که زیر فهرست چت‌ها نمایش داده می‌شوند پنهان شوند.</string>
-    <string name="EnableLastSeenDotsInfo">نقطهٔ نمایهٔ کسانی که در یک ساعت گذشته آنلاین بوده‌اند رنگی شود.</string>
     <string name="HideAllChatsTab">پنهان کردن زبانهٔ «همهٔ چت‌ها»</string>
     <string name="HideAllChatsTabInfo">زبانهٔ «همهٔ چت‌ها» از نوار پوشه‌ها حذف می‌شود. چت‌هایی که داخل هیچ پوشه‌ای نیستند از راه جستجو و آرشیو در دسترس می‌مانند.</string>
     <string name="DefaultFolder">پوشهٔ پیش‌فرض</string>
@@ -151,7 +150,6 @@
     <string name="AudioPlayerAutoplayNext">پخش خودکار بعدی</string>
     <string name="SmsOnlyOfficialWarning">توجه: تأیید با پیامک فقط برای برنامه‌های موبایل رسمی در دسترس است</string>
     <string name="ThirdParty">شخص ثالث</string>
-    <string name="EnableLastSeenDots">فعال کردن نقطه‌های رنگی آخرین بازدید</string>
     <string name="HideStoriesInArchive">پنهان کردن استوری‌ها در آرشیو</string>
     <string name="ExtractMediaFromPreview">ارسال رسانهٔ پیش‌نمایش پیوند به‌صورت پیوست</string>
     <string name="ReplaceLinksOnPaste">جایگزینی پیوندها هنگام چسباندن</string>
