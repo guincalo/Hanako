@@ -11,6 +11,22 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+## [2.04d] - 2026-10-21
+
+Development build: Rin recoloured from her CG, pitch black for OLED screens.
+
+### Added
+- **Pitch black (OLED)** in Settings > Hanako > Appearance (off by default). While a dark theme is on
+  (Rin, Night, Monet, any dark theme) backgrounds, header, drawer, sheets and the input bar turn true black;
+  menus, search fields and dividers stay very dark gray so things remain readable. "Black chat background"
+  (on by default) blacks out chat wallpapers too. Applies at once; light themes are not changed.
+
+### Changed
+- **Rin (dark)** no longer looks orange: colours are sampled from Rin Tezuka's artwork. Rose-crimson like her
+  hair for the header and your bubbles, cream text on them, near-black backgrounds with a faint rose tint,
+  and her mint/teal eyes for links, switches, checkboxes, tabs, counters and the compose button.
+- Error and delete red is a clear red instead of orange-red in Rin.
+
 ## [2.03d] - 2026-10-21
 
 Development build: fixes from testing 2.02d, Rin recoloured.
