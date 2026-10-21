@@ -4,9 +4,7 @@ name: Hanako Classic compile check
 # rebase work branch. Gives every javac error in ~15 minutes.
 
 on:
-  push:
-    branches: [hanako-classic-wip]
-  workflow_dispatch:
+  workflow_dispatch: # manual only: the rebase branch it watched (hanako-classic-wip) is merged and gone
 
 concurrency:
   group: hanako-classic-check-${{ github.ref }}
