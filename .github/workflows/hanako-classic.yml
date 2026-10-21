@@ -154,6 +154,14 @@ jobs:
           APK=$(ls TMessagesProj_App/build/outputs/apk/afatFd_v8a/release/*.apk | head -1)
           echo "APK=${APK}" >> "$GITHUB_ENV"
 
+      - name: Upload R8 mapping (to read crash stacks from telemetry)
+        uses: actions/upload-artifact@v4
+        with:
+          name: r8-mapping
+          path: TMessagesProj_App/build/outputs/mapping/
+          if-no-files-found: ignore
+          retention-days: 90
+
       - name: Errors summary
         if: failure()
         run: |

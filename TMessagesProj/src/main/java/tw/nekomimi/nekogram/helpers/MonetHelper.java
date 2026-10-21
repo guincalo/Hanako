@@ -153,7 +153,11 @@ public class MonetHelper {
         }
 
         public void unregister(Context context) {
-            context.unregisterReceiver(this);
+            try {
+                context.unregisterReceiver(this);
+            } catch (IllegalArgumentException ignore) {
+                // hanako: not registered on this context (2.01d crashed in LaunchActivity.onDestroy)
+            }
         }
 
         @Override

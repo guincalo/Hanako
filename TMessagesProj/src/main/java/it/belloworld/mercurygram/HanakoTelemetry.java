@@ -719,12 +719,21 @@ public final class HanakoTelemetry {
         return f.format(new Date());
     }
 
+    /** "2.02d (13.0.2.0) arm64-v8a": Hanako version, Telegram base, primary ABI. */
     private static String appVersion() {
+        String base = "";
         try {
             Context ctx = ApplicationLoader.applicationContext;
-            return ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0).versionName;
-        } catch (Throwable t) {
-            return "";
+            base = ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0).versionName;
+        } catch (Throwable ignore) {
         }
+        String abi = "";
+        try {
+            abi = Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "";
+        } catch (Throwable ignore) {
+        }
+        String hanako = it.belloworld.mercurygram.MgUpdateChecker.hanakoVersion();
+        String v = hanako == null || hanako.isEmpty() ? base : hanako + " (" + base + ")";
+        return abi.isEmpty() ? v : v + " " + abi;
     }
 }
