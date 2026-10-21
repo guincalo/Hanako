@@ -25,9 +25,12 @@ together with Forkgram's own options. Settings search finds them.
 - **Streamer mode**: pseudonyms, masked avatars and titles, hidden numbers, optional screen-capture block.
 - **Message filters**: hide or collapse messages by regular expression, per chat or globally.
 - **Chat export** in Telegram Desktop's HTML and JSON formats, with media types, date range and size limit.
+- **Keep rules**: choose per chat or per person which deleted messages and media types are kept.
+- **Themes**: Rin (dark, the theme from Hanako 1.3) and Hanako (light) as the default look, and a
+  **Pitch black (OLED)** switch that turns any dark theme true black.
 - **Other**: message shots, session backup, choice of app API ID, profile DC and registration date,
-  transfer speed presets, confirmations before sending voice/stickers/GIFs or calling, the Rin dark theme
-  and the Smug language.
+  transfer speed presets, confirmations before sending voice/stickers/GIFs or calling, hiding the
+  "Send as" button.
 - **From Forkgram**: QR login, hidden accounts, UnifiedPush notifications, Monet themes, voice-to-text,
   and Forkgram's chat and privacy tweaks.
 
@@ -39,11 +42,15 @@ message content, names, numbers or IDs. You can view exactly what would be sent 
 Hanako 1.x was based on Mercurygram. The 2.x line moves to Forkgram Classic and drops: OpenPGP, the Tor
 plugin, custom DNS-over-HTTPS, proxy auto-switch, disabling the proxy while a VPN is on, the extra
 translation engines, on-device Whisper and Parakeet transcription, the plugin engine, and sending as
-scheduled in ghost mode. Where Mercurygram and Forkgram both had a feature, Forkgram's version is used.
+scheduled in ghost mode, the Smug language and Peek. Where Mercurygram and Forkgram both had a feature,
+Forkgram's version is used. Hanako 1.x's in-app updater looks at Mercurygram's releases, so update to 2.x
+by installing the APK yourself (it installs over 1.2 and later).
 
 ## Download
 
-APKs are on the [Releases](https://github.com/guincalo/Hanako/releases) page (arm64-v8a only).
+The current stable version is **2.04** ([release notes](CHANGELOG.md#204---2026-10-21)):
+[Hanako-v2.04-arm64-v8a.apk](https://github.com/guincalo/Hanako/releases/latest). All APKs are on the
+[Releases](https://github.com/guincalo/Hanako/releases) page (arm64-v8a only).
 Development builds are marked as pre-releases. You can also track releases with Obtainium:
 [stable](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%20%22moe.hanako.chan%22%2C%20%22url%22%3A%20%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%20%22author%22%3A%20%22guincalo%22%2C%20%22name%22%3A%20%22Hanako%22%2C%20%22additionalSettings%22%3A%20%22%7B%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%28%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%29%3F-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D) or [stable and dev builds](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%20%22moe.hanako.chan%22%2C%20%22url%22%3A%20%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%20%22author%22%3A%20%22guincalo%22%2C%20%22name%22%3A%20%22Hanako%20%28with%20dev%20builds%29%22%2C%20%22additionalSettings%22%3A%20%22%7B%5C%22includePrereleases%5C%22%3A%20true%2C%20%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%28%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%29%3Fd%3F-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D).
 

@@ -11,6 +11,44 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+## [2.04] - 2026-10-21
+
+First stable release of the 2.x line, based on [Forkgram Classic](https://github.com/forkgram/forkgram-classic)
+(Telegram 13.0.2 with the classic interface) instead of Mercurygram. It collects everything from the 1.31d and
+2.0d-2.04d development builds below, plus the changes listed here. Lightly tested on real devices; keep a
+session backup.
+
+### Changed
+- **Rin (dark) is back to the version from Hanako 1.3** (the last Mercurygram-based release): deep crimson
+  bubbles, near-black backgrounds, rose-red accents. The recolours from 2.02d-2.04d are gone.
+- Pitch black (OLED) from 2.04d stays and works on top of the restored Rin.
+
+### Fixed
+- **Hide "Send as" button** works: the avatar button next to the message field stays hidden in groups and
+  channels where you can post as a channel, also after the chat updates. Turning the setting on or off applies
+  when you return to the chat.
+
+### Since 1.3.1, in short
+- New base: Forkgram Classic. Where Mercurygram and Forkgram both had a feature, Forkgram's version is used.
+- One settings screen, **Settings > Hanako**, organized into Privacy, History, Chats and Advanced; Settings
+  search finds every option.
+- **Keep rules** for deleted messages per chat and per person; deleted media keeps everything already on the
+  device and says what it didn't keep.
+- Chat export closer to Telegram Desktop's HTML and JSON.
+- **Hanako (light)** and **Rin (dark)** themes as the default look, and a **Pitch black (OLED)** switch.
+- The in-app updater checks Hanako's own releases and verifies Hanako's signing key.
+- Removed: OpenPGP, the Tor plugin, custom DNS-over-HTTPS, proxy auto-switch, disabling the proxy while a
+  VPN is on, extra translation engines, on-device Whisper/Parakeet transcription, the plugin engine, sending
+  as scheduled in ghost mode, the Smug language, Peek, and the fading "recently online" ring.
+- Fixed: folder tabs missing on cold start after updating from 1.x, a crash when the launch screen closes,
+  "LOC_ERR:..." strings, and a stray version line on other people's profiles.
+
+### Known issues
+- Chat export still differs from Telegram Desktop for service messages, polls, reactions, userpics and some
+  rich media.
+- Hanako 1.x's in-app updater looks at Mercurygram's releases, so it won't offer 2.04; install the APK from
+  Releases or Obtainium. It installs as an update over Hanako 1.2 and later.
+
 ## [2.04d] - 2026-10-21
 
 Development build: Rin recoloured from her CG, pitch black for OLED screens.
@@ -316,7 +354,12 @@ First Hanako release, built on Mercurygram (Telegram for Android 12.10.6 base).
 ### Other
 - Telegram Premium upsells and promo rows hidden; upstream Mercurygram update checks disabled.
 
-[Unreleased]: https://github.com/guincalo/Hanako/compare/v2.0d...hanako-classic
+[Unreleased]: https://github.com/guincalo/Hanako/compare/v2.04...hanako-classic
+[2.04]: https://github.com/guincalo/Hanako/compare/v1.3.1...v2.04
+[2.04d]: https://github.com/guincalo/Hanako/compare/v2.03d...v2.04d
+[2.03d]: https://github.com/guincalo/Hanako/compare/v2.02d...v2.03d
+[2.02d]: https://github.com/guincalo/Hanako/compare/v2.01d...v2.02d
+[2.01d]: https://github.com/guincalo/Hanako/compare/v2.0d...v2.01d
 [2.0d]: https://github.com/guincalo/Hanako/releases/tag/v2.0d
 [1.31d]: https://github.com/guincalo/Hanako/compare/v1.3.1...v1.31d
 [1.3.1]: https://github.com/guincalo/Hanako/compare/v1.3.0...v1.3.1
