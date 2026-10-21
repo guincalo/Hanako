@@ -6,11 +6,11 @@
     <string name="ForkSettingsLockCodesDoNotMatch">Коди не збігаються. Введіть новий код.</string>
     <string name="ForkSettingsLockConfirmCodeInfo">Введіть код ще раз для підтвердження.</string>
     <string name="ForkSettingsLockConfirmCurrentCodeInfo">Введіть поточний код, щоб змінити або видалити його.</string>
-    <string name="ForkSettingsLockInfo">Окремий 4-значний код для входу в налаштування клієнта Fork. Код захищає лише цей екран налаштувань: очищення даних застосунку або встановлення іншої збірки прибирає його.</string>
+    <string name="ForkSettingsLockInfo">Окремий 4-значний код для входу в налаштування Hanako. Код захищає лише цей екран налаштувань: очищення даних застосунку або встановлення іншої збірки прибирає його.</string>
     <string name="ForkSettingsLockRemoveCode">Видалити код</string>
-    <string name="ForkSettingsLockRemoveCodeConfirm">Налаштування клієнта Fork відкриватимуться без коду.</string>
+    <string name="ForkSettingsLockRemoveCodeConfirm">Налаштування Hanako відкриватимуться без коду.</string>
     <string name="ForkSettingsLockSetCode">Встановити код</string>
-    <string name="ForkSettingsLockUnlockInfo">Введіть код, щоб відкрити налаштування клієнта Fork.</string>
+    <string name="ForkSettingsLockUnlockInfo">Введіть код, щоб відкрити налаштування Hanako.</string>
     <string name="DeleteFromDevice">Видалити з пристрою</string>
     <string name="DeleteFromDeviceDone">Файл видалено з пристрою</string>
     <string name="DeleteFromDeviceMessage">Цей файл буде назавжди видалено з вашого пристрою.</string>

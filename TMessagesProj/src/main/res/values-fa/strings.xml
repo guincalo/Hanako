@@ -165,15 +165,15 @@
     <string name="LinkReplacementInvalid">عبارت نامعتبر</string>
     <string name="LinkReplacedOnPaste">پیوند جایگزین شد</string>
     <string name="ForkSettingsLock">قفل تنظیمات</string>
-    <string name="ForkSettingsLockInfo">برای باز کردن تنظیمات Fork Client از یک کد ۴ رقمی جداگانه استفاده می‌شود. این کد فقط از همین صفحهٔ تنظیمات محافظت می‌کند: پاک کردن داده‌های برنامه یا نصب نسخه‌ای دیگر آن را حذف می‌کند.</string>
-    <string name="ForkSettingsLockUnlockInfo">برای باز کردن تنظیمات Fork Client کد را وارد کنید.</string>
+    <string name="ForkSettingsLockInfo">برای باز کردن تنظیمات Hanako از یک کد ۴ رقمی جداگانه استفاده می‌شود. این کد فقط از همین صفحهٔ تنظیمات محافظت می‌کند: پاک کردن داده‌های برنامه یا نصب نسخه‌ای دیگر آن را حذف می‌کند.</string>
+    <string name="ForkSettingsLockUnlockInfo">برای باز کردن تنظیمات Hanako کد را وارد کنید.</string>
     <string name="ForkSettingsLockConfirmCurrentCodeInfo">برای تغییر یا حذف کد، کد فعلی را وارد کنید.</string>
     <string name="ForkSettingsLockConfirmCodeInfo">برای تأیید، کد را دوباره وارد کنید.</string>
     <string name="ForkSettingsLockCodesDoNotMatch">کدها یکسان نیستند. کد جدیدی وارد کنید.</string>
     <string name="ForkSettingsLockSetCode">تنظیم کد</string>
     <string name="ForkSettingsLockChangeCode">تغییر کد</string>
     <string name="ForkSettingsLockRemoveCode">حذف کد</string>
-    <string name="ForkSettingsLockRemoveCodeConfirm">تنظیمات Fork Client بدون کد باز خواهد شد.</string>
+    <string name="ForkSettingsLockRemoveCodeConfirm">تنظیمات Hanako بدون کد باز خواهد شد.</string>
     <!--chat view-->
     <string name="SendAsRoundVideo">ارسال به‌صورت ویدیوی دایره‌ای</string>
     <!--usernames-->
