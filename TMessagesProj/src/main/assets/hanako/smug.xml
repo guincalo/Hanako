@@ -160,7 +160,7 @@
     <string name="ClearLocalDatabase">Wipe Local Database</string>
     <string name="CheckPhoneNumberYes">Yes, that\'s me</string>
     <string name="ChannelSettingsChangedAlert">You changed this channel\'s settings. Apply them? Decide already!</string>
-    <string name="AttachMediaRestrictedForever">The admins won\'t let you send media here. Ouch.</string>
+    <string name="AttachMediaRestrictedForever">The admins won\'t let you send media here. Text it is.</string>
     <string name="AttachMediaRestricted">The admins blocked your media here until %1$s. What did you send them?</string>
     <string name="AdminWillBeRemoved">%1$s stops being an admin if you restrict them.</string>
     <string name="AddToTheGroupAlertText">Add **%1$s** to **%2$s**?</string>
@@ -171,7 +171,7 @@
     <string name="NewChatsFromNonContacts">New chats from strangers</string>
     <string name="MessageScheduledUntilOnline">When they come online</string>
     <string name="KickFromGroup">Kick from group</string>
-    <string name="InviteExpired">Ehh? This invite link expired. Too slow!</string>
+    <string name="InviteExpired">This invite link expired. Too slow!</string>
     <string name="InvLinkToChats">Invite link sent to **%1$s**. Off it goes.</string>
     <string name="HashtagCopied">Hashtag copied.</string>
     <string name="GlobalAttachVideoRestricted">No videos allowed in this group.</string>

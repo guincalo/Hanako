@@ -11,6 +11,33 @@ Telegram/Mercurygram base it is built on.
 
 ## [Unreleased]
 
+## [2.01d] - 2026-10-21
+
+Development build: fixes from testing 2.0d.
+
+### Changed
+- **Settings > Hanako is organized again**: Privacy (Ghost mode, Chat lock, Streamer mode, Privacy and
+  tracking), History (Deleted and edited messages, Activity log), Chats (Appearance, Chats and messages,
+  Media and voice, Message filters) and Advanced (Network and system, Updates, Backup and export, App API ID,
+  Usage statistics). Forkgram's options live on these pages, duplicates are gone, and the search at the top
+  finds every option on every page.
+- **Deleted media keeps everything and says what it didn't keep.** Stickers, GIFs, bot posts, channels and
+  big groups are kept like everything else. Only files already on the device are copied (nothing is
+  downloaded again), and a file posted many times is stored once. Over the storage limit the oldest copies
+  go first; the messages stay. Join and leave notices aren't kept.
+- In the deleted media screen: stickers show whole and transparent and play when opened, a file deleted
+  several times in a chat is one tile with "×N", a **Stickers** filter, **Stop keeping media here** for a
+  chat (from the ⋮ menu or an item's long-press), and a line saying how much media wasn't kept and why
+  (never downloaded, over the size limit, media off in the chat, removed for space).
+- The in-app updater checks Hanako's own GitHub releases (`vX.Y[d]` tags) and verifies the Hanako key.
+- Smug language: menus and settings rows are plain English again; the voice stays in dialogs, toasts and
+  empty states, without repeated teases.
+
+### Fixed
+- The Language row's globe icon lined up with the other Settings icons.
+- Forkgram leftovers: splash, chat list title, notification icon, and "Fork Client" in the settings code
+  texts in all languages.
+
 ## [2.0d] - 2026-10-21
 
 Development build of the new 2.x line: Hanako moved from Mercurygram to

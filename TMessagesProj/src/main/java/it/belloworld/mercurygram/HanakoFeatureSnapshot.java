@@ -119,7 +119,7 @@ final class HanakoFeatureSnapshot {
         }
         put(s, "history_keep_reactions", PlusDeletedReactions::isKeepEnabled);
         put(s, "deleted_media_chat_menu", PlusDeletedMedia::isChatMenuEnabled);
-        put(s, "deleted_media_include_edits", PlusDeletedMedia::isIncludeEdits);
+        put(s, "deleted_media_chats_off", MgDeletedRetention::countChatsMediaOff); // hanako 2.01
         put(s, "vanished_chats_log", () -> PlusDeletedDialogs.isEnabled(a));
 
         // message filters
