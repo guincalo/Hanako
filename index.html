@@ -133,8 +133,8 @@
       </header>
       <p class="lede">An unofficial Telegram client for Android with Telegram’s classic interface, built on Forkgram Classic.</p>
       <div class="actions">
-        <a class="button solid" href="https://github.com/guincalo/Hanako/releases" target="_blank" rel="noopener">Download APK</a>
-        <a class="button" href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%20%22moe.hanako.chan%22%2C%20%22url%22%3A%20%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%20%22author%22%3A%20%22guincalo%22%2C%20%22name%22%3A%20%22Hanako%20%28with%20dev%20builds%29%22%2C%20%22additionalSettings%22%3A%20%22%7B%5C%22includePrereleases%5C%22%3A%20true%2C%20%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%28%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%29%3Fd%3F-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D" target="_blank" rel="noopener">Add to Obtainium</a>
+        <a class="button solid" href="https://github.com/guincalo/Hanako/releases/latest" target="_blank" rel="noopener">Download 2.04</a>
+        <a class="button" href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%20%22moe.hanako.chan%22%2C%20%22url%22%3A%20%22https%3A%2F%2Fgithub.com%2Fguincalo%2FHanako%22%2C%20%22author%22%3A%20%22guincalo%22%2C%20%22name%22%3A%20%22Hanako%22%2C%20%22additionalSettings%22%3A%20%22%7B%5C%22apkFilterRegEx%5C%22%3A%20%5C%22%5EHanako-v%5C%5C%5C%5Cd%2B%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%28%5C%5C%5C%5C.%5C%5C%5C%5Cd%2B%29%3F-arm64-v8a%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D" target="_blank" rel="noopener">Add to Obtainium</a>
         <a href="https://github.com/guincalo/Hanako" target="_blank" rel="noopener">Source on GitHub</a>
       </div>
 
@@ -165,6 +165,7 @@
         <ul>
           <li>Deleted messages stay in the chat; edits keep their history</li>
           <li>Media from deleted and view-once messages is kept and browsable</li>
+          <li>Keep rules: per chat or per person, choose what gets kept</li>
           <li>A local log of when contacts were online and read your messages</li>
         </ul>
 
@@ -173,7 +174,21 @@
           <li>Regex message filters</li>
           <li>Chat export in Telegram Desktop’s HTML and JSON formats</li>
           <li>Message shots, session backup, profile DC and registration date</li>
+          <li>Hide the “Send as” button</li>
         </ul>
+
+        <h2>Look</h2>
+        <ul>
+          <li>Rin, the dark theme from Hanako 1.3, and Hanako, a light one</li>
+          <li>Pitch black for OLED screens, on top of any dark theme</li>
+        </ul>
+      </section>
+
+      <section class="part" id="news">
+        <h2 class="top">New in 2.04</h2>
+        <p>The first stable release on Forkgram Classic, out on 21 October 2026. Rin is back to how it looked in
+          1.3, pitch black is new, and hiding the “Send as” button works now. Read the
+          <a href="https://github.com/guincalo/Hanako/blob/hanako-classic/CHANGELOG.md" target="_blank" rel="noopener">full changelog</a>.</p>
       </section>
 
       <section class="part" id="install">
@@ -181,7 +196,7 @@
         <ol>
           <li>
             <a href="https://github.com/guincalo/Hanako/releases" target="_blank" rel="noopener">Download</a>
-            <code>Hanako-&lt;version&gt;-arm64-v8a.apk</code> from Releases and install it. Only arm64-v8a
+            <code>Hanako-v2.04-arm64-v8a.apk</code> from Releases and install it. Only arm64-v8a
             builds are published, and development builds are marked as pre-releases.
           </li>
           <li>
@@ -192,7 +207,7 @@
         </ol>
         <p class="small">
           The package ID is <code>moe.hanako.chan</code>. Hanako 2.x installs as an update over Hanako 1.2 and
-          later; make a session backup first.
+          later; make a session backup first. Hanako 1.x won’t offer the update by itself, so install it from here.
         </p>
       </section>
     </main>
