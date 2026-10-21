@@ -1248,6 +1248,10 @@ public class SharedConfig {
 
 
 
+    public static boolean isMgUpdateAvailable() { // used by TMessagesProj_App (update banner)
+        return mgPendingUpdate != null && it.belloworld.mercurygram.MgUpdateChecker.canSelfInstall();
+    }
+
     public static it.belloworld.mercurygram.MgUpdateInfo getMgPendingUpdate() {
         return it.belloworld.mercurygram.MgUpdateInfo.fromJson(mgPendingUpdate);
     }
