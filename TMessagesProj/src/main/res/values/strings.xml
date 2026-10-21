@@ -29,7 +29,7 @@
     <string name="DisableThumbsInDialogListInfo">Hide media thumbnails of the last message in the chat list.</string>
     <string name="DisableGlobalSearchInfo">Show only your chats and contacts in search, no global results.</string>
     <string name="HideContactsInDialogsInfo">Hide the contacts shown below the chat list when you have few chats.</string>
-    <string name="EnableLastSeenDotsInfo">Color the avatar dot for people last seen within the past hour.</string>
+    <string name="EnableLastSeenDotsInfo">Online: full dot. Offline less than 15, 30 or 60 minutes ago: the same dot, fainter each step.</string>
     <string name="HideAllChatsTab">Hide the \"All Chats\" tab</string>
     <string name="HideAllChatsTabInfo">Remove the \"All Chats\" tab from the folder bar. Chats that aren\'t inside a folder stay reachable through search and the archive.</string>
     <string name="DefaultFolder">Default folder</string>
@@ -165,7 +165,7 @@
     <string name="AudioPlayerAutoplayNext">Auto-play next</string>
     <string name="SmsOnlyOfficialWarning">Note: SMS verification is limited to ONLY official mobile apps</string>
     <string name="ThirdParty">Third-party</string>
-    <string name="EnableLastSeenDots">Enable colored last seen dots</string>
+    <string name="EnableLastSeenDots">Recently-online dots</string>
     <string name="HideStoriesInArchive">Hide Stories in Archive</string>
     <string name="ExtractMediaFromPreview">Send media from link preview as attachment</string>
     <string name="ReplaceLinksOnPaste">Replace links on paste</string>

@@ -1651,7 +1651,7 @@ public class Theme {
             }
             if ("Dark Blue".equals(name) || "Night".equals(name) || "Monet Dark".equals(name) || "Rin".equals(name)) { // hanako: Rin
                 isDark = DARK;
-            } else if ("Blue".equals(name) || "Arctic Blue".equals(name) || "Day".equals(name) || "Monet Light".equals(name)) {
+            } else if ("Blue".equals(name) || "Arctic Blue".equals(name) || "Day".equals(name) || "Monet Light".equals(name) || "Hanako".equals(name)) { // hanako
                 isDark = LIGHT;
             }
             if (isDark == UNKNOWN) {
@@ -4041,14 +4041,25 @@ public class Theme {
         themes.add(themeInfo);
         themesDict.put("Night", themeInfo);
 
-        // hanako: built-in dark theme "Rin" (assets/rin.attheme)
+        // hanako: the default look. "Hanako" (light) and "Rin" (dark): calm plum-tinted neutrals,
+        // pastel pink accent, lavender links, a soft petal wallpaper inside each .attheme (WPS).
+        themeInfo = new ThemeInfo();
+        themeInfo.name = "Hanako";
+        themeInfo.assetName = "hanako.attheme";
+        themeInfo.previewBackgroundColor = 0xfff6ebf2;
+        themeInfo.previewInColor = 0xffffffff;
+        themeInfo.previewOutColor = 0xfffadde8;
+        themeInfo.sortIndex = 0;
+        themes.add(themeInfo);
+        themesDict.put("Hanako", themeInfo);
+
         themeInfo = new ThemeInfo();
         themeInfo.name = "Rin";
         themeInfo.assetName = "rin.attheme";
-        themeInfo.previewBackgroundColor = 0xff121011;
-        themeInfo.previewInColor = 0xff242022;
-        themeInfo.previewOutColor = 0xff7a2832;
-        themeInfo.sortIndex = 9;
+        themeInfo.previewBackgroundColor = 0xff1a171c;
+        themeInfo.previewInColor = 0xff27222a;
+        themeInfo.previewOutColor = 0xff4d2b3d;
+        themeInfo.sortIndex = 1;
         themes.add(themeInfo);
         themesDict.put("Rin", themeInfo);
 
@@ -4125,7 +4136,10 @@ public class Theme {
             final ThemeInfo themeDarkBlue = themesDict.get("Dark Blue");
 
             String theme = preferences.getString("theme", null);
-            if ("Default".equals(theme)) {
+            if (theme == null) { // hanako: Hanako by day, Rin by night until the user picks a theme
+                applyingTheme = themesDict.get("Hanako");
+                if (!preferences.contains("nighttheme")) currentNightTheme = themesDict.get("Rin");
+            } else if ("Default".equals(theme)) {
                 applyingTheme = themesDict.get("Blue");
                 applyingTheme.currentAccentId = DEFALT_THEME_ACCENT_ID;
             } else if ("Dark".equals(theme)) {

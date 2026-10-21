@@ -1,0 +1,4 @@
+# Keys referenced by upstream Telegram/Forkgram code that upstream's own strings
+# also lack (dead or cloud-only paths). Hanako keys never go here.
+AddedMembersToChannel
+New

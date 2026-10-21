@@ -4924,12 +4924,11 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                         ? Theme.getColor(Theme.key_chats_onlineCircle)
                         : !MessagesController.getGlobalMainSettings().getBoolean("enableLastSeenDots", true)
                         ? 0
-                        : diff > -15 * 60
-                        ? android.graphics.Color.argb(255, 234, 234, 30)
-                        : diff > -30 * 60
-                        ? android.graphics.Color.argb(255, 234, 132, 30)
+                        // hanako: "last seen dots" fade the theme's online colour (was yellow /
+                        // orange / red, which clashed with themes whose online dot is red)
                         : diff > -60 * 60
-                        ? android.graphics.Color.argb(255, 234, 30, 30)
+                        ? androidx.core.graphics.ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_chats_onlineCircle),
+                            diff > -15 * 60 ? 0xa0 : diff > -30 * 60 ? 0x68 : 0x38)
                         : 0;
                     if (colorOnline != 0) {
                         isOnline = true;

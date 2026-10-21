@@ -65,7 +65,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TimeZone;
 
-import it.belloworld.mercurygram.HanakoSmugLanguage; // hanako: Smug language
 
 public class LocaleController {
 
@@ -477,7 +476,6 @@ public class LocaleController {
         public int baseVersion;
         public boolean builtIn;
         public int serverIndex;
-        public String serverLangCode; // hanako: Smug language (lang code sent to the server instead of shortName)
 
         public String getSaveString() {
             String langCode = baseLangCode == null ? "" : baseLangCode;
@@ -566,9 +564,6 @@ public class LocaleController {
         }
 
         public String getLangCode() {
-            if (serverLangCode != null) { // hanako: Smug language
-                return serverLangCode;
-            }
             return shortName.replace("_", "-");
         }
 
@@ -716,11 +711,6 @@ public class LocaleController {
         localeInfo.builtIn = true;
         languages.add(localeInfo);
         languagesDict.put(localeInfo.shortName, localeInfo);
-
-        // hanako: Smug language (bundled local language file, English fallback)
-        localeInfo = HanakoSmugLanguage.create();
-        languages.add(localeInfo);
-        languagesDict.put(localeInfo.getKey(), localeInfo);
 
         loadOtherLanguages();
         if (remoteLanguages.isEmpty()) {
@@ -1177,7 +1167,7 @@ public class LocaleController {
     }
 
     public boolean deleteLanguage(LocaleInfo localeInfo, int currentAccount) {
-        if (localeInfo.pathToFile == null || localeInfo.isRemote() && localeInfo.serverIndex != Integer.MAX_VALUE || HanakoSmugLanguage.isSmug(localeInfo)) { // hanako: Smug language is built in
+        if (localeInfo.pathToFile == null || localeInfo.isRemote() && localeInfo.serverIndex != Integer.MAX_VALUE) {
             return false;
         }
         if (currentLocaleInfo == localeInfo) {

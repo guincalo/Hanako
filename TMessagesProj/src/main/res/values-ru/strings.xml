@@ -96,7 +96,7 @@
     <string name="DisableThumbsInDialogListInfo">Скрывать миниатюры медиа последнего сообщения в списке чатов.</string>
     <string name="DisableGlobalSearchInfo">Показывать в поиске только ваши чаты и контакты, без глобальных результатов.</string>
     <string name="HideContactsInDialogsInfo">Скрывать список контактов под списком чатов, когда чатов мало.</string>
-    <string name="EnableLastSeenDotsInfo">Подсвечивать точку на аватаре для тех, кто был в сети в течение последнего часа.</string>
+    <string name="EnableLastSeenDotsInfo">В сети: яркая точка. Не в сети меньше 15, 30 или 60 минут: та же точка, бледнее с каждым шагом.</string>
     <string name="HideAllChatsTab">Скрыть вкладку «Все чаты»</string>
     <string name="HideAllChatsTabInfo">Убрать вкладку «Все чаты» из панели папок. Чаты вне папок останутся доступны через поиск и архив.</string>
     <string name="DefaultFolder">Папка по умолчанию</string>
@@ -227,7 +227,7 @@
     <string name="AudioPlayerAutoplayNext">Автовоспроизведение следующего</string>
     <string name="SmsOnlyOfficialWarning">Примечание: SMS-подтверждение доступно ТОЛЬКО в официальных мобильных приложениях</string>
     <string name="ThirdParty">Сторонние</string>
-    <string name="EnableLastSeenDots">Включить цветные точки последнего входа</string>
+    <string name="EnableLastSeenDots">Точки «недавно в сети»</string>
     <string name="HideStoriesInArchive">Скрыть истории в архиве</string>
     <string name="ExtractMediaFromPreview">Отправлять медиа из превью ссылки как вложение</string>
     <string name="ReplaceLinksOnPaste">Заменять ссылки при вставке</string>

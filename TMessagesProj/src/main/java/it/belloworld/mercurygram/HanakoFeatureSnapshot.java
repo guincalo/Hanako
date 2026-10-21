@@ -140,7 +140,6 @@ final class HanakoFeatureSnapshot {
         // voice and translation
 
         // look
-        put(s, "smug_language", () -> HanakoSmugLanguage.isSmug(LocaleController.getInstance().getCurrentLocaleInfo()));
         put(s, "theme_rin", () -> {
             Theme.ThemeInfo t = Theme.getActiveTheme();
             return t != null && "Rin".equals(t.name) && t.assetName != null;

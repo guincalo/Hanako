@@ -1,0 +1,855 @@
+actionBarActionModeDefault=#ffffffff
+actionBarActionModeDefaultSelector=#ffe5dfe3
+actionBarActionModeDefaultTop=#10000000
+actionBarActionModeReaction=#fff2eef0
+actionBarActionModeReactionDot=#ffc6bac2
+actionBarActionModeReactionText=#ff94788b
+actionBarBrowser=#ffffffff
+actionBarDefault=#ffffffff
+actionBarDefaultArchived=#ffffffff
+actionBarDefaultArchivedIcon=#ff372b33
+actionBarDefaultArchivedSelector=#12211a1f
+actionBarDefaultArchivedTitle=#ff3e313a
+actionBarDefaultIcon=#ff742244
+actionBarDefaultSearch=#ff000000
+actionBarDefaultSearchArchivedPlaceholder=#ff9a7f91
+actionBarDefaultSearchPlaceholder=#88876f7f
+actionBarDefaultSelector=#12211a1f
+actionBarDefaultSubmenuBackground=#ffffffff
+actionBarDefaultSubmenuSeparator=#fff6f4f5
+actionBarDefaultSubtitle=#ff8c6e82
+actionBarDefaultTitle=#ff382e35
+actionBarTabActiveText=#ffb03468
+actionBarTabLine=#ffb03468
+actionBarTabSelector=#12211a1f
+actionBarTabUnactiveText=#ff896d80
+actionBarWhiteSelector=#12211a1f
+avatar_actionBarIconBlue=#ff424952
+avatar_actionBarSelectorBlue=#121a1d21
+avatar_background2Blue=#ff408acf
+avatar_background2Cyan=#ff359ad4
+avatar_background2Green=#ff46ba43
+avatar_background2Orange=#fff68136
+avatar_background2Pink=#ffd95574
+avatar_background2Red=#ffd45246
+avatar_background2Saved=#ff409fe1
+avatar_background2Violet=#ff6c61df
+avatar_backgroundActionBarBlue=#ffffffff
+avatar_backgroundArchived=#ffb8c2cc
+avatar_backgroundArchivedHidden=#ff229af0
+avatar_backgroundBlue=#ff50a5e6
+avatar_backgroundCyan=#ff5bcbe3
+avatar_backgroundGreen=#ff9ad164
+avatar_backgroundInProfileBlue=#ff3496ec
+avatar_backgroundOrange=#fffebb5b
+avatar_backgroundPink=#ffff8aac
+avatar_backgroundRed=#ffff845e
+avatar_backgroundSaved=#ff45b6ff
+avatar_backgroundViolet=#ffb694f9
+avatar_nameInMessageBlue=#ff2586d6
+avatar_nameInMessageCyan=#ff309eba
+avatar_nameInMessageGreen=#ff40a920
+avatar_nameInMessageOrange=#ffd67722
+avatar_nameInMessagePink=#ffcb4f86
+avatar_nameInMessageRed=#ffcc5049
+avatar_nameInMessageViolet=#ff836fe6
+avatar_subtitleInProfileBlue=#ff8d8d8d
+avatar_text=#ffffffff
+botKeyboard_button_danger=#ffdb4646
+botKeyboard_button_success=#ff40b135
+bot_loadingIcon=#fff3f1f2
+buttonNeutral=#ffe7e1e5
+calls_callReceivedGreenIcon=#ff2fc766
+calls_callReceivedRedIcon=#ffff4848
+chat_BlurAlpha=#ff000000
+chat_BlurAlphaSlow=#ff000000
+chat_TextSelectionCursor=#ffd46c98
+chat_addContact=#ffc53b75
+chat_adminSelectedText=#ff9b8293
+chat_adminText=#ff9b8293
+chat_attachActiveTab=#ffce5a8b
+chat_attachAudioBackground=#ffc2437a
+chat_attachCheckBoxCheck=#ffffffff
+chat_attachContactBackground=#fff2c04b
+chat_attachContactText=#ffdfa000
+chat_attachEmptyImage=#ffd1c7ce
+chat_attachGalleryBackground=#ffd26894
+chat_attachIcon=#ffffffff
+chat_attachLocationBackground=#ff60c255
+chat_attachLocationText=#ff3cab2f
+chat_attachPermissionImage=#ff382e35
+chat_attachPermissionMark=#ffe25050
+chat_attachPermissionText=#ff826779
+chat_attachPhotoBackground=#0c000000
+chat_attachPollBackground=#fff2c04b
+chat_attachUnactiveTab=#ffa48c9c
+chat_botButtonText=#ff32282f
+chat_botKeyboardButtonBackground=#66c9bbc4
+chat_botKeyboardButtonBackgroundPressed=#66987c8f
+chat_botKeyboardButtonText=#f04b3d46
+chat_botSwitchToInlineText=#ffca4d81
+chat_editMediaButton=#ffcb4e82
+chat_emojiBottomPanelIcon=#ff9f8496
+chat_emojiPanelBackground=#fff9ecf1
+chat_emojiPanelBackspace=#ff9f8496
+chat_emojiPanelEmptyText=#ffa78e9f
+chat_emojiPanelIcon=#ffaf99a8
+chat_emojiPanelIconSelected=#ff775d6e
+chat_emojiPanelNewTrending=#ffd05f8e
+chat_emojiPanelShadowLine=#12000000
+chat_emojiPanelStickerPackSelector=#ffe8e1e6
+chat_emojiPanelStickerPackSelectorLine=#ffd46c98
+chat_emojiPanelStickerSetName=#ff997d90
+chat_emojiPanelStickerSetNameHighlight=#ffc63c76
+chat_emojiPanelStickerSetNameIcon=#ffbfaeb9
+chat_emojiPanelTrendingDescription=#ff8a8a8a
+chat_emojiPanelTrendingTitle=#ff222222
+chat_emojiSearchBackground=#fff4dfe7
+chat_emojiSearchIcon=#ffd46c98
+chat_fieldOverlayText=#ffca4d81
+chat_gifSaveHintBackground=#e2431428
+chat_gifSaveHintText=#ffffffff
+chat_goDownButton=#ffffffff
+chat_goDownButtonCounter=#ffffffff
+chat_goDownButtonCounterBackground=#ffc9497f
+chat_goDownButtonIcon=#ff9f8596
+chat_inArticleCodeBackground=#fffaf0f4
+chat_inArticleCodeScrollbar=#ffd46c98
+chat_inArticleCodeScrollbarBackground=#fff2d9e3
+chat_inArticleDetailsArrow=#ffae98a7
+chat_inArticleDetailsLine=#ffdcd4d9
+chat_inAudioCacheSeekbar=#3ff2d9e2
+chat_inAudioDurationSelectedText=#ff9b8293
+chat_inAudioDurationText=#ff886d7f
+chat_inAudioPerfomerSelectedText=#ff3a2d36
+chat_inAudioPerfomerText=#ff3a2d36
+chat_inAudioProgress=#ffffffff
+chat_inAudioSeekbar=#fff2d9e2
+chat_inAudioSeekbarFill=#ffd26794
+chat_inAudioSeekbarSelected=#fff2d9e2
+chat_inAudioSelectedProgress=#ffffffff
+chat_inAudioTitleText=#ff32272e
+chat_inBubble=#ffffffff
+chat_inBubbleLocationPlaceholder=#1e972c59
+chat_inBubbleSelected=#ffece8eb
+chat_inBubbleShadow=#00561a33
+chat_inCodeBackground=#ffc8457c
+chat_inContactBackground=#ffcf5b8c
+chat_inContactIcon=#ffffffff
+chat_inContactNameText=#ffb03468
+chat_inContactPhoneSelectedText=#ff9b8293
+chat_inContactPhoneText=#ff886d7f
+chat_inDivider=#ffe8e2e6
+chat_inDownCall=#ff00c853
+chat_inFileBackground=#00d46c98
+chat_inFileBackgroundSelected=#00f7d4e1
+chat_inFileInfoSelectedText=#ff9b8293
+chat_inFileInfoText=#ff886d7f
+chat_inFileNameText=#ffbf3971
+chat_inFileProgress=#ffffffff
+chat_inFileProgressSelected=#ffffffff
+chat_inForwardedNameText=#ffb03468
+chat_inInstant=#ffbd3870
+chat_inInstantSelected=#ffbd3870
+chat_inLoader=#ffd36b97
+chat_inLoaderPhoto=#ffd46c98
+chat_inLoaderSelected=#ffd33b3b
+chat_inLocationBackground=#00f8e8ee
+chat_inLocationIcon=#ffaf99a8
+chat_inMediaIcon=#ffffffff
+chat_inMediaIconSelected=#ffffffff
+chat_inMenu=#ffc5b6c0
+chat_inMenuSelected=#e4c5b6c0
+chat_inPollCorrectAnswer=#ff60c255
+chat_inPollWrongAnswer=#ffeb6060
+chat_inPreviewInstantText=#ffb8376d
+chat_inPreviewLine=#ffcf5c8c
+chat_inPsaNameText=#ff4b822f
+chat_inQuote=#ffcc5285
+chat_inReactionButtonTextSelected=#ffffffff
+chat_inReplyLine=#ffcc5285
+chat_inReplyMediaMessageSelectedText=#ff9b8293
+chat_inReplyMediaMessageText=#ff886b7e
+chat_inReplyMessageText=#ff000000
+chat_inReplyNameText=#ffb03468
+chat_inSentClock=#ffd46c98
+chat_inSentClockSelected=#ffd46c98
+chat_inSiteNameText=#ffbc376f
+chat_inTableBackground=#fff8f6f7
+chat_inTableBorder=#ffe3dde1
+chat_inTextSelectionHighlight=#51d46c98
+chat_inTimeSelectedText=#ff9b8293
+chat_inTimeText=#ff766c7b
+chat_inVenueInfoSelectedText=#ff9b8293
+chat_inVenueInfoText=#ff886d7f
+chat_inViaBotNameText=#ffc7437a
+chat_inViews=#efab95a4
+chat_inViewsSelected=#f0ab95a4
+chat_inVoiceSeekbar=#ffc8bac3
+chat_inVoiceSeekbarFill=#ffce588a
+chat_inVoiceSeekbarSelected=#ffc8bac3
+chat_inlineResultIcon=#ffce5b8b
+chat_linkSelectBackground=#3dd46c98
+chat_lockIcon=#ff382e35
+chat_mediaInfoText=#ffffffff
+chat_mediaLoaderPhoto=#66000000
+chat_mediaLoaderPhotoIcon=#ffffffff
+chat_mediaLoaderPhotoIconSelected=#ffddd5da
+chat_mediaLoaderPhotoSelected=#00000000
+chat_mediaMenu=#ffffffff
+chat_mediaProgress=#ffffffff
+chat_mediaSentCheck=#ffffffff
+chat_mediaSentClock=#ffffffff
+chat_mediaTimeBackground=#66000000
+chat_mediaTimeText=#ffffffff
+chat_mediaViews=#ffffffff
+chat_messageLinkIn=#ff6b4fc2
+chat_messageLinkOut=#ff5a3fb0
+chat_messagePanelBackground=#ffffffff
+chat_messagePanelCancelInlineBot=#ffb5a5b0
+chat_messagePanelCursor=#ffce588a
+chat_messagePanelHint=#ff947a8b
+chat_messagePanelIcons=#ffa18899
+chat_messagePanelSend=#ffb03468
+chat_messagePanelShadow=#e5000000
+chat_messagePanelText=#ff000000
+chat_messagePanelVoiceBackground=#ffc2437a
+chat_messagePanelVoiceDelete=#ffd33b3b
+chat_messagePanelVoiceDuration=#ffffffff
+chat_messagePanelVoicePressed=#ffffffff
+chat_messageTextIn=#ff241e26
+chat_messageTextOut=#ff241e26
+chat_msgIvButtonDangerIn=#fff8eae9
+chat_msgIvButtonDangerInPressed=#fff8eae9
+chat_msgIvButtonDangerInText=#ffcc5049
+chat_msgIvButtonDangerOut=#ffeae9cb
+chat_msgIvButtonDangerOutPressed=#ffeae9cb
+chat_msgIvButtonDangerOutText=#ffcc5049
+chat_msgIvButtonDefaultIn=#ffefebee
+chat_msgIvButtonDefaultInPressed=#ffefebee
+chat_msgIvButtonDefaultInlineIn=#fffae9ef
+chat_msgIvButtonDefaultInlineInPressed=#fffae9ef
+chat_msgIvButtonDefaultInlineOut=#ffdcf4cb
+chat_msgIvButtonDefaultInlineOutPressed=#ffdcf4cb
+chat_msgIvButtonDefaultInlineOutText=#ff53ab49
+chat_msgIvButtonDefaultOut=#ffdcf4cb
+chat_msgIvButtonDefaultOutPressed=#ffdcf4cb
+chat_msgIvButtonDefaultOutText=#ff53ab49
+chat_msgIvButtonPrimaryIn=#ffc9497f
+chat_msgIvButtonPrimaryInPressed=#ffcc5185
+chat_msgIvButtonPrimaryInText=#ffffffff
+chat_msgIvButtonPrimaryOut=#ff53ab49
+chat_msgIvButtonPrimaryOutPressed=#ff53ab49
+chat_msgIvButtonPrimaryOutText=#ffffffff
+chat_msgIvButtonSuccessIn=#ffe8f4e4
+chat_msgIvButtonSuccessInPressed=#ffe8f4e4
+chat_msgIvButtonSuccessInText=#ff40a920
+chat_msgIvButtonSuccessOut=#ffdcf4cb
+chat_msgIvButtonSuccessOutPressed=#ffdcf4cb
+chat_msgIvButtonSuccessOutText=#ff40a920
+chat_muteIcon=#ff8c6e82
+chat_outAdminSelectedText=#ffc8457c
+chat_outAdminText=#ffb03468
+chat_outArticleCodeScrollbar=#ffd46c98
+chat_outArticleCodeScrollbarBackground=#fff2d9e2
+chat_outArticleDetailsArrow=#ffcc5285
+chat_outArticleDetailsLine=#ffd46c98
+chat_outAudioCacheSeekbar=#2bffffff
+chat_outAudioDurationSelectedText=#fff9d2e0
+chat_outAudioDurationText=#ffc11a56
+chat_outAudioPerfomerSelectedText=#ffffffff
+chat_outAudioPerfomerText=#ff636363
+chat_outAudioProgress=#ffca4d81
+chat_outAudioSeekbar=#65d46c98
+chat_outAudioSeekbarFill=#ffffffff
+chat_outAudioSeekbarSelected=#64d46c98
+chat_outAudioSelectedProgress=#ffca4d81
+chat_outAudioTitleText=#ff636363
+chat_outBubble=#fffadde8
+chat_outBubbleGradient=#ffd36995
+chat_outBubbleGradientSelectedOverlay=#14000000
+chat_outBubbleLocationPlaceholder=#1e661e3c
+chat_outBubbleSelected=#ffc94a7f
+chat_outBubbleShadow=#005a1b35
+chat_outCodeBackground=#125d1b37
+chat_outContactBackground=#ffffffff
+chat_outContactIcon=#ffc63c76
+chat_outContactNameText=#ff241e26
+chat_outContactPhoneSelectedText=#fff9d2e0
+chat_outContactPhoneText=#ffc11a56
+chat_outDivider=#33cd5587
+chat_outFileBackground=#00d46c98
+chat_outFileBackgroundSelected=#00d46c98
+chat_outFileInfoSelectedText=#fff9d2e0
+chat_outFileInfoText=#ffc11a56
+chat_outFileNameText=#ff636363
+chat_outFileProgress=#ffc63c76
+chat_outFileProgressSelected=#ffc63c76
+chat_outForwardedNameText=#ff241e26
+chat_outInstant=#ff241e26
+chat_outInstantSelected=#ffffffff
+chat_outLinkSelectBackground=#33d46c98
+chat_outLoader=#ffffffff
+chat_outLoaderSelected=#ffffffff
+chat_outLocationIcon=#e4ffffff
+chat_outMediaIcon=#ffc63c76
+chat_outMediaIconSelected=#ffc8447b
+chat_outMenu=#ffd46c98
+chat_outMenuSelected=#ffd46c98
+chat_outPollCorrectAnswer=#ffca4d81
+chat_outPollWrongAnswer=#ffeb6060
+chat_outPreviewInstantText=#ff636363
+chat_outPreviewLine=#ff8e4a68
+chat_outPsaNameText=#ffa43161
+chat_outQuote=#ffcb4d82
+chat_outReactionButtonBackground=#ffd16391
+chat_outReactionButtonText=#ffb13469
+chat_outReactionButtonTextSelected=#ffffffff
+chat_outReplyLine=#ff8e4a68
+chat_outReplyLine2=#ff9b2e5c
+chat_outReplyMediaMessageSelectedText=#fff9d2e0
+chat_outReplyMediaMessageText=#ffc11a56
+chat_outReplyMessageText=#ff241e26
+chat_outReplyNameText=#ff241e26
+chat_outSentCheck=#ff8e4a68
+chat_outSentCheckRead=#ff8e4a68
+chat_outSentCheckReadSelected=#ffc53b75
+chat_outSentCheckSelected=#f5ffffff
+chat_outSentClock=#70ffffff
+chat_outSentClockSelected=#70ffffff
+chat_outSiteNameText=#ff241e26
+chat_outTableBackground=#fff3d8e2
+chat_outTableBorder=#ffd46c98
+chat_outTextSelectionCursor=#ffce5b8b
+chat_outTextSelectionHighlight=#96d46c98
+chat_outTimeSelectedText=#fff9d2e0
+chat_outTimeText=#ff8e4a68
+chat_outUpCall=#ffffffff
+chat_outVenueInfoSelectedText=#fff9d2e0
+chat_outVenueInfoText=#ffc11a56
+chat_outViaBotNameText=#ff241e26
+chat_outViews=#ff8e4a68
+chat_outViewsSelected=#fff9d2e0
+chat_outVoiceSeekbar=#e6d46c98
+chat_outVoiceSeekbarFill=#ffffffff
+chat_outVoiceSeekbarSelected=#e5d46c98
+chat_previewDurationText=#ffffffff
+chat_previewGameText=#ffffffff
+chat_reactionServiceButtonBackgroundSelected=#ffffffff
+chat_reactionServiceButtonTextSelected=#ff000000
+chat_recordTime=#ffa18899
+chat_recordVoiceCancel=#ffc8467c
+chat_recordedVoiceBackground=#ffc2437a
+chat_recordedVoiceDarkerBackground=#ffc13972
+chat_recordedVoiceDot=#ffd33b3b
+chat_recordedVoicePlayPause=#ffffffff
+chat_recordedVoiceProgress=#fff9d2e0
+chat_recordedVoiceProgressInner=#ffffffff
+chat_replyPanelClose=#ffa18899
+chat_replyPanelIcons=#ffc9497f
+chat_replyPanelLine=#ffeae6e9
+chat_replyPanelName=#ffbf3971
+chat_searchPanelIcons=#ff785e6f
+chat_searchPanelText=#ff785e6f
+chat_secretChatStatusText=#ff8c7283
+chat_secretTimeText=#fff2d9e2
+chat_selectedBackground=#08000000
+chat_sentError=#ffff0000
+chat_sentErrorIcon=#ffffffff
+chat_serviceBackground=#f4ffffff
+chat_serviceBackgroundSelected=#10000000
+chat_serviceBackgroundSelector=#20ffffff
+chat_serviceIcon=#ff5d1c37
+chat_serviceLink=#ffc64078
+chat_serviceText=#ff3e323a
+chat_status=#ff0785d9
+chat_stickerNameText=#ffffffff
+chat_stickerReplyLine=#ffc8467c
+chat_stickerReplyMessageText=#ff9b8293
+chat_stickerReplyNameText=#ffc64078
+chat_stickerViaBotNameText=#ffffffff
+chat_stickersHintPanel=#ffffffff
+chat_tagAdmin=#ff40a920
+chat_tagCreator=#ff955cdb
+chat_textSelectBackground=#63d46c98
+chat_topPanelBackground=#ffffffff
+chat_topPanelClose=#ff927689
+chat_topPanelLine=#ead46c98
+chat_topPanelMessage=#ff886c7f
+chat_topPanelTitle=#ffce588a
+chat_unreadMessagesStartArrowIcon=#fff9d2e0
+chat_unreadMessagesStartBackground=#ffcb4f83
+chat_unreadMessagesStartText=#ffffffff
+chat_wallpaper=#ffffffff
+chats_actionBackground=#ffc2437a
+chats_actionIcon=#ffffffff
+chats_actionMessage=#ffc33a73
+chats_actionPressedBackground=#ffb03468
+chats_archiveBackground=#ffd46c98
+chats_archiveIcon=#ffffffff
+chats_archivePinBackground=#ffd46c98
+chats_archivePullDownBackground=#ffcfc3cb
+chats_archiveText=#ffffffff
+chats_attachMessage=#ffc33a73
+chats_date=#ff766c7b
+chats_date_bold=#ff876c7e
+chats_draft=#fae32246
+chats_mentionIcon=#ffffffff
+chats_menuBackground=#ffffffff
+chats_menuItemCheck=#ffc94a7f
+chats_menuItemIcon=#ff9d8495
+chats_menuItemText=#ff4b3d46
+chats_menuName=#ffffffff
+chats_menuPhone=#c3ffffff
+chats_menuPhoneCats=#ffffffff
+chats_menuTopBackgroundCats=#ffd0608f
+chats_menuTopShadow=#29782347
+chats_menuTopShadowCats=#00cf5c8c
+chats_message=#ff6e6472
+chats_messageArchived=#ff866e7e
+chats_message_threeLines=#ff856c7c
+chats_muteIcon=#ffc8b9c3
+chats_name=#ff241e26
+chats_nameArchived=#ff211a1f
+chats_nameMessage=#ffbf3971
+chats_nameMessageArchived=#ff866e7e
+chats_nameMessageArchived_threeLines=#ff866e7e
+chats_nameMessage_threeLines=#ff4e3d48
+chats_onlineCircle=#ffd2588e
+chats_pinnedIcon=#ff9e8796
+chats_pinnedOverlay=#06000000
+chats_secretIcon=#ff19b126
+chats_secretName=#ffb03468
+chats_sentCheck=#ffb03468
+chats_sentClock=#ff766c7b
+chats_sentError=#ffff0000
+chats_sentErrorIcon=#ffffffff
+chats_sentReadCheck=#ffb03468
+chats_tabUnreadActiveBackground=#ffd46c98
+chats_tabUnreadUnactiveBackground=#ffce588a
+chats_tabletSelectedOverlay=#0f000000
+chats_unreadCounter=#ffc2437a
+chats_unreadCounterMuted=#ff766c7b
+chats_unreadCounterText=#ffffffff
+chats_verifiedBackground=#ff52adf8
+chats_verifiedCheck=#ffffffff
+checkbox=#ffc2437a
+checkboxCheck=#ffffffff
+checkboxDisabled=#ffd46c98
+checkboxSquareBackground=#ffc2437a
+checkboxSquareCheck=#ffffffff
+checkboxSquareDisabled=#ffb8a8b3
+checkboxSquareUnchecked=#ff7f6777
+code_comment=#80000000
+code_constant=#ff7f79f3
+code_function=#fff28c39
+code_keyword=#ffe05356
+code_number=#ff327fe5
+code_operator=#ff4dbbff
+code_string=#ff37c123
+color_blue=#ff327fe5
+color_cyan=#ff40d0ca
+color_green=#ff61c752
+color_lightblue=#ff58a8ed
+color_lightgreen=#ff9ed448
+color_orange=#fff28c39
+color_purple=#ff7f79f3
+color_red=#ffe05356
+color_yellow=#ffe3b727
+contacts_inviteBackground=#ff55be61
+contacts_inviteText=#ffffffff
+contextProgressInner1=#fff9d2e0
+contextProgressInner2=#cef8d3e0
+contextProgressInner3=#ffbbabb6
+contextProgressInner4=#ffd3c7cf
+contextProgressOuter1=#ffd05f8e
+contextProgressOuter2=#ffd46c98
+contextProgressOuter3=#ffffffff
+contextProgressOuter4=#ff3a2d36
+dialogBackground=#ffffffff
+dialogBackgroundGray=#fff2eef0
+dialogButton=#ffb03468
+dialogButtonSelector=#0f000000
+dialogCardShadow=#17000000
+dialogCheckboxSquareBackground=#ffc9497f
+dialogCheckboxSquareCheck=#ffffffff
+dialogCheckboxSquareDisabled=#ffb8a8b3
+dialogCheckboxSquareUnchecked=#ff7f6777
+dialogEmptyImage=#ffae99a7
+dialogEmptyText=#ff9d8394
+dialogFloatingButtonPressed=#0f000000
+dialogFloatingIcon=#ffffffff
+dialogGiftsBackground=#fff7f5f6
+dialogGiftsTabText=#ff634f5c
+dialogGrayLine=#ffd6ced3
+dialogInputField=#ffdfd7dc
+dialogLineProgress=#ffc7427a
+dialogLineProgressBackground=#fff9d2e0
+dialogLinkSelection=#33d46c98
+dialogRadioBackground=#ffbbabb6
+dialogRadioBackgroundChecked=#ffc9497f
+dialogReactionMentionBackground=#ffeb5e5e
+dialogRoundCheckBox=#ffcd5788
+dialogRoundCheckBoxCheck=#ffffffff
+dialogScrollGlow=#fff7f5f6
+dialogSearchBackground=#fff9eef2
+dialogSearchHint=#ffab94a3
+dialogSearchIcon=#ffb29eab
+dialogSearchText=#ff251f23
+dialogShadowLine=#12000000
+dialogSwipeRemove=#ffe56555
+dialogTextBlack=#ff241e26
+dialogTextBlue=#ffb03468
+dialogTextBlue2=#ffb03468
+dialogTextBlue4=#ffc03972
+dialogTextGray=#ff6e6472
+dialogTextGray2=#ff6e6472
+dialogTextGray3=#ff766c7b
+dialogTextGray4=#ff856c7d
+dialogTextHint=#ff846d7c
+dialogTextLink=#ffc8437b
+dialog_inlineProgress=#ff7f6476
+dialog_inlineProgressBackground=#f6f9ecf1
+dialog_liveLocationProgress=#ffcb4f83
+divider=#ffede6ec
+emptyListPlaceholder=#ff85697c
+fastScrollActive=#ffc9497f
+fastScrollInactive=#ffd3c7cf
+fastScrollText=#ffffffff
+featuredStickers_addButton=#ffc2437a
+featuredStickers_addButton2=#ffd46c98
+featuredStickers_addButtonPressed=#ffb03468
+featuredStickers_addedIcon=#ffce5b8b
+featuredStickers_buttonProgress=#ffffffff
+featuredStickers_buttonText=#ffffffff
+featuredStickers_removeButtonText=#ffcd5688
+featuredStickers_unread=#ffd26593
+files_folderIcon=#ffffffff
+files_folderIconBackground=#ffd46c98
+files_iconText=#ffffffff
+fill_RedNormal=#ffd33b3b
+gift_ribbon=#ff46a4f2
+gift_ribbon_soldout=#ffcc4747
+glass_defaultIcon=#99330f1e
+glass_defaultText=#99330f1e
+glass_tabSelected=#ffc53b75
+glass_tabSelectedText=#ffaa3264
+glass_tabUnselected=#ff211a1f
+glass_targetMainTabs=#ffffffff
+glass_targetMainTopPanel=#ffffffff
+graySection=#fff7f5f6
+groupcreate_cursor=#ffcc5386
+groupcreate_hintText=#ffb4a0ad
+groupcreate_sectionShadow=#ff000000
+groupcreate_sectionText=#ff917387
+groupcreate_spanBackground=#fff2f2f2
+groupcreate_spanDelete=#ffffffff
+groupcreate_spanText=#ff251f23
+inappPlayerBackground=#ffffffff
+inappPlayerClose=#ff967b8d
+inappPlayerPerformer=#ff211a1f
+inappPlayerPlayPause=#ffc9497f
+inappPlayerTitle=#ff211a1f
+iv_background=#ffffffff
+iv_backgroundGray=#fff2eef0
+iv_navigationBackground=#fff2eef0
+key_chat_messagePanelVoiceLock=#ffad9ba7
+key_chat_messagePanelVoiceLockBackground=#ffffffff
+key_chat_messagePanelVoiceLockShadow=#ff000000
+key_graySectionText=#ff947a8b
+key_player_progressCachedBackground=#fff5d6e1
+key_sheet_other=#ffd4c8d0
+key_sheet_scrollUp=#fff2d9e2
+listSelectorSDK21=#0f000000
+location_actionActiveIcon=#ffce5a8b
+location_actionBackground=#ffffffff
+location_actionIcon=#ff473842
+location_actionPressedBackground=#fff3f1f2
+location_liveLocationProgress=#ffcb4f83
+location_placeLocationBackground=#ffd16592
+location_sendLiveLocationBackground=#ff4fc244
+location_sendLiveLocationIcon=#ffffffff
+location_sendLiveLocationText=#ff36ab24
+location_sendLocationBackground=#ffd46c98
+location_sendLocationIcon=#ffffffff
+location_sendLocationText=#ffbc386f
+login_progressInner=#fff4dfe7
+login_progressOuter=#ffd06290
+passport_authorizeBackground=#ffd16391
+passport_authorizeBackgroundSelected=#ffcb5084
+passport_authorizeText=#ffffffff
+picker_badge=#ffcf5d8d
+picker_badgeText=#ffffffff
+picker_disabledButton=#ffa38f9c
+picker_enabledButton=#ffcb5184
+player_actionBarItems=#ff967e8e
+player_actionBarSelector=#0f000000
+player_actionBarSubtitle=#ff967e8e
+player_actionBarTitle=#ff3a2d36
+player_background=#ffffffff
+player_button=#ff382e35
+player_buttonActive=#ffcf5b8c
+player_progress=#ffca4b80
+player_progressBackground=#fff6e5eb
+player_time=#ffb19baa
+pollCreateIcons=#ffa18899
+premiumCoinGradient1=#ff1473ff
+premiumCoinGradient2=#ffc066fa
+premiumGradient0=#ff4acd43
+premiumGradient1=#ff55a5ff
+premiumGradient2=#ffa767ff
+premiumGradient3=#ffdb5c9d
+premiumGradient4=#fff38926
+premiumGradientBackground1=#ff55a5ff
+premiumGradientBackground2=#ffa767ff
+premiumGradientBackground3=#ffdb5c9d
+premiumGradientBackground4=#fff38926
+premiumGradientBottomSheet1=#ff5b9de7
+premiumGradientBottomSheet2=#ffab87dd
+premiumGradientBottomSheet3=#ffe794be
+premiumStarGradient1=#ffffffff
+premiumStarGradient2=#ffe3ecfa
+profile_actionBackground=#ffd26693
+profile_actionIcon=#ffffffff
+profile_actionPressedBackground=#12211a1f
+profile_creatorIcon=#ffc8477d
+profile_status=#ffc43a74
+profile_tabSelectedLine=#ffd26693
+profile_tabSelectedText=#ffc8477d
+profile_tabSelector=#0f000000
+profile_tabText=#ff997e90
+profile_title=#ff3b3138
+profile_verifiedBackground=#ff53a0eb
+profile_verifiedCheck=#ffffffff
+progressCircle=#ffd36a96
+radioBackground=#ffbbabb6
+radioBackgroundChecked=#ffc2437a
+reactionStarSelector=#40f0ab1f
+returnToCallBackground=#ffd36a96
+returnToCallMutedBackground=#ffb29cab
+returnToCallText=#ffffffff
+sessions_devicesImage=#ffa08c9a
+share_icon=#ff7f6476
+share_linkBackground=#0f000000
+share_linkText=#ff251f23
+sharedMedia_linkPlaceholder=#fff5f3f4
+sharedMedia_linkPlaceholderText=#ffc5b5c0
+sharedMedia_photoPlaceholder=#fff8ebf0
+sharedMedia_startStopLoadIcon=#ffcd5788
+statisticChartActiveLine=#14000000
+statisticChartActivePickerChart=#d8baccd9
+statisticChartBackZoomColor=#ff108be3
+statisticChartChevronColor=#ffd2d5d7
+statisticChartHintLine=#1a182d3b
+statisticChartInactivePickerChart=#99e2eef9
+statisticChartLineEmpty=#ffeeeeee
+statisticChartLine_blue=#ff327fe5
+statisticChartLine_cyan=#ff40d0ca
+statisticChartLine_golden=#ffe3b727
+statisticChartLine_green=#ff61c752
+statisticChartLine_indigo=#ff7f79f3
+statisticChartLine_lightblue=#ff58a8ed
+statisticChartLine_lightgreen=#ff9ed448
+statisticChartLine_orange=#fff28c39
+statisticChartLine_purple=#ff9f79e8
+statisticChartLine_red=#ffe05356
+statisticChartRipple=#2c7e9db7
+statisticChartSignature=#7f252529
+statisticChartSignatureAlpha=#7f252529
+stickers_menu=#ffc5b6c0
+stickers_menuSelector=#0f000000
+stories_circle1=#ff2c9efc
+stories_circle2=#ff2fc183
+stories_circle_closeFriends1=#ff81ce2d
+stories_circle_closeFriends2=#ff18bd36
+stories_circle_dialog1=#ff2c9efc
+stories_circle_dialog2=#ff2fc183
+stories_circle_live1=#ffff6b5b
+stories_circle_live2=#fffa4874
+switch2Track=#fff57480
+switch2TrackChecked=#ffc9497f
+switchTrack=#ffb6a3b0
+switchTrackBlue=#ff907286
+switchTrackBlueChecked=#ff9d2e5d
+switchTrackBlueSelector=#17712243
+switchTrackBlueSelectorChecked=#21651e3c
+switchTrackBlueThumb=#ffffffff
+switchTrackBlueThumbChecked=#ffffffff
+switchTrackChecked=#ffc2437a
+table_background=#fff8f6f7
+table_border=#ffe3dde1
+telegram_color_dialogsLogo=#ffba376e
+text_RedBold=#ffd33b3b
+text_RedRegular=#ffd33b3b
+topics_unreadCounter=#ff4ecc5e
+topics_unreadCounterMuted=#ff998191
+undo_background=#ea49162b
+undo_cancelColor=#ffd46c98
+undo_infoColor=#ffffffff
+voipgroup_actionBar=#ff1d0911
+voipgroup_actionBarItems=#ffffffff
+voipgroup_actionBarItemsSelector=#1ef9d2e0
+voipgroup_actionBarUnscrolled=#ff310e1d
+voipgroup_checkMenu=#ffd46c98
+voipgroup_connectingProgress=#ffce598a
+voipgroup_dialogBackground=#ff35101f
+voipgroup_disabledButton=#ff35101f
+voipgroup_disabledButtonActive=#ff571a34
+voipgroup_disabledButtonActiveScrolled=#82d46c98
+voipgroup_inviteMembersBackground=#ff421327
+voipgroup_lastSeenText=#ff917287
+voipgroup_lastSeenTextUnscrolled=#ff9a7f91
+voipgroup_leaveButton=#7df75c5c
+voipgroup_leaveButtonScrolled=#82d14d54
+voipgroup_leaveCallMenu=#ffff7575
+voipgroup_listSelector=#0effffff
+voipgroup_listViewBackground=#ff35101f
+voipgroup_listViewBackgroundUnscrolled=#ff421327
+voipgroup_listeningText=#ffd46c98
+voipgroup_muteButton=#ff77e55c
+voipgroup_muteButton2=#ff7ddcaa
+voipgroup_muteButton3=#ffd46c98
+voipgroup_mutedByAdminGradient=#ffd46c98
+voipgroup_mutedByAdminGradient2=#fff05459
+voipgroup_mutedByAdminGradient3=#ff8b75cf
+voipgroup_mutedByAdminIcon=#ffff7070
+voipgroup_mutedByAdminMuteButton=#7fd46c98
+voipgroup_mutedByAdminMuteButtonDisabled=#33d46c98
+voipgroup_mutedIcon=#ff86697c
+voipgroup_mutedIconUnscrolled=#ff94768a
+voipgroup_nameText=#ffffffff
+voipgroup_overlayAlertGradientMuted=#ff8c2953
+voipgroup_overlayAlertGradientMuted2=#ff752245
+voipgroup_overlayAlertGradientUnmuted=#ff392771
+voipgroup_overlayAlertGradientUnmuted2=#ff792448
+voipgroup_overlayAlertMutedByAdmin=#ff6446bf
+voipgroup_overlayAlertMutedByAdmin2=#ff81264c
+voipgroup_overlayBlue1=#ffcf5b8c
+voipgroup_overlayBlue2=#ffb6366c
+voipgroup_overlayGreen1=#ff12b522
+voipgroup_overlayGreen2=#ff00d6c1
+voipgroup_rtmpButton=#ff601d39
+voipgroup_scrollUp=#ff6d2040
+voipgroup_searchBackground=#ff5c1b36
+voipgroup_searchPlaceholder=#ff9a7f91
+voipgroup_searchText=#ffffffff
+voipgroup_soundButton=#7d5d1c37
+voipgroup_soundButton2=#7d28593a
+voipgroup_soundButtonActive=#7dc8457c
+voipgroup_soundButtonActive2=#7d18b751
+voipgroup_soundButtonActive2Scrolled=#8224bf46
+voipgroup_soundButtonActiveScrolled=#82d06290
+voipgroup_speakingText=#ff77ee7d
+voipgroup_topPanelBlue1=#ffd46c98
+voipgroup_topPanelBlue2=#ffd46c98
+voipgroup_topPanelGray=#ffd05f8e
+voipgroup_topPanelGreen1=#ff52ce5d
+voipgroup_topPanelGreen2=#ff48318f
+voipgroup_unmuteButton=#ffd46c98
+voipgroup_unmuteButton2=#ffd46c98
+voipgroup_windowBackgroundWhiteInputField=#ffdfd7dc
+wallet_comment=#fff6f4f5
+wallet_inputCurrency=#ff219949
+wallet_out_commentBorder=#ffddd5da
+windowBackgroundCheckText=#ffffffff
+windowBackgroundChecked=#ffc2437a
+windowBackgroundGray=#fff5f0f4
+windowBackgroundGrayShadow=#ff000000
+windowBackgroundUnchecked=#ffd46c98
+windowBackgroundWhite=#ffffffff
+windowBackgroundWhiteBlackText=#ff241e26
+windowBackgroundWhiteBlueButton=#ffb03468
+windowBackgroundWhiteBlueHeader=#ffb03468
+windowBackgroundWhiteBlueIcon=#ffb03468
+windowBackgroundWhiteBlueText=#ffb03468
+windowBackgroundWhiteBlueText2=#ffb03468
+windowBackgroundWhiteBlueText3=#ffb03468
+windowBackgroundWhiteBlueText4=#ffb03468
+windowBackgroundWhiteBlueText5=#ffc74079
+windowBackgroundWhiteBlueText6=#ffc7427a
+windowBackgroundWhiteBlueText7=#ffc74179
+windowBackgroundWhiteGrayIcon=#ff211a1f
+windowBackgroundWhiteGrayText=#ff766c7b
+windowBackgroundWhiteGrayText2=#ff6e6472
+windowBackgroundWhiteGrayText3=#ff866e7e
+windowBackgroundWhiteGrayText4=#ff856c7c
+windowBackgroundWhiteGrayText5=#ff866e7e
+windowBackgroundWhiteGrayText6=#ff816979
+windowBackgroundWhiteGrayText7=#ffccc0c8
+windowBackgroundWhiteGrayText8=#ff7c6374
+windowBackgroundWhiteGreenText=#ff228727
+windowBackgroundWhiteGreenText2=#ff038429
+windowBackgroundWhiteHintText=#ff876d7e
+windowBackgroundWhiteInputField=#ffdfd7dc
+windowBackgroundWhiteLinkSelection=#21d46c98
+windowBackgroundWhiteLinkText=#ff6b4fc2
+windowBackgroundWhiteValueText=#ffbf3971
+WPS
+ÿØÿà JFIF      ÿÛ C 				
+!'"#%%%),($+!$%$ÿÛ C				$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ÿÀ @„" ÿÄ            ÿÄ 2    !1AQ"aq2¡‘B#3Á$CR±ñbÿÄ             ÿÄ        !1AQ2"ÿÚ   ? ı.½                
+ –¨Z€                           	ê—+æç}€ 
+       €                 
+       Øj              €&Àµ                             yÏ—9¼ò’~kçcÔúzËË-ô[«únäéxym¹a7}ç—Ï=½Uà—´½ïáÓÇ'½OL9&ğÊe?N|]7|1Õù÷t`                                 {Í@          @ @      ğó‡7vãxÛ=¥                       æqã3¹É÷Y«^…       µ                            °Ô         @ @      Ç¬Ç,º|æ}ÿ 1óº|rËŸDï/ø}rI<Iç¼˜ 2     Lãêpâ¾,ïø¾Æà              
+      ¥¨                      º› ]?QQÊvÕÖT @    ÀsP    ã›;‡yc7dÜ€ö>6=G.9úıy[ûòûîKá¾¸¼ı@                3Ârcq»Õøº|Şn—)ÔãÇ.VeŞ[ìúié—)–¦çm¯=X<pğNÛ,²·ÍÊíĞ                  KP                 @    z¿í¸a†RŞÛÊi¹ã—ra–6oqfQòº~{Ógê“rÍXú|ó[1Ë=²Œ¿ğşŸùrg<}²_í½¿%–ú Ô    ÀsP    Ê€áGÁ~¹‡hîô PA                                      ÒÔ           Ç.¯‹­Ûú›×aÏŸ_ã{ü{º    €              `9¨     (  ‚                                
+      ¥¨           [©ºÇÉÖer×¦?7İ×¬¶p^şl•ˆtã™}×Lú\ñ¸Ü¦¯Äîæ¬’|%¸Ù–7YOô¸óúœxçãsošëÃÔgÃ©~ì>=àÇ“÷ÄÇ)–3)w* 
+               lĞ6€    PM–                         €               ––€            óÉŒÏ^,îù¾÷Ws}¯Ëèuúë{×³ç¾$Ës¯,ø\½]¼´¦¤»Ğï.(:ğôùójß·Ÿz1lŸZ:=ı	çÍÓºcŒÇŒš“Â«Í@              Ø # m€ €
+	i´                                      `              ybæé2Âïz±ø÷ ²Ùñó¾‡.­úw·ËÇ—ÔrÏ¥âäËÕe—ñu±¹äÿ ¬\¬Ç¼¯ˆú\X}><pøšyâàÃ‹øÎÿ 7Ë¢³ß_                 sl@´µ                                                                           t†Àe¨           9gÕqa—¦İßÄŞ«;ÇÃn>omü0kC|q¯¥ÇË‡,Ş7øY–7ÆSü¾gêÙ¿ŠjO¿C_äúƒ‡IÍy1¸ew–>ÿ 1Üs³=                 (                      åÏÏ8gÎWÄQ†uœÒïí³ãIÉÕrç{_DøFÿ Î·Œ\=^X]r_V?>ñ·Ê³eŸ@              @    @lKM            x)¼lù€ÁÍÏ—6]®°'ÏåÎİM’YöŞÖv¥›šd“Óœæ›ñÙÑÎpÍùìè7søÓĞëÕßü5¾×>¾nŸ@y»™@      @        P      @ úÌî<sÛÕuhI·²êø±ºõ[ú||¸rÍáwÿ ‡Î%³¼¶o·aÖø¿ãê™yãwyKûoàæúØoÅ¬ë‹          z¹g>ìídÕn|ŞLï'&Y_OÀßëÊK/ŠY¹cŸXå»ÿ èôHé—ñ¯§Å–9qãq²ÍkqóZ:}yã¾Ú—C—’zÖÀÄ            @ @  P  tKKQÍ°             ræé°å¾®øåól¸åq¾eÓé¸óôÓ–ú¥ôåóò7ÇxÂõyÍã…Ê|ÇyĞİıÙÍ~#V8Ì1˜ã5 ß^OøáÓt×úóş^Óá +wİ <O-åä¸ËöcÛö/3n5ÿ ¨áŞ¾¦;ñäåê0â“wvø‘óÉ4:ÿ “Gúì÷ÿ NköÑÃÏ‡7Öy•óŞ¸ò¼|¸å>t'^9ŸHÄ      @       2ÊaÊö“»çòråÍ–òí=§Ãw6“‹,g›;ñf¬óO…²M×œy1Êê.Xú±±ãŠã–í‰˜èÙÑcgËÿ •ìÆÓĞå}Yãíärò|k p         zÇÏ¼mööneË±òÿ rÏÜùø'4õ”ñY§IÍ½}²|íg’\øø³å¶a'o6·pğÎu;Ûæü¯<8zg{ï~^ÕÏ®´ d         `     (    Ğm€                   ù¹ãpäËæZú9e0Æå{IİórÎòesËÍş‡OÔL³Ç5Yù1³+¿qè“Z<Ÿ{]¼qK1îö%ŸÆîŸ¨úÛ–k)ı»>w×>¾nŸDy{ç( È   €    °    pêx1Ï³˜ıòv±Ü	qòçq¯“£™eêÃ/NüË;/I8òõe}YOvÿ IŒ“íÔÃ-üi·¦àúXÛ—òËÏáØúîĞ                  Ë>«‹/MËwßSzsäë1¸ç®üû%­#?U92ôe§+ãâ´	f} ´P    P    €sl                   G|n|9ã<ØùÓ¼}F^nvåÇuoMğ:xúÏ¬£¦}?/7,¦:u\ÇiÔ¿}õïğ6t\zã¹Ù>ë¸'}~cÏIÁ–9^Læ½¤jç·nĞ        ´P                @           ã›+w2v{pêù.zÇÎW[ø	5x7%ÖæÉ54ã—W“~ß#×#¶õeø²ö}>Ly1õcw9£¢ß«=ßäròOZ×´À @  P@  >_ø„Ã’ã©.­ÛO.<Üs<|_é› Îò[ÇqôåwßÙ¯ƒŠpñL7½y¿5«ùÏC @9¶                    K5|2çĞÍï/Oâ÷j–ÏŒ¸t3{äËÕøš¤’jx ¶ß  (      h@                              sçáúØkÅåtóï.;ßíï%ÜÛé³çÑá–Vã•Ç~d'“ş³qqınONì’nØİ‡<xúqš‰ÅÅÖ3Ï›òö1×_ª 0  
+ (       @9¶                         (      h                 €               %¢€    €
+         = æØ                      
+       Z¨                                 	h†À   @         6Øm€            gÉŞYI? £Î¸r¥ı=      (      Z                 €                …      €        l@ @sæçÃ‡Îí¾$smë““,}Y]GŒ:®,ò˜Ëe¿3L|¼—›?UšÓáâÍÍQÖxı{}A‹¯“f7–½ıÚø¹qåÇÕÎóg×        Ë~›¯:.^¯<½2\¬ó¯f>Lï.w<¿í>qñßÏ»ÎyÌ ôqã‘ê[†S,{XßÅÔñòßLº¿óğÊg7‡|kê\ø°Êù³»Øó€ €       €                
+                ‚      €           ŸÏwÏï‹§Ğeëx¤ÿ ›/~ÒÏ—7n.V[u6ç4¹kZtòñ8±Æìzf^Ú:çŸÆ£;KŒœÙ5¹º9y/¬u p        ;šIÍœ“S~³Âgº®§%äÆ[ó¯g	†yoÓ†W_èã©8c0šœ\W›?Lº“½¯=şú.,±™g”³ÕÚOÀy:ÈÑ3f2jO
+Î                                            €   
+ (          €    ÜWãâû~ŞÇ6ß6á7Ya”¿¢ñòL}^Œ½/¤Ÿé_;,ùrôãŸ6öÓèa„ãÂc<I¥zêĞ         Ó÷©¿Ò€ (                        (9Ş£Šeé¼˜ïöçÖçqã˜ÎŞ««Xõ<ho7ÛèçËÇ„—,äÚáÉ$Ş9K?™©øó¼|˜å>u&­ñä} 0              @      sÎqãrÊêIº²Ë%+[ËÉxî?K,pß|­ò½7/ÓÇ¥–XNÓ(¿ŸZ6‚         m€              
+       €                 
+ çõ·›’Ïöã{9e—§^ù0¼|™c~w?/>Qéã1Ï“×l±ÓâÏ3ºcŒÇÄ[t5qô89>¯ËßßöèåÒáxødËÍï¯‡Uy(           €   
+	l’Ûâ+'QÔÌ¦\XÍûZ,–üyË¬äÊï	1ÇÛ~ï|}d“\³WæO,Àô_Æî>£–ëßâöu|»lû§k;ÇÓÆï~`ãß?•X   sæâœÜYa}ış¸ğœxc†>$ÓÒ €        è›`              (                        (   óŸ<“Yc,ü²u=ãËÕÇğ¾ÓÙ´[>>nyò]cıÙá»§ããÖ±›î€½uh È        ‚      ‰–ı7^tù˜øüû¾£7SÓãéË“Ì¤ßottñõ•9n7Óåã†e-ßhëå-“ÍG§}auÛ~7ßôúsZšğù¸ayrôãß~oÃéI©'ÂÇŸËõ@W  6         hP€sl    @        P                        P               --A     P@  Lú.ÿ fzŸxtáé±âï•õe]ÄjõlÄ’OEd  K@µ        P  €sl                ÒÔ        2Ï&ò²OÈ(ÅÓõ’óç3ºÇ+öî¶Ë/ëeŸ@     @               µ-    @        ´P       @   €sl @        P      --@         98xùuëÂe¯{‡ƒ£Ÿ[“×Œ¸cu%[pÃ<}8É'ÄQm·è €   €              ZZ     €
+        	h        ¢‚(     = æĞ        (      ›@                                ´´ @            Ğ-@      E        zÍ             ÒÔ                  P               KKA     P@       -Ô       P        M€ö›@            m-                                 Ó`€    (          €m       ‘@       @ tÍ°         ´Ø                                  €  €   
+ (            Ç×s\9xä¿Çîºò×S<fRî^ëŸÑ@@ Ñ"€        €  €9¶  
+                        
+                     	r“Í‘EÊ€         åÍÃŸ,¾\°ÜÖ§‡P+¨âËƒ=g—«s{iéú^\q™^l±Üñ=ºŸëgÇ—ÿ ßôìİïf Èi@      A    @Û P>LxæòÊIùyÃ›’ëå ö          &Yã„ŞVIùgY'Ww—ü»5½öı¶ã9ÍãeŸ…²Ï¢€€        (                     ƒ?UÍxäÇ¬²÷øl¬.û÷šüs6ûg™e.æyoçf[Îï;ê¿’İM¼aÉ3¶kHõNgÖ—’ñòÌ7n9v×ÃsæKe™cug†şO«Ç2ñ}ÿ k<œå×@È   A        ‘@       @     @l¶I»á›.»	~ÜrÊ|¯]•œxã<e{±œq¾êçåÎç—ŸoÂ{îv³Å-“É,¾y&cOËõxå¶z¼WWËñw.¯Ìoé¹¯/İü§j<ıñùu `@      ã—ƒšk<eüü=€ùÓ£ßWxÿ öç>ÍÜ\|3Xc'çåìjõoĞ      @               @     PbêåœÒßvmyÏy1ôå%ˆ×7.¾rLf>&šyºI;âİ³Ì·Ë<Ç+u0Ë{”÷Ô–ßˆİÓñŞ.)óæ§MÃô°ûµê½ë°ãßz ®`  €       è‘@       @       t†Üùø~·¼YŞWÏ§”Ş6|ÇÌ’ãöŞÖv£¯Šÿ ù±¶M8Ù.İèßX[¦î“ŠññÛ—k•Ş¾8&ùøÿ o¢<ş[ü                 ƒ›ş!œå³céÆë¿»s›~ãŸ,çâ™É­ùŸ—D              Ë)7+½O€2ÊaÊİIİç‹“n9>+'UÖc–qc[Êy³N]/UşŸxå-ÆŞÚönqlÑôÇœ3œ˜Ì¦õ~f         Ú        !¥       Ğ6€          69stØrßW|rù KŒøô\r_UË+ÿ Ó],ºÇÓ”ùŞ›©İ<áû²»Îÿ NÀ3n€                ƒ7ü>gÉrÇ?L·vi°Ylø<qqcÃÇ0ÇÄşŞÁ            ´     (ãÕqNNäÇykqÇ à“êe;åãƒ[ë         KKP        Q@      Ø         >oYÍÉyòÃÕ–8ãâKı¯<ş®¤2ôœü™q}ØÜµu±,ÏCp6h@                                KAm@ @  P@        6Z€       Š       % Z€          çËÓqs]ç™ÙĞ ˜a3d’{AEW@-shµ                                -Ğ    P         KM         Š        –´           T -@sh               @               Ñ@   @         ´µ       @   Ï“Ÿ/å{üO/8u\Yåé–ËùšØ¸ì €&Àµ @         @   {Í               P               ´BĞ    P@        --@      @P   ã““,}Y]G·Ïê2¹óe¿ööƒ\óú¸ñ–W<òÎùµæÍ«”åŞZ×dz§>±£ërÏıÌšºn{Í™kÕŸËOE…û³ö½§äròs$jµ^p         F^›ª¼œÜ˜eóö¼uu—Æ2c¯öİ±ñú½xı=ú½´ëÏÙz{Ô_úØã&½¼»9€ 	°5Ğ6€                           -´     P         KD       @4      2õ]=¶òaÿ yòÔ–nYò,¹v>cÏ§w®ï|œw‡/N^=¯ÉÇ†\¹k	¿›íêıÌÔjè­¸e7Ú^ÎS¤å¶Ké“Şí¯qa1ßØãäêY‘èq        @:^áÔrå”í.±¿¶±t @@  sl                              @         £paê³~Ò|º¸õ<_RêË¹I÷ØçÓõ¿W?FXúmñİ¥¦èóÃ’gÉgo6/Y¾€    Y ‘@       @K&^d¤’x’ €         €(       è›`%²y²€       
+           œ¸ñcêÊëÿ  ö3N»Íá”Ÿ?å2’Ë¹}ÂË>¨      €
+                 ²"€                  (€   €    è›cäue—>~»Ş_ğúïğñçfYa³ŞÆ¸ëóu:<²Ë§ÂççÛó5@    @          u7D³rÏ`åæË›-îÌ}¤ìñŞù¶şéé¸[…óg^ODšèôóÌş=´tœÓñå–»ı»dâäõË¹Ş=Ù,ÕùßO¦8ô¹Ü¸eÊîË§Qæ¾€@   ÜŞ·6ª         €       ²"€                  ª     €     €9¶                    ™]cløP/¹»wo{L±™MXÓËÒeê¹qëWÌ¾ÎytÜ¸ãrÔºÿ lçqËf3R=áÇ—.^œ{|ß‡Tùké8²Ãyå¹rí ï¬ÜxN<&8ø@<À   
+	w«¯*(ø™e•Êå•¾­÷»ğû7+Å…Ï¶Zî^;Ÿ®áËçOmuÖ€€     €       ,€H                  *€    €        : æØ     (               œw¿Lÿ 
+    (          €         $P      P           U    ´P      @Ğ ö›`   
+               j     €
+        	h        
+€      	ij  €         
+    j €      (   =€æØ  (               – €    (          –j         (       ––            ª   h       €    =€æØ€              ZZ     €
+        	h        *‚(       ––            ª   h       €     Ø6               &ËA     P@    sÏ<nY]HôÇÕòLòÇr–N÷_(×3n.]n[ûpšü×N«K1Êzr¿â±ŸÕù¯Šg§Ó2\¥ÜÏ)gå¯¦ç¼²ã½Sûƒ—\YíŞÔ`      Q@       ´µ  @         P   Ğ[P      @       Àa°         säê8ø®²½ş's¨ãåºÆ÷ø½ƒ   Ó`€    (       'YÉnS[=ë<šğïÖaéÎr{^×ğàO12Êc7^på™]kUsÃ×4ñ‡¦îÔu™›ué1·›Õ<c;¹4ôYMe»ïµrò_şZ@W˜           -’nö7¬âŞ½W_:ìóÖå~œ“Å½ÙÓ?S]³êù-û$Æ~c·OÏõ·,ÖSûbÜzÃ;ÇœÏ[>FºñÌôú#Ç$åÂe;|Ï‡µp        P   -×w>.lyñ·èí @      $P        M†€0Ø       \Üøñc~éê×h½G%ââ¹O>#»î÷·Íã'Íïoš_™ugŠ[$İLsÇ/wÆ¬zİIêã»÷±£“\}XİÇÎvé2¸ójxÊwºâI±µ--     P       Éf¬Ü`çÂqó\qššÜ áÔpıi5dÊxFøë+£İàå—_NßÓ¯Iw¾]xş#µòHÎÓÑau—%÷í1é8±»Õ¿»·_Ÿ~M™ È   ](        ›G³-qLuü¯ødmêx¯/oå;Æ+Rêá”³ğş+$rÃ,sİ½¿ûu:~9ËÉŞogqÓ®²mvè±³²öÊöh$’jxå·n€     
+     2õ=n8K†8åê»›³Q›¥êgO¼r–Ìµáôy8ñäÂãd»šfèx.å–xıÖëü7,Äiãäœ’ÜfS_3O@À    !¥      Ï¨äú\9å,–NÛù{Ëwé²_k_?ªáê1—>LıxÏoû/3hÑĞó}N/NWycÛ÷+§ãåäÎŞ+é×›·Óã™LdÎÌ²ù‘®¹’@2: æØ<œ˜ñarËÄ¡†õ|¹]ãéÆ|kn¸u¸úæONSã¾Æ¯4\}G.^œmßæiÔd  Ï¨ã¼¼WçÌ`ß}^Öy¦ÃÕOıEıAÓÇ}ã?.7,uøpÊe»¹ÁèßX4ôœ]¾­ó|~#-­³‚oŞÚ8ùo§pœ   @               Ò€        €  YtœY]êÏÕÓ¦cÇ5Œ’(.€     
+            ,„€        ñË‡ÕãËšzré¸~‡Æÿ +ŞşİA@ slbê¹±å³m³Şû;õy\x.®·ÙŠM>wØ<seqÃ³ÇY[eï£=kµù—Vx¯¡ÃäâÇ+æÇÎËÃèñ\o7ã®Ã‡•ìÈ .~	Í'}e<WPÒó|cûÛİè¯¦k?»ßá¨÷Ypè»ıùn|Ov™55¶ß   €
+               !"€ 	–SnW´Ó““<nY]HÇÏÔŞln3cù½Æ¹æß‰ŸUËŸ‹èŸxú¼ğ²g}Xüß1ÄGó™§2ÆøÊ•|­Iã³_IÍr·;»;Ë~.¼vMj\Ä@           U     @     tH        
+     m¼ç„äÂã—ŠÃÉÃŸò›ÇÛ(ú¼s—…÷ş†¹êÇÏ³d’xš\°Ï®9cw=äòëÃÒŞYêÎÜg´÷¯rGtÛÒcqà›šßwœ:<1Ëyer×µh»ï~   €  €   
+ (        ˆ
+€      è‘@  ®Êú°ÇÛË;wSÃy°ûuê—q†ËW5g”¯GŠÌÇœòôMéç_UÕw”ÕLxñÇ¼òŞ±éß£ÂåËröÆiÁ¯¢Ê}+µq¿åc–äh@W˜           @   @       Y        €     €9¶            €
+        ‚        !¥     ?©ÂáÏ–üeŞ>ƒÇ'³YÍÿ àk¿7_97'Cûç•Ÿ³‹aè˜OOÂc­òÏãçm»¥ã¼|}ÿ –]ëŞ\x]ã„•èsïÉú W0         P          B@       6€       è›`         (  
+        ‚        !"€      	°           P   Ùj  €     è       Ğ-@P        Ğ6À `     (           ›-@       t(     –É7|+‡Ylàº÷²Qd×<úîÿ f2Ï›îõÅÖc•×$˜_ŸfA5Şø¦6ÿ ¬âù¿½:c”Êo,¾ïœíÑçqä¸{Y¿Ğçß&ÆÀÈ   -’nø‡†N¯ªãúYaS,¯nŞÄ›èjÃ9ÉŒË¹{Åaèº>>?§˜êîZİ,³rî-™p @  @  Óh       
+       h@P           slĞ-@ @  P@        --@       E      ·Suó¹yræËÕoohú9MË>cæ\ná—k;#¯‹7Øãyûøììñx±·zG¢Yız—rW^›<pæ—/y©\¼ÅV:›1ôÄÇøÍùÒ«È   eŒÊYfåó:®“,³Âzn3}¼5–K5|U—¥ãäãú™ÏW~Ñ·1ãÇÓŒ’|C'3f¤í·h €¨   ZZ€           ['{tÃ×u)yîË»¯ÃnxcÉÇ),¾ÕózÎštúË}7¶¯³|I¾Æî£—	fSzï-ğêÉÁĞqÌqË’z²ó¯f¶n  6¨
+            :ZæÙh 	n¦ë/UwX_N?>ôkmøÚ>|çåÆï×oâµaÔñå‡«+1×k*¯\YõØxÃ›’ëå¯c 
+        ––         Š(       –kŸ'¿Êwù÷{×ÏåÃér\}¼ÏÓË/<³YO+”è±ß|ò³á1ÛŸ$Ïlü|YòËp’ÉÛv»ñt–e2ä²ë¾§ËF8Ì1˜ã5"Œuä´X       U   KP           yÏI¬¦æöô   Z¨
+             İ 9´  ]G/Òã¶+Ú
+ñÖg®/NûÛ­2ní¶üĞzxçóS{yË<qó^¼šlé9o&®òÇûŒnı¾¼ï¶¤W/$™­€+Î      %¥¨       (
+       Z¨          
+     Z–€                % Z€              `9¨ İl¾Œ/´½Ú^sÂraqËÅU—.¾p÷ËÁŸ{¬±ñ·„z¥—ã?&6ewîëÅ,Ç»Ø7zÙƒ_E”¼^™ÚËİ‘ß¢Ÿ~w]µ&ÕÇË=6 ¯8    	ij       
+€       –j €         €(   %¥       @       @-@               M€èš€( £—QÇy8®3Ï˜Á.ãê8òt¸r]Ï·/˜œwùb\xóÎ\°Çr]4ãÑa/İ–YO†Œq˜É1’Iík¯/üaÇ§åÎëÓéüÖÎ.)Å„Æwù¿/`ç×W¯ 
+È   ––        ²   ËÔuYaÃny®õ¸İúíüTnql×Ñø9§6­jÎÖ:+   ¨          
+     €       €H          (                  : Â€(          €      ÈŠ ós–^#&]g&Wí“ùîé×[èÆ{[İ‘¼|K6í¶İÛŞ‰•ôË\ñåŞZ³Ê;Éÿ ±Ï,7éÊã¿†ŸªË<æëwÅe\e¹ã'Í+Ÿ|Ë5ôÀW˜ @         @         d@              ^\xp¹å{=¸uœsñÉòÆî,¯|½2\rø®ì/KÉ9fyãé˜ÿ mëÔ’ú      @   @P               @$P  xåãœ¼wïı>~xÜ3¸[-ñôß?©ÂáÏ–üeŞ#¯ŠûÇ+%š¯ñLn÷·Az.<m¼›·)Û_ÍqÜ¯û®âÇ/-ôĞ¯8€            
+          ²         €                    ¨      
+‚        (    ñÉÅ‡,Ösø{št8ï¾yYğõ—IÅ”ÔÇÓ~c¸5ú¬øtXK¼­Ëñ]ûI¨ –ÛõP@          P   @      	                              ĞT     @       Ğ(       ‚  €         
+            È€        
+                        : Ê€   €         (       ‚  € >W??&\Ùo,±ÕÔ›ğú®\'.^¬±ïï¯v¸²_aÒòeËÁYyùùu1Æc&8ÍIâ€     ª   h        h       KY:¾k/ÓÆë¶íM¸ÓêÇÊ•|ÍO‡n«.9éÊ\§µ5»ã±´qãê°äËÓeÆß÷vV,À        ~§¨¼va†½W½¿É¾£C7?UqÊá†»yµšå•»¹eoí]yñ×¹ÏË.ş¥¿¶®Ÿ¨úÛ–k)ı±=aãÎg=¼ş‰Zï‰ŸFÔqãêpäº»Ç/Šì¯=˜         : Â€ 	h@       ´› i\/YÃ½nßÌyzÌqºã“;óì5ù­#/[.Rrcéß¼ğÔ%–}    KKP           U    ´P      @       ÒÔQÇ¨çúRc|¯ôÇ–W+rÊî×^®kŸwŞM8¥z<|ÌĞsæßo‡®=ú{£®z×«7C‡+Ÿ_6>~·d·Rİoáô±ÆcŒÆx‹<ª¸€       ùüûúùï~_A—­ÂMroWÆ¾JßåfL²˜ÍÕxåÆå;{2õG¬s™xW,/«w¶•:ın6ôü—“Š[çÅb·Q·§ã¼|R_>jÇ+¨ˆ   €
+  jlP       —®Îı¼~×½üµ±õ×V)çôqö3ƒÕË{öøG®Mu½ßG§·.-»º|÷NŸšñg&şËugÂ¹y9Øú +Î lµ  @         P   @µ @              --E ã—‹lu—ı¯Ãçø¶|]>›QÁ–\±›Æ÷íì•ÓÇÖ_nÌ3Êër·ôïş‹-Mg7ï¸˜ë{‘÷šùìúXÍc%øqáéfz²¾«<|Gv¤qï¯Õô 0       '[ÿ S	ø­n]GÕÃSùNğk›—XC-áu”ôßÉŒ¹öÂ\¿Hôlú»-Ğ®ı'9z²Êo){V·›ññîÿ ,»×eyz»@      tµÍKP       @Îê%œùïçú}.~Ÿi7Û)âÄo²ëÏ£ï]İù:\øğ¹ne¯2G!èç©~|<w—’Iâ]Ûğpqı^Y,Ş3½}qÇ	¬d“ğ9ù;ÏQ@W-6€           ¨    Z€       
+        –¢€               % Z %’ù’’IâH 9rtü|—w_™Øãéøøîæ;¿7»¨.€  
+ (    {@sP     E     2é8²»ÕŸ«§p]yÃxñôã$@ ––            ª   °-@              RÑ@               Ğ-         P     è5    E        e¨           *€   –h      ¥  n«ã~WŞ³K–6Y–[Ÿ‘¾|vÍ}+dód%—¼»|ÜòË“/Vwwú^>KÃ—«ãïVø®kè„»›‚¹€ –›                Ø         €      ¯@9¨   ¦”        KM            ª   °      		  Ë~›¯:.¦ËÏuwÛWğål“tÇÇçİ2ÇÕˆõó2bcÉWQë)¹cŸÇ-Úê5søİÁÉ'¸ûv³áÑ“¢ß¯;í©şZÕãêeÁP                        P@       è6€ Y	        A           P          D€    /7InW.=wópË°ËÓ”Õ}^9¦²<_ÓŸ%Œœ=>\ÓÕ¿N?ı»cÑa/İ–YO†‰$š¢bõäÿ <|xña1ÆvPiÈ                        P@         €sh]( —)<Ù?`¢K/yv         º–üg8Må”“ò˜raÉür—ôÁ–w—/^^oÄIn9L±º³İËÓé_êùw¿·õ¦yÍ/me<Åbñg×@@ T          Ğ         (                        (         €    ô²W6€L²˜cr½¤î	s•ñ&ß7<¯.^¬ûÛı=rsgÍw•³l^<#Ñãã=×NkÁ—i¼o˜Ñ[…ËYcqŸ5e2ñT^¼r¾Ÿ•pèò¹pÍİêØî¯=˜¨€€    1õùg•Ã¬gk¯vÇÎäÂñòeùÜü£§K}£Ï¯ë}Şœ~õyìLÏë³¯I/ÖíâNîNı~K‡¶]Ö9ù?òÖ¼À
+            ,„€       óËÉ8°¹_ooz¶cæÈó2—Å•ó³Ï.\½YİßhcnxßMüëşWHsàåúØoÅ¬tW                        P       @     @Ú9°¼œYc<Øöå~,Õbg«zÎ,}’c÷O7ğÈWl×><.7uîøºRK•˜ã7•ñ«µôx}7‹DÖ:ìöñÅ‡ÓãÇ:šziã      9x±åÆË7}À|Éã¿•kæéfyz±¾›|üTãèäËyåê×´ğ˜ïş³6ÑÑñÛ—Ô¾$Ôü´^+wpÇ§¿#=y6`¹€   €        º$  §¨¼fõ_éÏ©çÊåxğº“ÍgG^<{î½În\l¿Rİ{_vŞYÍ‡«ÅñgÃ~­Ÿª7×_¦3t¼÷+ôó»¾Õ¥\,Ë” Fn«¨¸_§‡l½ïÃ-¶ù¶şë×7ılÿ oôqÌÍœóô~Ì3õşÇ\¹¯^<[?U£§ê2õL3»ßŠÎ³¾XÏÌ#Ÿ|ËH`          h          €              m Y,ÕğË—E}WÑ”˜ü_f°YløáÅÒa†ÎLíók¦\|wxa%ü= Z €          ¨   @       Y    zœ/-·Æ]åskë?è_ÜÛ"=;±ŸWÔ÷ß»@—ÇqÖİwèğ¹r}OöÉ¯ÛcŸO¿¡†ş-W«·M *3õ|XÜ~¦õ”íûdmê±¹pİw×v$®ş+éç<&³&·¡·ø4ôœ2ë–İüO†fŞ—ßm÷Xãå¾€W          ´µ          P       @        @Ú  Ğ6€            *€  ¥¨       
+     ’Ë/ŠË—Eeû3“ŠÔ:³ã-è¾É¬şÿ {ì¼}²ß&RÉíKEıQY ›“£—-á—§~×ÃH,¶|eÃ¢ï÷å¹ñ=Ìú.ÿ fZŸÙ¨1wë7G&[Ï/V½§†Û~€       l´  z¦tøÎÛÊøÌı_Myä¸Ù2Ççİfo°éº¹Ïn7NS¿í¡—¤é2áÊç›Ö¤ÍKÖo    P       @          tÍ Ğ-@           @  ÒÔ               ´P               ÒĞ        @     Ë)†7,®¤/Y•¿n_š¿ë~ßá}_Òjş:ÿ Cê¹w¿¶ş4ÓÃÍ9±¶MYæ^lúè²         è	k›E¨           ¨   ZZ€                j€              ZZ         (        ÍÖß³}­idêù=Y}9;Nö¥^=× qË—/WnÚeë“]z[®}|Îî8eêÆUüø³Åë˜úCŸ'ÔâÇ+çÅıº6ò€        =Ú€æ          €(   –        (       	h-¨
+               	ih          €      ÓÓÏœ¾ıÛÜ¹¸1æ“¾²,J×eÖ$¸c•İ¼>|X\îS)<ê9²ôóÔ¿º5r³æİFÌ:n<,ºİõdg¾ÿ +ÓapáÆ_7½u`         Ô         P   KK@       P       Ğ-@              -                   ,ÜÕpË£Âİãn?ˆĞ!-Ÿ¸º|8»Îù|×PP          €sP      @   Ğ      @$P                                 P       GœóÇo+$r_¾lüØáÔesæË~1í#›:ëÏf×Ñ–Y¹á_?óÆzqÎÈ÷ÇÕg…ûï«›æ.³|v6€¬             Ğj     €(          È	"€       €           9gÕqã.²™YíóäÏ’ï,¯ê_µÏ¾ˆÅÁÔe†S­ËÛôÚ'\Ùr€          €
+       2õ<ùz¾ZócS<¸óç¿~ñ+~9-öñ¤Ë<qóUË“+–ç}²õs#¯’ø»L1ôã"îK-›’îÁ›é»‚YÃ„ËÎ]ÍÅmä              Ô    P      Ù&íÔyÇŸ;¬sÆÖn¯+—$Ãı²oöãd¨éÏf·åÏÇ…ÖYã+Ô²ÍË¸ùÒHíÒeqä¸¶Íş:ñäÖÀYÌ        @        ›¬ä²L'oW{,ıg«É<ãçôV¹ÍöÈnOqË“®[“l½rk«§>\W½¹cï/³œí"ã…äËÑ›ı¤Ïo¥.æÄ“RO…iå       @         @ 98±åšÊ~«Ø›=çÅĞÑÏÓes¹ñêïÌ®S‡—+¯§gíœz9îcÁé¹ÙŒïof¬z<=3×mËŞÊéÇÃ‡ñşo“¾Yü{“RO…œ@            ã§æ¼¸Ù–½SÏåÕ“¢×¯;¾úšÜÛêeÈ 2 (€   €   %›–|ƒ/'Õä¹É©â~\óÏÑ×WpËµ…’ÍTzùÉxóõÎó¼{Ç,°Êg™ı¤Æc5&‰¼ï§	»EëG)9âÍ½<ñaôøñÃÎ¦•ã       @          z¹oÔŞ¬®ÀK˜6gÑá•Ş6ã¿h—£ÃÓ©o«ÿ ’c¿úÆF®‹øç/3¢»û³šüF¬q˜c1ÆjBF|Ë2*¹       (        8ruXa}2\¯¾“³®²—ÍM\¿Z V@                ¶O6@Q%—ÅÚ€	hNg>ùş›Ü¸:yÅ}Vú²ùøustï­»           yÏOåŒ¿¶>n¸²ºÆÜ/{7,ƒ\õgÇÏãáÏšÉ1³{[ñÇgi"×W¯       €                      (        áÕr\8äÇÎW[zçæœ8Ë­Ûâ2gÉŸ%ŞwÇ‰<Dµ¾9¶¼É©¨/CŞüœxÌ1³SÆãŞ^xß¾L§ÌqX¾>kèã”Ë”»•Yú<­Ã,}±½šç³. *             Ï&O³Öõ6ÁW’ú³»¿Ñ×¨ç¹ÛÇñ­ùqf×o?ÚõÇ\Wx_û{=Î«–]ßMóN3<mÔ½ËGKÄşÇĞãåœ¸L±ÿ ñYú)}9]v·³CO5™p G@h   `       è	        -E      N~§+•ÇêO9Gnn|xgÎWÄŒ?Ÿék§»]pêy0ËvÜç¼®×­Ç}°Ë_,‚k¥ñÊú<|˜òcêÆî=1t™YÍ©ã)İµ§¦\     ´P       @       bê­¼ıı¤Ó“OWÅn¹1›³µ×Ã4»f½;0ÊêZÏõ2õomKVÿ ¤væÉõï¹)n¦ÂÍÍ¶tÜwwùeŞ»9tÙÜøe¾ggV;÷Ø€             ùÙcpÏ,ró½¥›–7sqcËyŞx¬Û;ù÷fÇ£ÇŞúrÇŠÌ·ohê[©²L­ÔÃ+C§]Ö;wÇ|c7\z~Å.Y+ı;5N³} *: æĞ  Z¨               i´P       ?›ş¾{ó·†îny§ÆSÅŒYcpË,mİ—IcÑãêYú½wÏáÚoS~AmÖŠã3Ê_ågoÓ[I…Ë’çíŒ×í±¨ò÷ÿ  € -µ         P       @ z™®{Û[‘¹ËŸ‡êã5©”ñRµÅË¬BÜrÆë,2—ôõÇÁŸ-ñqÇŞÖ^‹Ô“^}§{|FËÒñ]}ºı]=qğaÅüqïó|®9ÿ ©ÃÇô¸æ>şÿ ·@iÄ              @ùzY^¬o¦ß?Ü	sã?I¬·^­{O -¶ı T @Ú ´       €       ¥¨          ÏÔô÷;õ0ï—¼ùh—=Æz~\²“Óqö´£âÿ úÿ .á‹{µ1ÆaŒÇ©@ Ø€       
+ (                                €  €mÍ¢Ô       P        Ùj(               Z        €
+                             €        :Z€æ       (        Zm               -`       €
+                             €          Øj     (        ––Š                ›Ğ   råê0âínòø€ê3ãÖan²—ÍLúÎúãÇ›ØkóZF~>®ef9ÏM¾şÍYgĞ@                            @    P       M{Í    Ñ"€       	°P                    Ku-ø|íÜ­ÊùË».så{ëÛå‚vü~>
+ëâÏ/F;xãåõ]TwËšéfãwW>,2¾laòÑÓsY”ãÊî_ÿ |“Öµ Óˆ       €                    lµ    ·Ó-¾Î=/Qõğ¶ÍY\º¬:‹W×.»’k³?M6Y[Ã}>7[œúÑôÄÂe1ûì¹|É¥d      {Í° 	@        €                      İnıßi{³>†xNL.7ÅeË¤äÆı¶e?=‡^:’epË”ÕyÃŠaw½×»,¶Y«;Q¥ô=ğcræÇ^İêğğıl®í˜Ï†¾>,x¦±VG.ûş=€Óˆ                          %¦Ğ    ,ÜÓ—OÁ81¸Ë½İº€       `9¶,„€        €                         £7O-õnã—Ì÷r[û¹&¿¬1©Õ<|xñã1Ævzd                          ÒÔ              ítH9¶       €                        €
+                           Ë—Ywöa,ù·Ë§Q9o¦ÏN_(·›&»&ËQP   @           @Û3Ï<}Ye1Ÿ4b½d½\Ö_òäÖ÷Ûö×‡&’Ü2™Iğ¶X= € 
+                €        
+ (                           %²KoˆÇÉÔçË,ÇíÆöüÖ|n|Yã<ØÃ.âWO2ı<%xåË);x^;n=Ñéüú×nl¸ó’ån6ë¿³kåä’x—v·¬y|’o ˜               ÿÙ
+WPE
