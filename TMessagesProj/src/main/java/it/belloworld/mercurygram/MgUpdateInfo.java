@@ -13,12 +13,7 @@ public class MgUpdateInfo {
 
     // 5-dotted tags (X.Y.Z.M.K) are pre-releases; 4-dotted (X.Y.Z.M) are stable.
     public boolean isPreRelease() {
-        if (tagName == null) return false;
-        int dots = 0;
-        for (int i = 0; i < tagName.length(); i++) {
-            if (tagName.charAt(i) == '.') dots++;
-        }
-        return dots == 4;
+        return tagName != null && tagName.endsWith("d"); // hanako: LRS development build
     }
 
     public String toJson() {

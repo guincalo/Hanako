@@ -38,9 +38,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MgUpdateChecker {
 
-    private static final String GITHUB_LATEST_URL = "https://api.github.com/repos/Mercurygram/Mercurygram/releases/latest";
-    private static final String GITHUB_LIST_URL = "https://api.github.com/repos/Mercurygram/Mercurygram/releases";
-    private static final String GITHUB_TAG_URL_PREFIX = "https://api.github.com/repos/Mercurygram/Mercurygram/releases/tags/";
+    // hanako 2.01: Hanako's own releases. Tags follow LRS numbering, vMAJOR.MINOR with a "d"
+    // suffix for development builds (published as GitHub pre-releases); assets are
+    // Hanako-<tag>-<abi>.apk. The running build knows its own tag from BuildConfig.HANAKO_VERSION.
+    private static final String GITHUB_LATEST_URL = "https://api.github.com/repos/guincalo/Hanako/releases/latest";
+    private static final String GITHUB_LIST_URL = "https://api.github.com/repos/guincalo/Hanako/releases?per_page=50";
+    private static final String GITHUB_TAG_URL_PREFIX = "https://api.github.com/repos/guincalo/Hanako/releases/tags/";
     // SHA-256 of the release keystore cert. Channel detection hangs off this:
     // a mismatch means "rebuilt and resigned by F-Droid" (isFdroidBuild), which
     // hides the Tor toggle pre-S, retargets the plugin install link and changes
@@ -48,7 +51,7 @@ public class MgUpdateChecker {
     // must therefore be enrolled with this same key as the Play App Signing
     // key, not just as the upload key: letting Play generate its own signing
     // key would reclassify every Play install as an F-Droid one.
-    private static final String MG_CERT_SHA256 = "1E73DE100E2646BE671AFAD2CB4BB471538E062A745AE5ADBE6C7D1666FD1EE9";
+    private static final String MG_CERT_SHA256 = "EE38A06CC99FC8BB9E5B5A8374885CE4690A89D2760B8AA47C561B4DF9646560"; // hanako release key
     private static final long CHECK_INTERVAL = 3600 * 1000; // 1 hour
     // Tighter throttle while a pending update is staged: a newer tag
     // landing 5+ minutes after the previous check should not stay hidden
@@ -75,13 +78,31 @@ public class MgUpdateChecker {
     // gradle/mg-version.gradle), so PackageInfo.versionName carries the
     // real 5-dotted tag for sideloads as well as in-app-updater installs.
     static String derivePrecedingStableTag(String tag) {
-        if (tag == null) return null;
-        String[] p = tag.split("\\.", -1);
-        if (p.length != 5) return null;
-        // X.Y.Z.0.K is the pre-stable namespace — no 4-dotted X.Y.Z.0 tag
-        // ever exists, so there's nothing to downgrade to.
-        if ("0".equals(p[3])) return null;
-        return p[0] + "." + p[1] + "." + p[2] + "." + p[3];
+        return null; // hanako: a dev build has no older stable to roll back to (LRS tags)
+    }
+
+    /** This build's Hanako version, e.g. "2.01d" (BuildConfig.HANAKO_VERSION); "" when unknown. */
+    public static String hanakoVersion() {
+        String v = org.telegram.messenger.BuildConfig.HANAKO_VERSION;
+        return v == null ? "" : v;
+    }
+
+    /** This build's release tag, e.g. "v2.01d". */
+    public static String currentTag() {
+        String v = hanakoVersion();
+        return v.isEmpty() ? "" : "v" + v;
+    }
+
+    /** "2.01d (Telegram 13.0.2)" for the version line in Settings. */
+    public static String displayVersion() {
+        String v = hanakoVersion();
+        String base = currentInstallVersion();
+        return v.isEmpty() ? base : v + " (Telegram " + base + ")";
+    }
+
+    /** True when this build is at least the release with this tag. */
+    public static boolean isUpToDateWith(String tag) {
+        return versionUpToDate(currentTag(), tag);
     }
 
     public static boolean acceptPreReleases() {
@@ -107,8 +128,9 @@ public class MgUpdateChecker {
         return c != null && l != null && compareVectors(c, l) < 0;
     }
 
+    // hanako: a development build ("v2.01d") is what Mercurygram called a prerelease.
     private static boolean isFiveDotted(String tag) {
-        return tag != null && tag.split("\\.", -1).length >= 5;
+        return tag != null && tag.endsWith("d");
     }
 
     /**
@@ -178,8 +200,6 @@ public class MgUpdateChecker {
     }
 
     public static void checkForUpdates(boolean force) {
-        // plus: personal build, never offer upstream Mercurygram updates
-        if (true) return;
         checkInternal(force, null);
     }
 
@@ -202,7 +222,7 @@ public class MgUpdateChecker {
     // opt-in on a stable drops the tag of an earlier stint so
     // shouldClearOptInOnRegress() cannot self-clear it.
     public static void setPreReleaseOptIn(boolean value) {
-        String cur = currentInstallVersion();
+        String cur = currentTag();
         SharedConfig.setAcceptPreReleaseUpdates(value);
         SharedConfig.setMgLastPreReleaseTag(isFiveDotted(cur) ? cur : "");
         // A staged prerelease is no longer offered once opted out: hide its
@@ -218,7 +238,7 @@ public class MgUpdateChecker {
     // checkInternal() so a stale opt-in stops re-offering the prerelease the
     // user already left, without any dedicated UI action from the user.
     private static void maybeAutoClearPreReleaseOptIn() {
-        String cur = currentInstallVersion();
+        String cur = currentTag();
         if (isFiveDotted(cur)) {
             // Running a prerelease IS the opt-in, whatever brought it here
             // (the toggle, a sideload, Obtainium). Once per tag, so a
@@ -263,7 +283,7 @@ public class MgUpdateChecker {
         }
 
         final boolean beta = isBetaChannel();
-        final boolean listReleases = beta || acceptPreReleases();
+        final boolean listReleases = true; // hanako: one list scan, pre-releases filtered below
         final String url = pinnedTag != null
                 ? GITHUB_TAG_URL_PREFIX + pinnedTag
                 : (listReleases ? GITHUB_LIST_URL : GITHUB_LATEST_URL);
@@ -305,6 +325,7 @@ public class MgUpdateChecker {
                         JSONObject r = releases.getJSONObject(i);
                         if (r.optBoolean("draft", false)) continue;
                         if (beta && !r.optBoolean("prerelease", false)) continue;
+                        if (!acceptPreReleases() && r.optBoolean("prerelease", false)) continue;
                         long[] vec = toVersionVector(r.optString("tag_name", ""));
                         if (vec == null) continue;
                         if (bestVec == null || compareVectors(vec, bestVec) > 0) {
@@ -325,7 +346,7 @@ public class MgUpdateChecker {
                 // Downgrade path (pinnedTag != null) intentionally skips the
                 // up-to-date check — current (5-dotted) > target (4-dotted of
                 // same base), so versionUpToDate would short-circuit.
-                if (pinnedTag == null && versionUpToDate(currentInstallVersion(), tagName)) {
+                if (pinnedTag == null && versionUpToDate(currentTag(), tagName)) {
                     markUpToDate();
                     return;
                 }
@@ -343,13 +364,13 @@ public class MgUpdateChecker {
                 // installs use /releases/latest (set above), which excludes
                 // prereleases, so the empty-infix lookup never matches a beta
                 // tag accidentally.
-                String infix = ApplicationLoader.applicationContext.getPackageName()
-                        .endsWith(".beta") ? "-debug" : "";
-                String abiApkName = "Mercurygram" + infix + "-" + tagName + "-" + targetAbi + ".apk";
+                String abiApkName = "Hanako-" + tagName + "-" + targetAbi + ".apk";
                 for (int i = 0; i < assets.length(); i++) {
                     JSONObject asset = assets.getJSONObject(i);
                     String name = asset.getString("name");
-                    if (name.equals(abiApkName)) {
+                    // exact name, or any Hanako APK for this ABI (an -UNOFFICIAL suffix never matches: other key)
+                    if (name.equals(abiApkName) || (name.startsWith("Hanako-") && name.endsWith("-" + targetAbi + ".apk")
+                            && !name.contains("UNOFFICIAL"))) {
                         apkFileName = name;
                         downloadUrl = asset.getString("browser_download_url");
                         fileSize = asset.getLong("size");
@@ -753,20 +774,22 @@ public class MgUpdateChecker {
         return 0;
     }
 
-    // Null on malformed input — caller treats as "refuse update".
+    // hanako: LRS tags. "v2.01d" -> {2, 10000, 0}: major, minor read as decimal digits (so
+    // 1.3 < 1.31 < 1.35 < 2.0 < 2.01), then 0 for a development build and 1 for a release of the
+    // same number. Null on anything else (old v1.x.y tags, Mercurygram tags): never offered.
+    private static final java.util.regex.Pattern LRS_TAG = java.util.regex.Pattern.compile("^v?(\\d+)\\.(\\d{1,6})(d?)$");
+
     private static long[] toVersionVector(String v) {
-        if (v == null || v.isEmpty()) return null;
-        String[] p = v.split("\\.", -1);
-        if (p.length < 4 || p.length > 5) return null;
-        long[] vec = new long[p.length];
-        for (int i = 0; i < p.length; i++) {
-            try {
-                vec[i] = Long.parseLong(p[i]);
-            } catch (NumberFormatException e) {
-                return null;
-            }
+        if (v == null) return null;
+        java.util.regex.Matcher m = LRS_TAG.matcher(v.trim());
+        if (!m.matches()) return null;
+        try {
+            StringBuilder minor = new StringBuilder(m.group(2));
+            while (minor.length() < 6) minor.append('0');
+            return new long[]{Long.parseLong(m.group(1)), Long.parseLong(minor.toString()), m.group(3).isEmpty() ? 1 : 0};
+        } catch (NumberFormatException e) {
+            return null;
         }
-        return vec;
     }
 
 }

@@ -96,6 +96,10 @@ jobs:
         run: |
           set -euo pipefail
           APP_VN=$(grep '^APP_VERSION_NAME=' gradle.properties | cut -d= -f2)
+          HV=$(grep '^HANAKO_VERSION=' gradle.properties | cut -d= -f2)
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "v${HV}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match HANAKO_VERSION=${HV} in gradle.properties (the in-app updater reads it)"; exit 1
+          fi
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then LABEL="${GITHUB_REF_NAME}"; else LABEL="classic-${APP_VN}-r${GITHUB_RUN_NUMBER}"; fi
           echo "label=${LABEL}" >> "$GITHUB_OUTPUT"
           ALLOWED=false

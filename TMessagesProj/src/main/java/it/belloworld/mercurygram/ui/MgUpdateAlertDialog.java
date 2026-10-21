@@ -183,7 +183,7 @@ public class MgUpdateAlertDialog extends BottomSheet {
         titleView.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
         titleView.setSingleLine(true);
         titleView.setEllipsize(TextUtils.TruncateAt.END);
-        titleView.setText("Mercurygram Update");
+        titleView.setText("Hanako " + (updateInfo != null && updateInfo.tagName != null ? updateInfo.tagName : ""));
         linearLayout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 23, 24, 23, 0));
 
         if (info.isPreRelease()) {

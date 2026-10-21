@@ -6740,7 +6740,7 @@ public class AndroidUtilities {
                     }
                     break;
             }
-            return formatString("TelegramVersion", R.string.TelegramVersion, String.format(Locale.US, "v%s (%d) %s", MgUpdateChecker.currentInstallVersion(), code, abi));
+            return formatString("TelegramVersion", R.string.TelegramVersion, String.format(Locale.US, "v%s (%d) %s", MgUpdateChecker.displayVersion(), code, abi));
         } catch (Exception e) {
             FileLog.e(e);
         }

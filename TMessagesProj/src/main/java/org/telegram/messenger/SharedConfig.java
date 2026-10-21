@@ -993,8 +993,7 @@ public class SharedConfig {
             try {
                 it.belloworld.mercurygram.MgUpdateInfo info = it.belloworld.mercurygram.MgUpdateInfo.fromJson(mgPendingUpdate);
                 if (info != null) {
-                    String currentVersion = it.belloworld.mercurygram.MgUpdateChecker.currentInstallVersion();
-                    if (currentVersion != null && versionBiggerOrEqual(currentVersion, info.versionName)) {
+                    if (it.belloworld.mercurygram.MgUpdateChecker.isUpToDateWith(info.tagName)) { // hanako: LRS tags
                         clearMgPendingUpdate();
                     }
                 }

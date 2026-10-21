@@ -186,6 +186,8 @@ android {
         // hanako: default telemetry upload address/key (CI secrets; empty = never upload)
         buildConfigField "String", "HANAKO_TELEMETRY_ENDPOINT", hanakoEnvString('HANAKO_TELEMETRY_ENDPOINT')
         buildConfigField "String", "HANAKO_TELEMETRY_KEY", hanakoEnvString('HANAKO_TELEMETRY_KEY')
+        // hanako: this build's LRS version (gradle.properties HANAKO_VERSION), read by the in-app updater
+        buildConfigField "String", "HANAKO_VERSION", '"' + (project.findProperty('HANAKO_VERSION') ?: '') + '"'
 
         vectorDrawables.generatedDensities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']
 
