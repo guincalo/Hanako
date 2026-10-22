@@ -612,8 +612,10 @@ public class MgUpdateChecker {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 pi = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(),
                         PackageManager.GET_SIGNING_CERTIFICATES);
-                if (pi == null || pi.signingInfo == null) return false;
-                return matchesMgCert(pi.signingInfo.getApkContentsSigners());
+                if (pi == null || pi.signingInfo == null) { FileLog.e("Hanako updater: cannot read APK signature"); return false; }
+                boolean ok = matchesMgCert(pi.signingInfo.getApkContentsSigners());
+                if (!ok) FileLog.e("Hanako updater: APK signed with an unexpected key");
+                return ok;
             } else {
                 pi = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(),
                         PackageManager.GET_SIGNATURES);

@@ -272,6 +272,20 @@ public class MgUpdateAlertDialog extends BottomSheet {
             public void onError(String error) {
                 downloading = false;
                 downloadButton.setText(LocaleController.formatString("AppUpdateDownloadNow", R.string.AppUpdateDownloadNow));
+                if ("cancelled".equals(error)) return;
+                // hanako: never fail silently. Say why and hand the user the release page.
+                org.telegram.messenger.FileLog.e("Hanako updater: " + error);
+                try {
+                    android.widget.Toast.makeText(getContext(), "Update failed: " + error + ". Opening the release page.", android.widget.Toast.LENGTH_LONG).show();
+                    String url = updateInfo != null && updateInfo.tagName != null
+                            ? "https://github.com/guincalo/Hanako/releases/tag/" + updateInfo.tagName
+                            : "https://github.com/guincalo/Hanako/releases/latest";
+                    android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url));
+                    i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getContext().startActivity(i);
+                } catch (Exception e) {
+                    org.telegram.messenger.FileLog.e(e);
+                }
             }
         });
     }
