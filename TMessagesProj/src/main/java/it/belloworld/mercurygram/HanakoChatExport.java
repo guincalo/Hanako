@@ -134,7 +134,6 @@ public final class HanakoChatExport {
     private volatile int waitSeconds;
     private final SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
     private final SimpleDateFormat fileFormat = new SimpleDateFormat("dd-MM-yyyy_HH-mm-ss", Locale.US);
-    private final SimpleDateFormat zoneFormat = new SimpleDateFormat("xxx", Locale.US);
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.US);
     private final SimpleDateFormat fullFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.US);
 
@@ -1469,7 +1468,7 @@ public final class HanakoChatExport {
     /** FormatDateTime(date, true): "20.10.2026 19:06:00 UTC+04:00". */
     private String fullDate(int date) {
         Date d = new Date(date * 1000L);
-        return fullFormat.format(d) + " UTC" + zoneFormat.format(d);
+        return fullFormat.format(d) + " UTC" + utcOffset(d);
     }
 
     /** Ui::FormatDurationText. */
@@ -1826,5 +1825,14 @@ public final class HanakoChatExport {
 
     private static String escAttr(String s) {
         return esc(s).replace("'", "&#39;");
+    }
+
+    // SimpleDateFormat has no 'x' and 'XXX' prints "Z" at UTC (and needs API 24),
+    // so build Telegram Desktop's "+03:00" by hand
+    private static String utcOffset(Date d) {
+        int m = java.util.TimeZone.getDefault().getOffset(d.getTime()) / 60000;
+        char sign = m < 0 ? '-' : '+';
+        m = Math.abs(m);
+        return String.format(Locale.US, "%c%02d:%02d", sign, m / 60, m % 60);
     }
 }
